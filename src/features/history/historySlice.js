@@ -1,0 +1,423 @@
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import historyService from '../../services/historyService';
+
+// Initial state
+const initialState = {
+  items: [],
+  currentEntry: null,
+  revertibleOperations: [],
+  stats: null,
+  loading: false,
+  error: null,
+  pagination: {
+    page: 0,
+    size: 20,
+    totalElements: 0,
+    totalPages: 0,
+  },
+  filters: {
+    operationType: null,
+    entityType: null,
+    userId: null,
+    locationId: null,
+    startDate: null,
+    endDate: null,
+    search: '',
+  },
+};
+
+// Async thunks
+export const fetchHistory = createAsyncThunk(
+  'history/fetchHistory',
+  async (params, { rejectWithValue }) => {
+    try {
+      const response = await historyService.getHistory(params);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch history');
+    }
+  }
+);
+
+export const fetchHistoryById = createAsyncThunk(
+  'history/fetchHistoryById',
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await historyService.getHistoryById(id);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch history entry');
+    }
+  }
+);
+
+export const fetchEntityHistory = createAsyncThunk(
+  'history/fetchEntityHistory',
+  async ({ entityType, entityId, params }, { rejectWithValue }) => {
+    try {
+      const response = await historyService.getEntityHistory(entityType, entityId, params);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch entity history');
+    }
+  }
+);
+
+export const fetchHistoryByOperation = createAsyncThunk(
+  'history/fetchHistoryByOperation',
+  async ({ operationType, params }, { rejectWithValue }) => {
+    try {
+      const response = await historyService.getHistoryByOperation(operationType, params);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch history by operation');
+    }
+  }
+);
+
+export const fetchUserHistory = createAsyncThunk(
+  'history/fetchUserHistory',
+  async ({ userId, params }, { rejectWithValue }) => {
+    try {
+      const response = await historyService.getUserHistory(userId, params);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch user history');
+    }
+  }
+);
+
+export const fetchLocationHistory = createAsyncThunk(
+  'history/fetchLocationHistory',
+  async ({ locationId, params }, { rejectWithValue }) => {
+    try {
+      const response = await historyService.getLocationHistory(locationId, params);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch location history');
+    }
+  }
+);
+
+export const revertOperation = createAsyncThunk(
+  'history/revertOperation',
+  async ({ id, reason }, { rejectWithValue }) => {
+    try {
+      const response = await historyService.revertOperation(id, reason);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to revert operation');
+    }
+  }
+);
+
+export const checkCanRevert = createAsyncThunk(
+  'history/checkCanRevert',
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await historyService.canRevert(id);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to check revert status');
+    }
+  }
+);
+
+export const fetchRevertibleOperations = createAsyncThunk(
+  'history/fetchRevertibleOperations',
+  async (params, { rejectWithValue }) => {
+    try {
+      const response = await historyService.getRevertibleOperations(params);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch revertible operations');
+    }
+  }
+);
+
+export const fetchHistoryStats = createAsyncThunk(
+  'history/fetchHistoryStats',
+  async (params, { rejectWithValue }) => {
+    try {
+      const response = await historyService.getHistoryStats(params);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch history stats');
+    }
+  }
+);
+
+export const fetchRecentOperations = createAsyncThunk(
+  'history/fetchRecentOperations',
+  async ({ limit, locationId }, { rejectWithValue }) => {
+    try {
+      const response = await historyService.getRecentOperations(limit, locationId);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch recent operations');
+    }
+  }
+);
+
+export const searchHistory = createAsyncThunk(
+  'history/searchHistory',
+  async ({ query, params }, { rejectWithValue }) => {
+    try {
+      const response = await historyService.searchHistory(query, params);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to search history');
+    }
+  }
+);
+
+// Slice
+const historySlice = createSlice({
+  name: 'history',
+  initialState,
+  reducers: {
+    clearError: (state) => {
+      state.error = null;
+    },
+    setFilters: (state, action) => {
+      state.filters = { ...state.filters, ...action.payload };
+    },
+    clearFilters: (state) => {
+      state.filters = initialState.filters;
+    },
+    clearCurrentEntry: (state) => {
+      state.currentEntry = null;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      // Fetch History
+      .addCase(fetchHistory.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchHistory.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload.content || action.payload;
+        if (action.payload.page !== undefined) {
+          state.pagination = {
+            page: action.payload.page,
+            size: action.payload.size,
+            totalElements: action.payload.totalElements,
+            totalPages: action.payload.totalPages,
+          };
+        }
+      })
+      .addCase(fetchHistory.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Fetch History By ID
+      .addCase(fetchHistoryById.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchHistoryById.fulfilled, (state, action) => {
+        state.loading = false;
+        state.currentEntry = action.payload;
+      })
+      .addCase(fetchHistoryById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Fetch Entity History
+      .addCase(fetchEntityHistory.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchEntityHistory.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload.content || action.payload;
+        if (action.payload.page !== undefined) {
+          state.pagination = {
+            page: action.payload.page,
+            size: action.payload.size,
+            totalElements: action.payload.totalElements,
+            totalPages: action.payload.totalPages,
+          };
+        }
+      })
+      .addCase(fetchEntityHistory.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Fetch History By Operation
+      .addCase(fetchHistoryByOperation.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchHistoryByOperation.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload.content || action.payload;
+        if (action.payload.page !== undefined) {
+          state.pagination = {
+            page: action.payload.page,
+            size: action.payload.size,
+            totalElements: action.payload.totalElements,
+            totalPages: action.payload.totalPages,
+          };
+        }
+      })
+      .addCase(fetchHistoryByOperation.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Fetch User History
+      .addCase(fetchUserHistory.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchUserHistory.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload.content || action.payload;
+        if (action.payload.page !== undefined) {
+          state.pagination = {
+            page: action.payload.page,
+            size: action.payload.size,
+            totalElements: action.payload.totalElements,
+            totalPages: action.payload.totalPages,
+          };
+        }
+      })
+      .addCase(fetchUserHistory.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Fetch Location History
+      .addCase(fetchLocationHistory.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchLocationHistory.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload.content || action.payload;
+        if (action.payload.page !== undefined) {
+          state.pagination = {
+            page: action.payload.page,
+            size: action.payload.size,
+            totalElements: action.payload.totalElements,
+            totalPages: action.payload.totalPages,
+          };
+        }
+      })
+      .addCase(fetchLocationHistory.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Revert Operation
+      .addCase(revertOperation.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(revertOperation.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(revertOperation.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Fetch Revertible Operations
+      .addCase(fetchRevertibleOperations.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchRevertibleOperations.fulfilled, (state, action) => {
+        state.loading = false;
+        state.revertibleOperations = action.payload;
+      })
+      .addCase(fetchRevertibleOperations.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Fetch History Stats
+      .addCase(fetchHistoryStats.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchHistoryStats.fulfilled, (state, action) => {
+        state.loading = false;
+        state.stats = action.payload;
+      })
+      .addCase(fetchHistoryStats.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Search History
+      .addCase(searchHistory.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(searchHistory.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload.content || action.payload;
+        if (action.payload.page !== undefined) {
+          state.pagination = {
+            page: action.payload.page,
+            size: action.payload.size,
+            totalElements: action.payload.totalElements,
+            totalPages: action.payload.totalPages,
+          };
+        }
+      })
+      .addCase(searchHistory.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
+  },
+});
+
+// Actions
+export const { clearError, setFilters, clearFilters, clearCurrentEntry } = historySlice.actions;
+
+// Selectors
+export const selectHistoryItems = (state) => state.history.items;
+export const selectCurrentHistoryEntry = (state) => state.history.currentEntry;
+export const selectRevertibleOperations = (state) => state.history.revertibleOperations;
+export const selectHistoryStats = (state) => state.history.stats;
+export const selectHistoryLoading = (state) => state.history.loading;
+export const selectHistoryError = (state) => state.history.error;
+export const selectHistoryPagination = (state) => state.history.pagination;
+export const selectHistoryFilters = (state) => state.history.filters;
+
+export default historySlice.reducer;
