@@ -35,6 +35,7 @@ function CreateProductPage() {
       notes: '',
       purchasePrice: '',
       sellingPrice: '',
+      quantity: 1,
     },
   });
 
@@ -122,24 +123,6 @@ function CreateProductPage() {
               <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SOLUTION]} value={PRODUCT_TYPES.SOLUTION} />
               <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.OTHER]} value={PRODUCT_TYPES.OTHER} />
             </Tabs>
-          </Box>
-
-          {/* Quantity Input */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Ilość początkowa
-            </Typography>
-            <TextField
-              type="number"
-              label="Ilość"
-              defaultValue={1}
-              inputProps={{ min: 1 }}
-              {...control.register('quantity', {
-                valueAsNumber: true,
-                min: { value: 1, message: 'Ilość musi być większa od 0' }
-              })}
-              sx={{ width: 200 }}
-            />
           </Box>
 
           {/* Dynamic Form */}

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -14,7 +13,7 @@ import {
   IconButton,
   Menu,
 } from '@mui/material';
-import { Eye, RotateCcw, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { RotateCcw, MoreVertical, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -24,11 +23,13 @@ import ConfirmDialog from '../../../shared/components/ConfirmDialog';
 import {
   fetchHistory,
   revertOperation,
+  deleteHistory,
+  deleteAllHistory,
   selectHistoryItems,
   selectHistoryLoading,
   selectHistoryPagination,
 } from '../historySlice';
-import { fetchActiveLocations, selectActiveLocations, selectCurrentLocation } from '../../locations/locationsSlice';
+import { fetchActiveLocations, selectCurrentLocation } from '../../locations/locationsSlice';
 import { selectUser } from '../../auth/authSlice';
 import { usePagination } from '../../../hooks/usePagination';
 import {
@@ -43,7 +44,6 @@ import {
 
 function HistoryListPage() {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
 
   const historyItems = useSelector(selectHistoryItems);
   const loading = useSelector(selectHistoryLoading);
@@ -55,7 +55,7 @@ function HistoryListPage() {
   const [entityFilters, setEntityFilters] = useState([]); // Array of selected entity types
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [confirmDialog, setConfirmDialog] = useState({ open: false, item: null });
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, item: null, action: null });
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedRow, setSelectedRow] = useState(null);
 
@@ -87,22 +87,32 @@ function HistoryListPage() {
 
   const canViewHistory = hasPermission('VIEW_HISTORY_ALL');
 
-  const handleOpenConfirm = (item) => {
-    setConfirmDialog({ open: true, item });
+  const handleOpenConfirm = (item, action) => {
+    setConfirmDialog({ open: true, item, action });
   };
 
   const handleCloseConfirm = () => {
-    setConfirmDialog({ open: false, item: null });
+    setConfirmDialog({ open: false, item: null, action: null });
   };
 
-  const handleConfirmRevert = async () => {
-    const { item } = confirmDialog;
+  const handleConfirmAction = async () => {
+    const { item, action } = confirmDialog;
     try {
-      await dispatch(revertOperation(item.id)).unwrap();
-      toast.success('Operacja została cofnięta');
-      dispatch(fetchHistory({ page: pagination.page, size: pagination.size }));
+      if (action === 'delete') {
+        await dispatch(deleteHistory(item.id)).unwrap();
+        toast.success('Wpis historii został usunięty');
+      } else if (action === 'deleteAll') {
+        const locationId = currentLocation?.id || undefined;
+        const result = await dispatch(deleteAllHistory(locationId)).unwrap();
+        toast.success(result.message || 'Cała historia została usunięta');
+        dispatch(fetchHistory({ page: 0, size: pagination.size, locationId }));
+      } else if (action === 'revert') {
+        await dispatch(revertOperation({ id: item.id, reason: 'Manual revert by user' })).unwrap();
+        toast.success('Operacja została cofnięta');
+        dispatch(fetchHistory({ page: pagination.page, size: pagination.size }));
+      }
     } catch (error) {
-      toast.error(error || 'Nie udało się cofnąć operacji');
+      toast.error(error || 'Nie udało się wykonać operacji');
     }
     handleCloseConfirm();
   };
@@ -125,18 +135,22 @@ function HistoryListPage() {
     setSelectedRow(null);
   };
 
-  const handleEdit = () => {
+  const handleDelete = () => {
     if (selectedRow) {
-      navigate(`/history/${selectedRow.id}`);
+      handleOpenConfirm(selectedRow, 'delete');
     }
     handleMenuClose();
   };
 
-  const handleDelete = () => {
+  const handleRevert = () => {
     if (selectedRow) {
-      handleOpenConfirm(selectedRow);
+      handleOpenConfirm(selectedRow, 'revert');
     }
     handleMenuClose();
+  };
+
+  const handleDeleteAll = () => {
+    handleOpenConfirm(null, 'deleteAll');
   };
 
   const toggleOperationFilter = (operation) => {
@@ -353,6 +367,16 @@ function HistoryListPage() {
               Wyczyść filtry
             </Button>
           )}
+          <Box sx={{ marginLeft: 'auto' }}>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleDeleteAll}
+              startIcon={<Trash2 size={18} />}
+            >
+              {currentLocation ? `Usuń całą historię z ${currentLocation.name}` : 'Usuń całą historię'}
+            </Button>
+          </Box>
         </Box>
 
         {/* History Table */}
@@ -367,7 +391,6 @@ function HistoryListPage() {
           }}
           onPageChange={pagination.handlePageChange}
           onRowsPerPageChange={pagination.handleRowsPerPageChange}
-          onRowClick={(row) => navigate(`/history/${row.id}`)}
           emptyMessage="Nie znaleziono rekordów historii. Spróbuj dostosować filtry."
         />
       </Paper>
@@ -376,11 +399,31 @@ function HistoryListPage() {
       <ConfirmDialog
         open={confirmDialog.open}
         onClose={handleCloseConfirm}
-        onConfirm={handleConfirmRevert}
-        title="Potwierdź cofnięcie"
-        message={`Czy na pewno chcesz cofnąć tę operację ${confirmDialog.item?.operationType?.toLowerCase()}? To cofnie zmiany.`}
-        confirmText="Cofnij"
-        confirmColor="warning"
+        onConfirm={handleConfirmAction}
+        title={
+          confirmDialog.action === 'deleteAll'
+            ? 'Potwierdź usunięcie całej historii'
+            : confirmDialog.action === 'delete'
+            ? 'Potwierdź usunięcie'
+            : 'Potwierdź cofnięcie operacji'
+        }
+        message={
+          confirmDialog.action === 'deleteAll'
+            ? currentLocation
+              ? `Czy na pewno chcesz usunąć CAŁĄ historię z lokalizacji "${currentLocation.name}"? Ta operacja jest NIEODWRACALNA i usunie wszystkie wpisy historii z tej lokalizacji.`
+              : 'Czy na pewno chcesz usunąć CAŁĄ historię ze WSZYSTKICH lokalizacji? Ta operacja jest NIEODWRACALNA i usunie wszystkie wpisy historii w systemie.'
+            : confirmDialog.action === 'delete'
+            ? 'Czy na pewno chcesz usunąć ten wpis z historii? Ta operacja jest nieodwracalna.'
+            : 'Czy na pewno chcesz cofnąć tę operację? To utworzy wpis kompensujący, który odwróci zmiany. Oryginalny wpis pozostanie w historii dla celów audytu.'
+        }
+        confirmText={
+          confirmDialog.action === 'deleteAll'
+            ? 'Usuń całą historię'
+            : confirmDialog.action === 'delete'
+            ? 'Usuń'
+            : 'Cofnij operację'
+        }
+        confirmColor={confirmDialog.action === 'deleteAll' || confirmDialog.action === 'delete' ? 'error' : 'warning'}
       />
 
       {/* Actions Menu */}
@@ -397,13 +440,13 @@ function HistoryListPage() {
           horizontal: 'right',
         }}
       >
-        <MenuItem onClick={handleEdit}>
-          <Pencil size={16} style={{ marginRight: 8 }} />
-          Edit
-        </MenuItem>
         <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
           <Trash2 size={16} style={{ marginRight: 8 }} />
-          Delete
+          Usuń
+        </MenuItem>
+        <MenuItem onClick={handleRevert} sx={{ color: 'warning.main' }}>
+          <RotateCcw size={16} style={{ marginRight: 8 }} />
+          Cofnij operację
         </MenuItem>
       </Menu>
     </Container>

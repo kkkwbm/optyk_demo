@@ -12,7 +12,6 @@ import {
   Slide,
   useTheme,
   alpha,
-  TextField,
 } from '@mui/material';
 import { X, Save, Edit3 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -86,21 +85,13 @@ function EditProductModal({ open, onClose, product }) {
       if (quantityDiff !== 0) {
         const locationId = product.location?.id || currentLocation?.id;
         if (locationId) {
-          if (quantityDiff > 0) {
-            await inventoryService.addStock({
-              productId: product.id,
-              locationId: locationId,
-              quantity: quantityDiff,
-              reason: 'Manual adjustment during edit'
-            });
-          } else {
-            await inventoryService.removeStock({
-              productId: product.id,
-              locationId: locationId,
-              quantity: Math.abs(quantityDiff),
-              reason: 'Manual adjustment during edit'
-            });
-          }
+          await inventoryService.adjustStock({
+            productId: product.id,
+            locationId: locationId,
+            quantity: Math.abs(quantityDiff),
+            reason: 'Manual adjustment during edit',
+            type: quantityDiff > 0 ? 'ADD' : 'REMOVE'
+          });
         }
       }
 
@@ -221,24 +212,6 @@ function EditProductModal({ open, onClose, product }) {
         <DialogContent sx={{ p: 3 }}>
           <Box sx={{ py: 1 }}>
             {renderForm()}
-
-            {/* Quantity Input */}
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                Stan magazynowy
-              </Typography>
-              <TextField
-                type="number"
-                label="Ilość"
-                fullWidth
-                inputProps={{ min: 0 }}
-                {...control.register('quantity', {
-                  valueAsNumber: true,
-                  min: { value: 0, message: 'Ilość nie może być ujemna' }
-                })}
-                helperText="Zmiana ilości spowoduje automatyczną korektę stanu magazynowego"
-              />
-            </Box>
           </Box>
         </DialogContent>
 

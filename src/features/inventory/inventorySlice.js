@@ -26,6 +26,7 @@ export const fetchInventory = createAsyncThunk(
   async ({ locationId, params }, { rejectWithValue }) => {
     try {
       // If locationId is null/undefined, getInventory will now fetch all inventory
+      // params may contain locationType
       const response = await inventoryService.getInventory(locationId, params);
       if (response.data.success) {
         return response.data.data;

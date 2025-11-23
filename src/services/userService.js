@@ -117,6 +117,10 @@ export const userService = {
   updateThemePreference: (themePreference) => {
     return api.patch('/users/me/theme', { themePreference });
   },
+
+  changePassword: (data) => {
+    return api.patch('/users/me/password', data);
+  },
 };
 
 export default userService;

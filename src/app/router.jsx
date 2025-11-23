@@ -24,6 +24,8 @@ const CreateProductPage = lazy(() => import('../features/products/pages/CreatePr
 
 // Inventory Management
 const InventoryPage = lazy(() => import('../features/inventory/pages/InventoryDashboardPage'));
+const UniqueFramesPage = lazy(() => import('../features/inventory/pages/UniqueFramesPage'));
+const AgingInventoryPage = lazy(() => import('../features/inventory/pages/AgingInventoryPage'));
 
 // Sales Management
 const SalesListPage = lazy(() => import('../features/sales/pages/SalesListPage'));
@@ -170,6 +172,22 @@ const router = createBrowserRouter([
             element: (
               <SuspenseWrapper>
                 <ProductDetailsPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: 'frames/unique',
+            element: (
+              <SuspenseWrapper>
+                <UniqueFramesPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: 'aging',
+            element: (
+              <SuspenseWrapper>
+                <AgingInventoryPage />
               </SuspenseWrapper>
             ),
           },

@@ -19,13 +19,13 @@ function FrameForm({ control, brands = [] }) {
       <Grid size={{ xs: 12, md: 6 }}>
         <FormField name="model" control={control} label="Model" type="text" required />
       </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
+      <Grid size={{ xs: 12, md: 3 }}>
         <FormField name="color" control={control} label="Kolor" type="text" required />
       </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
+      <Grid size={{ xs: 12, md: 3 }}>
         <FormField name="size" control={control} label="Rozmiar" type="text" required />
       </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
+      <Grid size={{ xs: 12, md: 3 }}>
         <FormField
           name="sellingPrice"
           control={control}
@@ -37,6 +37,18 @@ function FrameForm({ control, brands = [] }) {
           }}
         />
       </Grid>
+      <Grid size={{ xs: 12, md: 3 }}>
+        <FormField
+          name="quantity"
+          control={control}
+          label="Ilość"
+          type="number"
+          required
+          rules={{
+            min: { value: 0, message: 'Ilość nie może być ujemna' },
+          }}
+        />
+      </Grid>
       <Grid size={{ xs: 12 }}>
         <FormField
           name="notes"
@@ -44,7 +56,7 @@ function FrameForm({ control, brands = [] }) {
           label="Opis"
           type="text"
           multiline
-          rows={3}
+          rows={2}
         />
       </Grid>
     </Grid>

@@ -13,6 +13,7 @@ import {
   Button,
   useTheme,
   useMediaQuery,
+  Tooltip,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -31,7 +32,8 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout, selectUser, selectUserRole } from '../../features/auth/authSlice';
-import { PERMISSIONS } from '../../constants';
+import { selectCurrentLocation } from '../../features/locations/locationsSlice';
+import { PERMISSIONS, LOCATION_TYPES } from '../../constants';
 import toast from 'react-hot-toast';
 
 function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
@@ -40,6 +42,7 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
   const dispatch = useDispatch();
   const user = useSelector(selectUser);
   const userRole = useSelector(selectUserRole);
+  const currentLocation = useSelector(selectCurrentLocation);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [anchorEl, setAnchorEl] = useState(null);
@@ -92,6 +95,8 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
     return routerLocation.pathname.startsWith(path);
   };
 
+  const isWarehouse = currentLocation?.type === LOCATION_TYPES.WAREHOUSE;
+
   // Left-aligned navigation items
   const leftNavigationItems = [
     {
@@ -105,6 +110,8 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
       icon: <ShoppingCart size={18} />,
       path: '/sales',
       permission: 'RECORD_SALE',
+      disabled: isWarehouse,
+      disabledReason: 'Sprzedaż nie jest dostępna w magazynie',
     },
     {
       text: 'Transfery',
@@ -148,6 +155,47 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
     },
   ];
 
+  const renderNavButton = (item) => {
+    const button = (
+      <Button
+        key={item.text}
+        onClick={() => navigate(item.path)}
+        startIcon={item.icon}
+        disabled={item.disabled}
+        sx={{
+          color: 'white',
+          textTransform: 'none',
+          fontSize: '0.9rem',
+          px: 2,
+          py: 1,
+          borderRadius: 1,
+          backgroundColor: isActive(item.path) ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+          '&:hover': {
+            backgroundColor: isActive(item.path)
+              ? 'rgba(255, 255, 255, 0.25)'
+              : 'rgba(255, 255, 255, 0.1)',
+          },
+          '&.Mui-disabled': {
+            color: 'rgba(255, 255, 255, 0.3)',
+          },
+          fontWeight: isActive(item.path) ? 600 : 400,
+        }}
+      >
+        {item.text}
+      </Button>
+    );
+
+    if (item.disabled && item.disabledReason) {
+      return (
+        <Tooltip key={item.text} title={item.disabledReason}>
+          <span>{button}</span>
+        </Tooltip>
+      );
+    }
+
+    return button;
+  };
+
   return (
     <AppBar
       position="fixed"
@@ -185,30 +233,7 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
             <Box sx={{ display: 'flex', gap: 0.5 }}>
               {leftNavigationItems
                 .filter((item) => hasPermission(item.permission))
-                .map((item) => (
-                  <Button
-                    key={item.text}
-                    onClick={() => navigate(item.path)}
-                    startIcon={item.icon}
-                    sx={{
-                      color: 'white',
-                      textTransform: 'none',
-                      fontSize: '0.9rem',
-                      px: 2,
-                      py: 1,
-                      borderRadius: 1,
-                      backgroundColor: isActive(item.path) ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
-                      '&:hover': {
-                        backgroundColor: isActive(item.path)
-                          ? 'rgba(255, 255, 255, 0.25)'
-                          : 'rgba(255, 255, 255, 0.1)',
-                      },
-                      fontWeight: isActive(item.path) ? 600 : 400,
-                    }}
-                  >
-                    {item.text}
-                  </Button>
-                ))}
+                .map(renderNavButton)}
             </Box>
 
             {/* Spacer */}
@@ -218,30 +243,7 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
             <Box sx={{ display: 'flex', gap: 0.5, mr: 2 }}>
               {rightNavigationItems
                 .filter((item) => hasPermission(item.permission))
-                .map((item) => (
-                  <Button
-                    key={item.text}
-                    onClick={() => navigate(item.path)}
-                    startIcon={item.icon}
-                    sx={{
-                      color: 'white',
-                      textTransform: 'none',
-                      fontSize: '0.9rem',
-                      px: 2,
-                      py: 1,
-                      borderRadius: 1,
-                      backgroundColor: isActive(item.path) ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
-                      '&:hover': {
-                        backgroundColor: isActive(item.path)
-                          ? 'rgba(255, 255, 255, 0.25)'
-                          : 'rgba(255, 255, 255, 0.1)',
-                      },
-                      fontWeight: isActive(item.path) ? 600 : 400,
-                    }}
-                  >
-                    {item.text}
-                  </Button>
-                ))}
+                .map(renderNavButton)}
             </Box>
           </>
         )}

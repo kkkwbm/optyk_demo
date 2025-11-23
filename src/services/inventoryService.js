@@ -15,6 +15,7 @@ export const inventoryService = {
     if (locationId) {
       return api.get(`/inventory/location/${locationId}`, { params });
     }
+    // If locationId is null, we are fetching all inventory (possibly filtered by locationType in params)
     return api.get('/inventory', { params });
   },
 

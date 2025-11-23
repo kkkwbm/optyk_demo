@@ -93,14 +93,25 @@ function InventoryDashboardPage() {
       type: currentType, // Pass type to API
     };
 
-    dispatch(fetchInventory({
-      locationId: currentLocation?.id || null,
-      params: {
-        ...params,
-        // Inventory API might use different param names, adjusting as needed
-        productType: currentType,
-      }
-    }));
+    // Handle "All Stores" special case
+    if (currentLocation?.id === 'ALL_STORES') {
+      dispatch(fetchInventory({
+        locationId: null,
+        params: {
+          ...params,
+          locationType: 'STORE',
+          productType: currentType,
+        }
+      }));
+    } else {
+      dispatch(fetchInventory({
+        locationId: currentLocation?.id || null,
+        params: {
+          ...params,
+          productType: currentType,
+        }
+      }));
+    }
   }, [dispatch, currentType, pagination.page, pagination.size, currentLocation, isLocationView, searchTerm]);
 
   const handleTabChange = (event, newType) => {
@@ -310,11 +321,23 @@ function InventoryDashboardPage() {
     ];
   };
 
+  const getPageTitle = () => {
+    if (!currentLocation) return "Wszystkie produkty";
+    if (currentLocation.id === 'ALL_STORES') return "Wszystkie salony";
+    return `Magazyn - ${currentLocation.name}`;
+  };
+
+  const getPageSubtitle = () => {
+    if (!currentLocation) return "Przeglądaj produkty ze wszystkich lokalizacji";
+    if (currentLocation.id === 'ALL_STORES') return "Przeglądaj produkty ze wszystkich salonów";
+    return `Zarządzaj produktami w: ${currentLocation.name}`;
+  };
+
   return (
     <Container maxWidth="xl">
       <PageHeader
-        title={currentLocation ? `Magazyn - ${currentLocation.name}` : "Magazyn"}
-        subtitle={currentLocation ? `Zarządzaj produktami w: ${currentLocation.name}` : "Zarządzaj produktami w magazynie"}
+        title={getPageTitle()}
+        subtitle={getPageSubtitle()}
         breadcrumbs={[
           { label: 'Magazyn' },
         ]}

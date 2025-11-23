@@ -114,6 +114,21 @@ export const deactivateLocation = createAsyncThunk(
   }
 );
 
+export const deleteLocation = createAsyncThunk(
+  'locations/deleteLocation',
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await locationService.deleteLocation(id);
+      if (response.data.success) {
+        return id;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to delete location');
+    }
+  }
+);
+
 export const fetchActiveLocations = createAsyncThunk(
   'locations/fetchActiveLocations',
   async (type = null, { rejectWithValue }) => {
@@ -331,6 +346,23 @@ const locationsSlice = createSlice({
         }
       })
       .addCase(deactivateLocation.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Delete Location
+      .addCase(deleteLocation.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteLocation.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = state.items.filter(location => location.id !== action.payload);
+        state.activeLocations = state.activeLocations.filter(location => location.id !== action.payload);
+        if (state.currentLocation?.id === action.payload) {
+          state.currentLocation = null;
+        }
+      })
+      .addCase(deleteLocation.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

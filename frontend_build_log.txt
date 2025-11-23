@@ -1,0 +1,15 @@
+
+> optyk_frontend@0.0.0 build
+> vite build
+
+[36mvite v7.2.2 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mÔťô[39m 1132 modules transformed.
+ÔťŚ Build failed in 2.60s
+error during build:
+Could not resolve "../../../app/api" from "src/features/inventory/pages/AgingInventoryPage.jsx"
+file: C:/Users/Bartosz/Desktop/optyk/optyk_frontend/src/features/inventory/pages/AgingInventoryPage.jsx
+    at getRollupError (file:///C:/Users/Bartosz/Desktop/optyk/optyk_frontend/node_modules/rollup/dist/es/shared/parseAst.js:401:41)
+    at error (file:///C:/Users/Bartosz/Desktop/optyk/optyk_frontend/node_modules/rollup/dist/es/shared/parseAst.js:397:42)
+    at ModuleLoader.handleInvalidResolvedId (file:///C:/Users/Bartosz/Desktop/optyk/optyk_frontend/node_modules/rollup/dist/es/shared/node-entry.js:21576:24)
+    at file:///C:/Users/Bartosz/Desktop/optyk/optyk_frontend/node_modules/rollup/dist/es/shared/node-entry.js:21536:26

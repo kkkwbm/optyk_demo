@@ -156,6 +156,25 @@ export const historyService = {
   getOperationChanges: (id) => {
     return api.get(`/history/${id}/changes`);
   },
+
+  /**
+   * Delete history record
+   * @param {string} id - History entry ID
+   * @returns {Promise} Response with deletion confirmation
+   */
+  deleteHistory: (id) => {
+    return api.delete(`/history/${id}`);
+  },
+
+  /**
+   * Delete all history records (optionally filtered by location)
+   * @param {string} locationId - Optional location ID to filter deletion
+   * @returns {Promise} Response with deletion confirmation
+   */
+  deleteAllHistory: (locationId) => {
+    const params = locationId ? { locationId } : {};
+    return api.delete('/history', { params });
+  },
 };
 
 export default historyService;

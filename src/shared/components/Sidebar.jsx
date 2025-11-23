@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Drawer,
@@ -16,6 +16,8 @@ import {
   Store,
   Glasses,
   Building2,
+  Warehouse,
+  LayoutGrid,
 } from 'lucide-react';
 import {
   fetchActiveLocations,
@@ -23,6 +25,7 @@ import {
   selectCurrentLocation,
   setCurrentLocation,
 } from '../../features/locations/locationsSlice';
+import { LOCATION_TYPES } from '../../constants';
 
 function Sidebar({ drawerWidth, open, onClose, variant }) {
   const dispatch = useDispatch();
@@ -44,135 +47,172 @@ function Sidebar({ drawerWidth, open, onClose, variant }) {
     return currentLocation?.id === locationId;
   };
 
-  const drawerContent = (
-    <Box>
-      {/* Logo/Brand Section */}
-      <Box
+  // Sort locations: Warehouses first, then Stores
+  const sortedLocations = useMemo(() => {
+    if (!activeLocations) return { warehouses: [], stores: [] };
+
+    const warehouses = activeLocations
+      .filter(loc => loc.type === LOCATION_TYPES.WAREHOUSE)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const stores = activeLocations
+      .filter(loc => loc.type === LOCATION_TYPES.STORE)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return { warehouses, stores };
+  }, [activeLocations]);
+
+  const renderLocationItem = (loc) => (
+    <ListItem key={loc.id} disablePadding sx={{ mb: 0.5 }}>
+      <ListItemButton
+        onClick={() => handleLocationClick(loc)}
+        selected={isSelected(loc.id)}
         sx={{
-          p: 2,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 64,
+          borderRadius: 2,
+          '&.Mui-selected': {
+            backgroundColor: 'primary.main',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'primary.dark',
+            },
+            '& .MuiListItemIcon-root': {
+              color: 'white',
+            },
+          },
         }}
       >
-        <Glasses size={32} color="#1976d2" />
-        <Typography
-          variant="h6"
+        <ListItemIcon
           sx={{
-            ml: 1,
-            fontWeight: 600,
-            color: 'primary.main',
+            minWidth: 40,
+            color: isSelected(loc.id) ? 'white' : 'text.secondary',
           }}
         >
-          OptiStore
+          {loc.type === LOCATION_TYPES.WAREHOUSE ? <Warehouse size={20} /> : <Store size={20} />}
+        </ListItemIcon>
+        <ListItemText
+          primary={loc.name}
+          primaryTypographyProps={{
+            fontSize: '0.95rem',
+            fontWeight: isSelected(loc.id) ? 600 : 400,
+          }}
+        />
+      </ListItemButton>
+    </ListItem>
+  );
+  const drawerContent = (
+    <Box>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box
+          sx={{
+            width: 40,
+            height: 40,
+            borderRadius: 1,
+            backgroundColor: 'primary.main',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+          }}
+        >
+          <Glasses size={24} />
+        </Box>
+        <Typography variant="h6" fontWeight="bold" color="primary">
+          Optyk
         </Typography>
       </Box>
 
       <Divider />
 
-      {/* Locations Section */}
-      <Box sx={{ px: 2, py: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, px: 1 }}>
-          <MapPin size={20} color="#666" />
-          <Typography
-            variant="subtitle2"
+      <List sx={{ px: 2, py: 2 }}>
+        {/* All Locations (Everything) */}
+        <ListItem disablePadding sx={{ mb: 0.5 }}>
+          <ListItemButton
+            onClick={() => handleLocationClick(null)}
+            selected={currentLocation === null}
             sx={{
-              ml: 1,
-              fontWeight: 600,
-              color: 'text.secondary',
+              borderRadius: 2,
+              '&.Mui-selected': {
+                backgroundColor: 'primary.main',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'primary.dark',
+                },
+                '& .MuiListItemIcon-root': {
+                  color: 'white',
+                },
+              },
             }}
           >
-            Lokalizacje
-          </Typography>
-        </Box>
-
-        <List sx={{ px: 0 }}>
-          {/* All Stores Option */}
-          <ListItem disablePadding sx={{ mb: 0.5 }}>
-            <ListItemButton
-              onClick={() => handleLocationClick(null)}
-              selected={currentLocation === null}
+            <ListItemIcon
               sx={{
-                borderRadius: 2,
-                '&.Mui-selected': {
-                  backgroundColor: 'primary.main',
-                  color: 'white',
-                  '&:hover': {
-                    backgroundColor: 'primary.dark',
-                  },
-                  '& .MuiListItemIcon-root': {
-                    color: 'white',
-                  },
-                },
+                minWidth: 40,
+                color: currentLocation === null ? 'white' : 'text.secondary',
               }}
             >
-              <ListItemIcon
-                sx={{
-                  minWidth: 40,
-                  color: currentLocation === null ? 'white' : 'text.secondary',
-                }}
-              >
-                <Building2 size={20} />
-              </ListItemIcon>
-              <ListItemText
-                primary="Wszystkie salony"
-                primaryTypographyProps={{
-                  fontSize: '0.95rem',
-                  fontWeight: currentLocation === null ? 600 : 400,
-                }}
-              />
-            </ListItemButton>
-          </ListItem>
+              <LayoutGrid size={20} />
+            </ListItemIcon>
+            <ListItemText
+              primary="Wszystko"
+              primaryTypographyProps={{
+                fontSize: '0.95rem',
+                fontWeight: currentLocation === null ? 600 : 400,
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
 
-          {/* Individual Locations */}
-          {activeLocations && activeLocations.length > 0 ? (
-            activeLocations.map((loc) => (
-              <ListItem key={loc.id} disablePadding sx={{ mb: 0.5 }}>
-                <ListItemButton
-                  onClick={() => handleLocationClick(loc)}
-                  selected={isSelected(loc.id)}
-                  sx={{
-                    borderRadius: 2,
-                    '&.Mui-selected': {
-                      backgroundColor: 'primary.main',
-                      color: 'white',
-                      '&:hover': {
-                        backgroundColor: 'primary.dark',
-                      },
-                      '& .MuiListItemIcon-root': {
-                        color: 'white',
-                      },
-                    },
-                  }}
-                >
-                  <ListItemIcon
-                    sx={{
-                      minWidth: 40,
-                      color: isSelected(loc.id) ? 'white' : 'text.secondary',
-                    }}
-                  >
-                    <Store size={20} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={loc.name}
-                    primaryTypographyProps={{
-                      fontSize: '0.95rem',
-                      fontWeight: isSelected(loc.id) ? 600 : 400,
-                    }}
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))
-          ) : (
-            <Box sx={{ px: 2, py: 3 }}>
-              <Typography variant="body2" color="text.secondary" align="center">
-                Brak lokalizacji
-              </Typography>
-            </Box>
-          )}
-        </List>
-      </Box>
+        {/* Warehouses Section */}
+        {sortedLocations.warehouses.length > 0 && (
+          <>
+            <Typography variant="overline" sx={{ px: 2, mt: 2, mb: 1, display: 'block', color: 'text.secondary' }}>
+              Magazyny
+            </Typography>
+            {sortedLocations.warehouses.map(renderLocationItem)}
+          </>
+        )}
+
+        <Divider sx={{ my: 2 }} />
+
+        {/* All Stores Option */}
+        <ListItem disablePadding sx={{ mb: 0.5 }}>
+          <ListItemButton
+            onClick={() => handleLocationClick({ id: 'ALL_STORES', type: 'ALL_STORES', name: 'Wszystkie salony' })}
+            selected={currentLocation?.id === 'ALL_STORES'}
+            sx={{
+              borderRadius: 2,
+              '&.Mui-selected': {
+                backgroundColor: 'primary.main',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'primary.dark',
+                },
+                '& .MuiListItemIcon-root': {
+                  color: 'white',
+                },
+              },
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: 40,
+                color: currentLocation?.id === 'ALL_STORES' ? 'white' : 'text.secondary',
+              }}
+            >
+              <Building2 size={20} />
+            </ListItemIcon>
+            <ListItemText
+              primary="Wszystkie salony"
+              primaryTypographyProps={{
+                fontSize: '0.95rem',
+                fontWeight: currentLocation?.id === 'ALL_STORES' ? 600 : 400,
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Individual Stores */}
+        {sortedLocations.stores.map(renderLocationItem)}
+      </List>
     </Box>
   );
 

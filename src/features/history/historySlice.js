@@ -207,6 +207,36 @@ export const searchHistory = createAsyncThunk(
   }
 );
 
+export const deleteHistory = createAsyncThunk(
+  'history/deleteHistory',
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await historyService.deleteHistory(id);
+      if (response.data.success) {
+        return id;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to delete history record');
+    }
+  }
+);
+
+export const deleteAllHistory = createAsyncThunk(
+  'history/deleteAllHistory',
+  async (locationId, { rejectWithValue }) => {
+    try {
+      const response = await historyService.deleteAllHistory(locationId);
+      if (response.data.success) {
+        return { locationId, message: response.data.message };
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to delete all history records');
+    }
+  }
+);
+
 // Slice
 const historySlice = createSlice({
   name: 'history',
@@ -401,6 +431,41 @@ const historySlice = createSlice({
         }
       })
       .addCase(searchHistory.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Delete History
+      .addCase(deleteHistory.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteHistory.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = state.items.filter(item => item.id !== action.payload);
+        if (state.pagination.totalElements > 0) {
+          state.pagination.totalElements -= 1;
+        }
+      })
+      .addCase(deleteHistory.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Delete All History
+      .addCase(deleteAllHistory.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteAllHistory.fulfilled, (state) => {
+        state.loading = false;
+        state.items = [];
+        state.pagination = {
+          page: 0,
+          size: 20,
+          totalElements: 0,
+          totalPages: 0,
+        };
+      })
+      .addCase(deleteAllHistory.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

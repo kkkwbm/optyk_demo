@@ -61,6 +61,15 @@ export const locationService = {
   },
 
   /**
+   * Delete location
+   * @param {string} id - Location ID
+   * @returns {Promise} Response with success message
+   */
+  deleteLocation: (id) => {
+    return api.delete(`/locations/${id}`);
+  },
+
+  /**
    * Get active locations only (for dropdowns)
    * @param {string} type - Location type filter (STORE, WAREHOUSE) - optional
    * @returns {Promise} Response with active locations list

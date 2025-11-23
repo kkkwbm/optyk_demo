@@ -28,6 +28,7 @@ import {
   TrendingUp,
   TrendingDown,
   DollarSign,
+  Glasses,
 } from 'lucide-react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { selectUser } from '../../auth/authSlice';
@@ -79,7 +80,12 @@ function DashboardPage() {
 
     const startDate = format(start, 'yyyy-MM-dd');
     const endDate = format(end, 'yyyy-MM-dd');
-    const locationId = currentLocation?.id || undefined;
+
+    // Handle "All Stores" by sending undefined (which becomes null in backend)
+    // If currentLocation is null (Global view), it's also undefined
+    const locationId = (currentLocation?.id === 'ALL_STORES' || !currentLocation)
+      ? undefined
+      : currentLocation.id;
 
     dispatch(fetchDashboardStats({ startDate, endDate, locationId }));
     dispatch(fetchRecentSales({ limit: 5, locationId }));
@@ -139,8 +145,8 @@ function DashboardPage() {
       {/* Main Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         {/* Total Sales */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
+        <Grid item xs={12} sm={6} md={4} lg={2}>
+          <Card sx={{ cursor: 'pointer', height: '100%' }} onClick={() => navigate('/sales')}>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                 <Box
@@ -168,9 +174,9 @@ function DashboardPage() {
           </Card>
         </Grid>
 
-        {/* Total Products */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
+        {/* Number of Sales */}
+        <Grid item xs={12} sm={6} md={4} lg={2}>
+          <Card sx={{ cursor: 'pointer', height: '100%' }} onClick={() => navigate('/sales')}>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                 <Box
@@ -178,37 +184,7 @@ function DashboardPage() {
                     width: 48,
                     height: 48,
                     borderRadius: 2,
-                    bgcolor: 'primary.light',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Package size={24} color="#fff" />
-                </Box>
-                {renderTrend(stats?.inventoryTrend, true)}
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {stats?.totalProducts || 0}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Łącznie produktów
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Sales Count */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 2,
-                    bgcolor: 'info.light',
+                    bgcolor: 'info.main',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -216,21 +192,20 @@ function DashboardPage() {
                 >
                   <ShoppingCart size={24} color="#fff" />
                 </Box>
-                {renderTrend(stats?.salesCountTrend)}
               </Box>
               <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
                 {stats?.salesCount || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Transakcje sprzedaży
+                Liczba sprzedaży
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
         {/* Transfers */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
+        <Grid item xs={12} sm={6} md={4} lg={2}>
+          <Card sx={{ cursor: 'pointer', height: '100%' }} onClick={() => navigate('/inventory/transfers')}>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                 <Box
@@ -248,17 +223,139 @@ function DashboardPage() {
                 </Box>
               </Box>
               <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {stats?.transfersCount || 0}
+                {stats?.activeTransfers || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Transfery
+                Aktywne przesunięcia
               </Typography>
             </CardContent>
           </Card>
         </Grid>
-      </Grid>
+
+        {/* Total Products */}
+        <Grid item xs={12} sm={6} md={4} lg={2}>
+          <Card sx={{ cursor: 'pointer', height: '100%' }} onClick={() => navigate('/inventory')}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 2,
+                    bgcolor: 'primary.main',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Package size={24} color="#fff" />
+                </Box>
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
+                {stats?.totalProducts || 0}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Wszystkie produkty
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Unique Frame Models */}
+        <Grid item xs={12} sm={6} md={4} lg={2}>
+          <Card sx={{ cursor: 'pointer', height: '100%' }} onClick={() => navigate('/inventory/frames/unique')}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 2,
+                    bgcolor: 'secondary.main',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Glasses size={24} color="#fff" />
+                </Box>
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
+                {stats?.uniqueFramesCount || 0}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Unikalne modele opraw
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Inventory Aging */}
+        <Grid item xs={12} sm={6} md={4} lg={2}>
+          <Card sx={{ cursor: 'pointer', height: '100%' }} onClick={() => navigate('/inventory/aging')}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 2,
+                    bgcolor: 'error.main',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Package size={24} color="#fff" />
+                </Box>
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
+                {stats?.inventoryAgingCount || 0}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Zalegający towar (&gt;90 dni)
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid >
 
       <Grid container spacing={3}>
+        {/* Revenue Trends */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Trend przychodów (Dzienny)
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'flex-end', height: 200, gap: 1, overflowX: 'auto', pb: 1 }}>
+              {stats?.revenueTrends && stats.revenueTrends.length > 0 ? (
+                stats.revenueTrends.map((item) => (
+                  <Box key={item.date} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 40, flex: 1 }}>
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: `${Math.max((item.revenue / (Math.max(...stats.revenueTrends.map(i => i.revenue)) || 1)) * 100, 5)}%`,
+                        bgcolor: 'primary.main',
+                        borderRadius: '4px 4px 0 0',
+                        transition: 'height 0.3s',
+                        '&:hover': { bgcolor: 'primary.dark' },
+                      }}
+                      title={`${item.date}: ${formatCurrency(item.revenue)}`}
+                    />
+                    <Typography variant="caption" sx={{ mt: 1, fontSize: '0.7rem', whiteSpace: 'nowrap', transform: 'rotate(-45deg)', transformOrigin: 'left top' }}>
+                      {format(new Date(item.date), 'dd.MM')}
+                    </Typography>
+                  </Box>
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ width: '100%', textAlign: 'center', alignSelf: 'center' }}>
+                  Brak danych o przychodach
+                </Typography>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
+
         {/* Sales by Product Type */}
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3, height: '100%' }}>
@@ -306,49 +403,48 @@ function DashboardPage() {
           </Paper>
         </Grid>
 
-        {/* Top Products */}
+        {/* Sales by Brand */}
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3, height: '100%' }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
-              Najlepsze produkty
+              Sprzedaż wg marki
             </Typography>
-            {stats?.topProducts && stats.topProducts.length > 0 ? (
+            {stats?.salesByBrand && stats.salesByBrand.length > 0 ? (
               <Box>
-                {stats.topProducts.map((item, index) => (
-                  <Box
-                    key={index}
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: 2,
-                      pb: 2,
-                      borderBottom: index < stats.topProducts.length - 1 ? '1px solid' : 'none',
-                      borderColor: 'divider',
-                    }}
-                  >
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {item.productName}
+                {stats.salesByBrand.slice(0, 5).map((item, index) => (
+                  <Box key={index} sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body2">
+                        {item.brand || 'Nieznana marka'}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {item.brand}
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {formatCurrency(item.totalSales)}
                       </Typography>
                     </Box>
-                    <Box sx={{ textAlign: 'right' }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {item.quantity} sprzedane
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {formatCurrency(item.revenue)}
-                      </Typography>
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: 8,
+                        bgcolor: 'grey.200',
+                        borderRadius: 1,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: `${(item.totalSales / (stats.totalSales || 1)) * 100}%`,
+                          height: '100%',
+                          bgcolor: 'secondary.main',
+                          borderRadius: 1,
+                        }}
+                      />
                     </Box>
                   </Box>
                 ))}
               </Box>
             ) : (
               <Typography variant="body2" color="text.secondary">
-                Brak danych produktów za ten okres
+                Brak danych sprzedażowych za ten okres
               </Typography>
             )}
           </Paper>
@@ -415,7 +511,7 @@ function DashboardPage() {
           </Paper>
         </Grid>
       </Grid>
-    </Container>
+    </Container >
   );
 }
 
