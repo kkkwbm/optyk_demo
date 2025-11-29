@@ -26,6 +26,7 @@ import {
   updateBrand,
   activateBrand,
   deactivateBrand,
+  deleteBrand,
   selectBrands,
   selectBrandsLoading,
   selectBrandsPagination,
@@ -100,6 +101,17 @@ function BrandsPage() {
     handleCloseConfirm();
   };
 
+  const handleDeleteBrand = async (brand) => {
+    try {
+      await dispatch(deleteBrand(brand.id)).unwrap();
+      toast.success('Markę usunięto pomyślnie');
+      dispatch(fetchBrands({ page: pagination.page, size: pagination.size }));
+    } catch (error) {
+      toast.error(error || 'Nie udało się usunąć marki');
+    }
+    handleCloseConfirm();
+  };
+
   const handleOpenConfirm = (brand, action) => {
     setConfirmDialog({ open: true, brand, action });
   };
@@ -112,6 +124,8 @@ function BrandsPage() {
     const { brand, action } = confirmDialog;
     if (action === 'toggle') {
       handleToggleStatus(brand);
+    } else if (action === 'delete') {
+      handleDeleteBrand(brand);
     }
   };
 
@@ -289,6 +303,15 @@ function BrandsPage() {
         >
           {selectedBrand?.status === BRAND_STATUS.ACTIVE ? 'Dezaktywuj' : 'Aktywuj'}
         </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleOpenConfirm(selectedBrand, 'delete');
+            handleMenuClose();
+          }}
+          sx={{ color: 'error.main' }}
+        >
+          Usuń
+        </MenuItem>
       </Menu>
 
       {/* Confirm Dialog */}
@@ -301,6 +324,8 @@ function BrandsPage() {
             ? confirmDialog.brand?.status === BRAND_STATUS.ACTIVE
               ? 'Dezaktywuj markę'
               : 'Aktywuj markę'
+            : confirmDialog.action === 'delete'
+            ? 'Usuń markę'
             : 'Potwierdź akcję'
         }
         message={
@@ -308,10 +333,12 @@ function BrandsPage() {
             ? confirmDialog.brand?.status === BRAND_STATUS.ACTIVE
               ? `Czy na pewno chcesz dezaktywować "${confirmDialog.brand?.name}"?`
               : `Czy na pewno chcesz aktywować "${confirmDialog.brand?.name}"?`
+            : confirmDialog.action === 'delete'
+            ? `Czy na pewno chcesz usunąć markę "${confirmDialog.brand?.name}"? Ta operacja jest nieodwracalna.`
             : 'Czy na pewno chcesz kontynuować?'
         }
-        confirmText="Potwierdź"
-        confirmColor={confirmDialog.brand?.status === BRAND_STATUS.ACTIVE ? 'warning' : 'primary'}
+        confirmText={confirmDialog.action === 'delete' ? 'Usuń' : 'Potwierdź'}
+        confirmColor={confirmDialog.action === 'delete' ? 'error' : confirmDialog.brand?.status === BRAND_STATUS.ACTIVE ? 'warning' : 'primary'}
       />
     </Container>
   );

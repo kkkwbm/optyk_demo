@@ -12,7 +12,7 @@ import {
   Grid,
   Typography,
 } from '@mui/material';
-import { Plus, Eye, XCircle, Warehouse, Store } from 'lucide-react';
+import { Plus, XCircle, Warehouse, Store, CheckCircle2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
@@ -23,6 +23,8 @@ import {
   fetchTransfers,
   fetchTransfersByLocation,
   cancelTransfer,
+  confirmTransfer,
+  deleteTransfer,
   selectTransfers,
   selectTransfersLoading,
   selectTransfersPagination,
@@ -46,12 +48,14 @@ function TransfersListPage() {
   const locations = useSelector(selectActiveLocations);
   const currentLocation = useSelector(selectCurrentLocation);
 
-  const [fromLocationFilters, setFromLocationFilters] = useState([]); // Array of selected source locations
-  const [toLocationFilters, setToLocationFilters] = useState([]); // Array of selected destination locations
+  const [fromLocationFilters, setFromLocationFilters] = useState([]);
+  const [toLocationFilters, setToLocationFilters] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [confirmDialog, setConfirmDialog] = useState({ open: false, transfer: null });
+
+  // Dialog state: type can be 'CANCEL', 'ACCEPT', or 'DELETE'
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, transfer: null, type: null });
 
   const pagination = usePagination({
     total: paginationData?.totalElements || 0,
@@ -80,22 +84,46 @@ function TransfersListPage() {
     }
   }, [dispatch, pagination.page, pagination.size, fromLocationFilters, toLocationFilters, statusFilter, startDate, endDate, currentLocation]);
 
-  const handleOpenConfirm = (transfer) => {
-    setConfirmDialog({ open: true, transfer });
+  const handleOpenConfirm = (transfer, type) => {
+    setConfirmDialog({ open: true, transfer, type });
   };
 
   const handleCloseConfirm = () => {
-    setConfirmDialog({ open: false, transfer: null });
+    setConfirmDialog({ open: false, transfer: null, type: null });
   };
 
-  const handleConfirmCancel = async () => {
-    const { transfer } = confirmDialog;
+  const handleConfirmAction = async () => {
+    const { transfer, type } = confirmDialog;
     try {
-      await dispatch(cancelTransfer(transfer.id)).unwrap();
-      toast.success('Transfer anulowany pomyślnie');
-      dispatch(fetchTransfers({ page: pagination.page, size: pagination.size }));
+      if (type === 'CANCEL') {
+        await dispatch(cancelTransfer({ id: transfer.id })).unwrap();
+        toast.success('Transfer anulowany pomyślnie');
+      } else if (type === 'ACCEPT') {
+        await dispatch(confirmTransfer({ id: transfer.id, notes: '' })).unwrap();
+        toast.success('Transfer odebrany pomyślnie');
+      } else if (type === 'DELETE') {
+        await dispatch(deleteTransfer(transfer.id)).unwrap();
+        toast.success('Transfer usunięty pomyślnie');
+      }
+
+      // Refresh list
+      const params = {
+        page: pagination.page,
+        size: pagination.size,
+        fromLocationIds: fromLocationFilters.length > 0 ? fromLocationFilters.join(',') : undefined,
+        toLocationIds: toLocationFilters.length > 0 ? toLocationFilters.join(',') : undefined,
+        status: statusFilter || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      };
+
+      if (currentLocation) {
+        dispatch(fetchTransfersByLocation({ locationId: currentLocation.id, params }));
+      } else {
+        dispatch(fetchTransfers(params));
+      }
     } catch (error) {
-      toast.error(error || 'Nie udało się anulować transferu');
+      toast.error(error || 'Wystąpił błąd podczas przetwarzania transferu');
     }
     handleCloseConfirm();
   };
@@ -132,105 +160,135 @@ function TransfersListPage() {
     );
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case TRANSFER_STATUS.PENDING:
-        return 'warning';
-      case TRANSFER_STATUS.IN_TRANSIT:
-        return 'info';
-      case TRANSFER_STATUS.COMPLETED:
-        return 'success';
-      case TRANSFER_STATUS.CANCELLED:
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
   const columns = [
     {
       id: 'transferNumber',
       label: 'Transfer #',
       sortable: true,
-      render: (row) => `#${row.transferNumber || row.id.slice(0, 8)}`,
+      render: (_, row) => `#${row.transferNumber || row.id.slice(0, 8)}`,
     },
     {
       id: 'date',
       label: 'Data',
       sortable: true,
-      render: (row) => format(new Date(row.createdAt), DATE_FORMATS.DISPLAY_WITH_TIME),
+      render: (_, row) => format(new Date(row.createdAt), DATE_FORMATS.DISPLAY_WITH_TIME),
     },
     {
       id: 'from',
       label: 'Z',
       sortable: true,
-      render: (row) => row.fromLocation?.name || '-',
+      render: (_, row) => row.fromLocation?.name || '-',
     },
     {
       id: 'to',
       label: 'Do',
       sortable: true,
-      render: (row) => row.toLocation?.name || '-',
+      render: (_, row) => row.toLocation?.name || '-',
     },
     {
       id: 'itemsCount',
       label: 'Produkty',
       sortable: false,
-      render: (row) => row.items?.length || 0,
+      render: (_, row) => row.items?.length || 0,
     },
     {
       id: 'totalQuantity',
       label: 'Ilość',
       sortable: false,
-      render: (row) => row.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
+      render: (_, row) => row.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
     },
     {
       id: 'createdBy',
       label: 'Utworzony przez',
       sortable: false,
-      render: (row) => `${row.user?.firstName || ''} ${row.user?.lastName || ''}`.trim() || '-',
+      render: (_, row) => `${row.user?.firstName || ''} ${row.user?.lastName || ''}`.trim() || '-',
     },
     {
       id: 'status',
       label: 'Status',
       sortable: true,
-      render: (row) => <TransferStatusChip status={row.status} />,
+      render: (_, row) => <TransferStatusChip status={row.status} />,
     },
     {
       id: 'actions',
       label: 'Akcje',
       sortable: false,
-      render: (row) => (
+      render: (_, row) => (
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            size="small"
-            variant="text"
-            startIcon={<Eye size={14} />}
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/transfers/${row.id}`);
-            }}
-          >
-            Wyświetl
-          </Button>
           {(row.status === TRANSFER_STATUS.PENDING || row.status === TRANSFER_STATUS.IN_TRANSIT) && (
+            <>
+              <Button
+                size="small"
+                variant="text"
+                color="success"
+                startIcon={<CheckCircle2 size={14} />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenConfirm(row, 'ACCEPT');
+                }}
+              >
+                Odbierz
+              </Button>
+              <Button
+                size="small"
+                variant="text"
+                color="error"
+                startIcon={<XCircle size={14} />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenConfirm(row, 'CANCEL');
+                }}
+              >
+                Anuluj
+              </Button>
+            </>
+          )}
+          {(row.status === TRANSFER_STATUS.CANCELLED || row.status === TRANSFER_STATUS.REJECTED) && (
             <Button
               size="small"
               variant="text"
               color="error"
-              startIcon={<XCircle size={14} />}
+              startIcon={<Trash2 size={14} />}
               onClick={(e) => {
                 e.stopPropagation();
-                handleOpenConfirm(row);
+                handleOpenConfirm(row, 'DELETE');
               }}
             >
-              Anuluj
+              Usuń
             </Button>
           )}
         </Box>
       ),
     },
   ];
+
+  const getDialogTitle = () => {
+    if (confirmDialog.type === 'ACCEPT') return 'Odbierz transfer';
+    if (confirmDialog.type === 'DELETE') return 'Usuń transfer';
+    return 'Anuluj transfer';
+  };
+
+  const getDialogMessage = () => {
+    const transferNum = confirmDialog.transfer?.transferNumber || confirmDialog.transfer?.id.slice(0, 8);
+    if (confirmDialog.type === 'ACCEPT') {
+      return `Czy na pewno chcesz odebrać transfer #${transferNum}? Spowoduje to zaktualizowanie stanów magazynowych w lokalizacji docelowej.`;
+    }
+    if (confirmDialog.type === 'DELETE') {
+      return `Czy na pewno chcesz usunąć transfer #${transferNum}? Ta operacja jest NIEODWRACALNA i trwale usunie transfer z systemu.`;
+    }
+    return `Czy na pewno chcesz anulować transfer #${transferNum}? Ta operacja nie może zostać cofnięta.`;
+  };
+
+  const getConfirmText = () => {
+    if (confirmDialog.type === 'ACCEPT') return 'Odbierz transfer';
+    if (confirmDialog.type === 'DELETE') return 'Usuń';
+    return 'Anuluj transfer';
+  };
+
+  const getConfirmColor = () => {
+    if (confirmDialog.type === 'ACCEPT') return 'success';
+    return 'error';
+  };
 
   return (
     <Container maxWidth="xl">
@@ -366,11 +424,11 @@ function TransfersListPage() {
       <ConfirmDialog
         open={confirmDialog.open}
         onClose={handleCloseConfirm}
-        onConfirm={handleConfirmCancel}
-        title="Anuluj transfer"
-        message={`Czy na pewno chcesz anulować transfer #${confirmDialog.transfer?.transferNumber || confirmDialog.transfer?.id.slice(0, 8)}? Ta operacja nie może zostać cofnięta.`}
-        confirmText="Anuluj transfer"
-        confirmColor="error"
+        onConfirm={handleConfirmAction}
+        title={getDialogTitle()}
+        message={getDialogMessage()}
+        confirmText={getConfirmText()}
+        confirmColor={getConfirmColor()}
       />
     </Container>
   );

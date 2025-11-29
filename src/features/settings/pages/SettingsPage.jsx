@@ -30,7 +30,7 @@ import {
   useTheme,
   alpha,
 } from '@mui/material';
-import { Settings, Moon, Sun, MapPin, Plus, Trash2, User, Shield, Mail, Phone } from 'lucide-react';
+import { Settings, Moon, Sun, MapPin, Plus, Trash2, User, Shield, Mail, Phone, Edit } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
@@ -38,7 +38,7 @@ import FormField from '../../../shared/components/FormField';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
 import { selectTheme, setTheme } from '../../../app/uiSlice';
 import { selectUser } from '../../auth/authSlice';
-import { createLocation, deleteLocation, fetchActiveLocations, selectActiveLocations } from '../../locations/locationsSlice';
+import { createLocation, deleteLocation, fetchActiveLocations, selectActiveLocations, updateLocation } from '../../locations/locationsSlice';
 import { LOCATION_TYPES, LOCATION_TYPE_LABELS, VALIDATION } from '../../../constants';
 import userService from '../../../services/userService';
 
@@ -51,6 +51,7 @@ function SettingsPage() {
   const locations = useSelector(selectActiveLocations);
 
   const [openLocationDialog, setOpenLocationDialog] = useState(false);
+  const [editingLocation, setEditingLocation] = useState(null);
   const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, location: null });
 
@@ -84,22 +85,43 @@ function SettingsPage() {
   };
 
   const handleOpenLocationDialog = () => {
+    setEditingLocation(null);
+    setOpenLocationDialog(true);
+  };
+
+  const handleOpenEditDialog = (location) => {
+    setEditingLocation(location);
+    reset({
+      name: location.name,
+      type: location.type,
+      address: location.address,
+      city: location.city,
+      postalCode: location.postalCode,
+      phone: location.phone || '',
+      email: location.email || '',
+    });
     setOpenLocationDialog(true);
   };
 
   const handleCloseLocationDialog = () => {
     setOpenLocationDialog(false);
+    setEditingLocation(null);
     reset();
   };
 
   const onSubmitLocation = async (data) => {
     try {
-      await dispatch(createLocation(data)).unwrap();
-      toast.success('Lokalizacja została utworzona');
+      if (editingLocation) {
+        await dispatch(updateLocation({ id: editingLocation.id, data })).unwrap();
+        toast.success('Lokalizacja została zaktualizowana');
+      } else {
+        await dispatch(createLocation(data)).unwrap();
+        toast.success('Lokalizacja została utworzona');
+      }
       handleCloseLocationDialog();
       dispatch(fetchActiveLocations());
     } catch (error) {
-      toast.error(error || 'Nie udało się utworzyć lokalizacji');
+      toast.error(error || `Nie udało się ${editingLocation ? 'zaktualizować' : 'utworzyć'} lokalizacji`);
     }
   };
 
@@ -349,14 +371,24 @@ function SettingsPage() {
                                 </Box>
                               )}
                             </Box>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => handleOpenDeleteConfirm(location)}
-                              sx={{ opacity: 0.7, '&:hover': { opacity: 1, bgcolor: 'error.lighter' } }}
-                            >
-                              <Trash2 size={18} />
-                            </IconButton>
+                            <Box sx={{ display: 'flex', gap: 0.5 }}>
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => handleOpenEditDialog(location)}
+                                sx={{ opacity: 0.7, '&:hover': { opacity: 1, bgcolor: 'primary.lighter' } }}
+                              >
+                                <Edit size={18} />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleOpenDeleteConfirm(location)}
+                                sx={{ opacity: 0.7, '&:hover': { opacity: 1, bgcolor: 'error.lighter' } }}
+                              >
+                                <Trash2 size={18} />
+                              </IconButton>
+                            </Box>
                           </Box>
                         </CardContent>
                       </Card>
@@ -378,7 +410,7 @@ function SettingsPage() {
         </Grid>
       </Grid>
 
-      {/* Create Location Dialog */}
+      {/* Create/Edit Location Dialog */}
       <Dialog
         open={openLocationDialog}
         onClose={handleCloseLocationDialog}
@@ -388,7 +420,9 @@ function SettingsPage() {
           sx: { borderRadius: 2 }
         }}
       >
-        <DialogTitle sx={{ pb: 1 }}>Dodaj nową lokalizację</DialogTitle>
+        <DialogTitle sx={{ pb: 1 }}>
+          {editingLocation ? 'Edytuj lokalizację' : 'Dodaj nową lokalizację'}
+        </DialogTitle>
         <Divider />
         <form onSubmit={handleSubmit(onSubmitLocation)}>
           <DialogContent sx={{ pt: 3 }}>
@@ -506,7 +540,7 @@ function SettingsPage() {
           <DialogActions sx={{ p: 2.5 }}>
             <Button onClick={handleCloseLocationDialog} color="inherit">Anuluj</Button>
             <Button type="submit" variant="contained">
-              Utwórz lokalizację
+              {editingLocation ? 'Zapisz zmiany' : 'Utwórz lokalizację'}
             </Button>
           </DialogActions>
         </form>

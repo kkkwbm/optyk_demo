@@ -239,6 +239,21 @@ export const searchTransfers = createAsyncThunk(
   }
 );
 
+export const deleteTransfer = createAsyncThunk(
+  'transfers/deleteTransfer',
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await transferService.deleteTransfer(id);
+      if (response.data.success) {
+        return id;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to delete transfer');
+    }
+  }
+);
+
 // Slice
 const transfersSlice = createSlice({
   name: 'transfers',
@@ -491,6 +506,23 @@ const transfersSlice = createSlice({
         }
       })
       .addCase(searchTransfers.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Delete Transfer
+      .addCase(deleteTransfer.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteTransfer.fulfilled, (state, action) => {
+        state.loading = false;
+        // Remove from list
+        state.items = state.items.filter(t => t.id !== action.payload);
+        // Remove from incoming/outgoing transfers
+        state.incomingTransfers = state.incomingTransfers.filter(t => t.id !== action.payload);
+        state.outgoingTransfers = state.outgoingTransfers.filter(t => t.id !== action.payload);
+      })
+      .addCase(deleteTransfer.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

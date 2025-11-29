@@ -261,6 +261,16 @@ function HistoryListPage() {
       render: (value, row) => row.location?.name || '-',
     },
     {
+      id: 'reason',
+      label: 'Opis',
+      sortable: false,
+      render: (value, row) => (
+        <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {row.reason || '-'}
+        </Typography>
+      ),
+    },
+    {
       id: 'actions',
       label: 'Akcje',
       sortable: false,

@@ -111,6 +111,21 @@ export const deactivateBrand = createAsyncThunk(
   }
 );
 
+export const deleteBrand = createAsyncThunk(
+  'brands/deleteBrand',
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await brandService.deleteBrand(id);
+      if (response.data.success || response.status === 204) {
+        return id;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to delete brand');
+    }
+  }
+);
+
 export const fetchActiveBrands = createAsyncThunk(
   'brands/fetchActiveBrands',
   async (_, { rejectWithValue }) => {
@@ -292,6 +307,23 @@ const brandsSlice = createSlice({
         }
       })
       .addCase(deactivateBrand.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Delete Brand
+      .addCase(deleteBrand.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteBrand.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = state.items.filter(brand => brand.id !== action.payload);
+        state.activeBrands = state.activeBrands.filter(brand => brand.id !== action.payload);
+        if (state.currentBrand?.id === action.payload) {
+          state.currentBrand = null;
+        }
+      })
+      .addCase(deleteBrand.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

@@ -28,7 +28,7 @@ import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import FormField from '../../../shared/components/FormField';
 import { createSale } from '../salesSlice';
-import { fetchProducts, selectProducts } from '../../products/productsSlice';
+import { fetchAllProducts, selectProducts } from '../../products/productsSlice';
 import { fetchActiveLocations, selectActiveLocations, selectCurrentLocation } from '../../locations/locationsSlice';
 import { fetchInventoryByProductAndLocation } from '../../inventory/inventorySlice';
 import {
@@ -59,7 +59,7 @@ function CreateSalePage() {
   });
 
   useEffect(() => {
-    dispatch(fetchProducts({ page: 0, size: 1000 }));
+    dispatch(fetchAllProducts({ page: 0, size: 1000 }));
     dispatch(fetchActiveLocations());
   }, [dispatch]);
 
@@ -227,14 +227,14 @@ function CreateSalePage() {
         <Grid container spacing={3}>
           {/* Lewa kolumna - Wybór produktu */}
           <Grid item xs={12} lg={8}>
-            <Paper sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
+            <Paper sx={{ p: 4, mb: 3, minHeight: '160px' }}>
+              <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
                 Informacje sprzedaży
               </Typography>
 
-              <Grid container spacing={2}>
+              <Grid container spacing={3}>
                 {/* Selektor lokalizacji */}
-                <Grid item xs={12}>
+                <Grid item xs={12} md={8} lg={6}>
                   <Controller
                     name="locationId"
                     control={control}
@@ -251,6 +251,7 @@ function CreateSalePage() {
                           setCart([]);
                         }}
                         getOptionLabel={(option) => option.label || ''}
+                        sx={{ width: '300%' }}
                         renderInput={(params) => (
                           <TextField
                             {...params}
@@ -258,6 +259,15 @@ function CreateSalePage() {
                             required
                             error={!!error}
                             helperText={error?.message}
+                            size="large"
+                            sx={{
+                              '& .MuiInputBase-root': {
+                                fontSize: '1.1rem',
+                              },
+                              '& .MuiInputLabel-root': {
+                                fontSize: '1.1rem',
+                              },
+                            }}
                           />
                         )}
                       />
@@ -267,16 +277,20 @@ function CreateSalePage() {
               </Grid>
             </Paper>
 
-            {selectedLocation && (
-              <>
-                <Paper sx={{ p: 3, mb: 3 }}>
-                  <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                    <ShoppingCart size={20} style={{ marginRight: 8 }} />
-                    Dodaj produkty
-                  </Typography>
+            <Paper sx={{ p: 4, mb: 3 }}>
+              <Typography variant="h5" sx={{ mb: 3, fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                <ShoppingCart size={24} style={{ marginRight: 8 }} />
+                Dodaj produkty
+              </Typography>
 
+              {!selectedLocation ? (
+                <Alert severity="info">
+                  Proszę najpierw wybrać lokalizację, aby dodać produkty do sprzedaży.
+                </Alert>
+              ) : (
+                <>
                   <Grid container spacing={2}>
-                    <Grid item xs={12} md={5}>
+                    <Grid item xs={12} md={7}>
                       <Autocomplete
                         options={productOptions}
                         value={
@@ -290,36 +304,54 @@ function CreateSalePage() {
                           setPrice(newValue?.product?.sellingPrice?.toString() || '');
                         }}
                         getOptionLabel={(option) => option.label || ''}
-                        renderInput={(params) => <TextField {...params} label="Wybierz produkt" />}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={2}>
-                      <TextField
-                        label="Ilość"
-                        type="number"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
                         fullWidth
-                        inputProps={{ min: 1 }}
-                        helperText={
-                          availableStock !== null ? `Dostępne: ${availableStock}` : undefined
-                        }
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Wybierz produkt"
+                            sx={{
+                              '& .MuiInputBase-root': {
+                                fontSize: '1rem',
+                              },
+                              '& .MuiInputLabel-root': {
+                                fontSize: '1rem',
+                              },
+                            }}
+                          />
+                        )}
                       />
                     </Grid>
 
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        label="Cena"
-                        type="number"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        fullWidth
-                        inputProps={{ min: 0, step: 0.01 }}
-                      />
+                    <Grid item xs={4} md={1.5}>
+                      <Box sx={{ width: '100%' }}>
+                        <TextField
+                          label="Ilość"
+                          type="number"
+                          value={quantity}
+                          onChange={(e) => setQuantity(e.target.value)}
+                          fullWidth
+                          inputProps={{ min: 1 }}
+                          helperText={
+                            availableStock !== null ? `Dostępne: ${availableStock}` : undefined
+                          }
+                        />
+                      </Box>
                     </Grid>
 
-                    <Grid item xs={12} md={2}>
+                    <Grid item xs={4} md={1.5}>
+                      <Box sx={{ width: '100%' }}>
+                        <TextField
+                          label="Cena"
+                          type="number"
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          fullWidth
+                          inputProps={{ min: 0, step: 0.01 }}
+                        />
+                      </Box>
+                    </Grid>
+
+                    <Grid item xs={4} md={2}>
                       <Button
                         variant="contained"
                         startIcon={<Plus size={16} />}
@@ -337,92 +369,92 @@ function CreateSalePage() {
                       Ten produkt jest niedostępny na wybranej lokalizacji
                     </Alert>
                   )}
-                </Paper>
+                </>
+              )}
+            </Paper>
 
-                {/* Tabela koszyka */}
-                <Paper sx={{ p: 3 }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    Koszyk ({cart.length} produktów)
+            {/* Tabela koszyka */}
+            <Paper sx={{ p: 4 }}>
+              <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
+                Koszyk ({cart.length} produktów)
+              </Typography>
+
+              {cart.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    Brak produktów w koszyku. Dodaj produkty powyżej.
                   </Typography>
-
-                  {cart.length === 0 ? (
-                    <Box sx={{ textAlign: 'center', py: 4 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Brak produktów w koszyku. Dodaj produkty powyżej.
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <TableContainer>
-                      <Table>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Produkt</TableCell>
-                            <TableCell>Marka</TableCell>
-                            <TableCell align="right">Ilość</TableCell>
-                            <TableCell align="right">Cena</TableCell>
-                            <TableCell align="right">Suma</TableCell>
-                            <TableCell align="right">Akcje</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {cart.map((item) => (
-                            <TableRow key={item.product.id}>
-                              <TableCell>
-                                {item.product.model || item.product.name || '-'}
-                              </TableCell>
-                              <TableCell>{item.product.brand?.name || '-'}</TableCell>
-                              <TableCell align="right">
-                                <TextField
-                                  type="number"
-                                  value={item.quantity}
-                                  onChange={(e) =>
-                                    handleQuantityChange(item.product.id, e.target.value)
-                                  }
-                                  size="small"
-                                  inputProps={{ min: 1 }}
-                                  sx={{ width: 80 }}
-                                />
-                              </TableCell>
-                              <TableCell align="right">${item.unitPrice.toFixed(2)}</TableCell>
-                              <TableCell align="right">
-                                <strong>${item.subtotal.toFixed(2)}</strong>
-                              </TableCell>
-                              <TableCell align="right">
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={() => handleRemoveFromCart(item.product.id)}
-                                >
-                                  <Trash2 size={16} />
-                                </IconButton>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </Paper>
-              </>
-            )}
+                </Box>
+              ) : (
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Produkt</TableCell>
+                        <TableCell>Marka</TableCell>
+                        <TableCell align="right">Ilość</TableCell>
+                        <TableCell align="right">Cena</TableCell>
+                        <TableCell align="right">Suma</TableCell>
+                        <TableCell align="right">Akcje</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {cart.map((item) => (
+                        <TableRow key={item.product.id}>
+                          <TableCell>
+                            {item.product.model || item.product.name || '-'}
+                          </TableCell>
+                          <TableCell>{item.product.brand?.name || '-'}</TableCell>
+                          <TableCell align="right">
+                            <TextField
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) =>
+                                handleQuantityChange(item.product.id, e.target.value)
+                              }
+                              size="small"
+                              inputProps={{ min: 1 }}
+                              sx={{ width: 80 }}
+                            />
+                          </TableCell>
+                          <TableCell align="right">${item.unitPrice.toFixed(2)}</TableCell>
+                          <TableCell align="right">
+                            <strong>${item.subtotal.toFixed(2)}</strong>
+                          </TableCell>
+                          <TableCell align="right">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleRemoveFromCart(item.product.id)}
+                            >
+                              <Trash2 size={16} />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Paper>
           </Grid>
 
           {/* Prawa kolumna - Podsumowanie */}
           <Grid item xs={12} lg={4}>
             <Card sx={{ position: 'sticky', top: 16 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 3 }}>
+              <CardContent sx={{ p: 4 }}>
+                <Typography variant="h5" sx={{ mb: 4, fontWeight: 600 }}>
                   Podsumowanie sprzedaży
                 </Typography>
 
-                <Box sx={{ mb: 3 }}>
+                <Box sx={{ mb: 4 }}>
                   <FormField
                     name="notes"
                     control={control}
                     label="Notatki (Opcjonalne)"
                     type="text"
                     multiline
-                    rows={3}
+                    rows={4}
                     rules={{
                       maxLength: {
                         value: VALIDATION.NOTES_MAX_LENGTH,
@@ -432,31 +464,35 @@ function CreateSalePage() {
                   />
                 </Box>
 
-                <Divider sx={{ my: 2 }} />
+                <Divider sx={{ my: 3 }} />
 
-                <Box sx={{ mb: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
+                <Box sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography variant="body1" color="text.secondary">
                       Produkty:
                     </Typography>
-                    <Typography variant="body2">{cart.length}</Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      {cart.length}
+                    </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography variant="body1" color="text.secondary">
                       Łączna ilość:
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
                       {cart.reduce((sum, item) => sum + item.quantity, 0)}
                     </Typography>
                   </Box>
                 </Box>
 
-                <Divider sx={{ my: 2 }} />
+                <Divider sx={{ my: 3 }} />
 
-                <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="h6">Suma:</Typography>
-                    <Typography variant="h6" color="primary">
+                <Box sx={{ mb: 4 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                      Suma:
+                    </Typography>
+                    <Typography variant="h4" color="primary" sx={{ fontWeight: 700 }}>
                       ${calculateTotal().toFixed(2)}
                     </Typography>
                   </Box>
@@ -468,6 +504,11 @@ function CreateSalePage() {
                   fullWidth
                   size="large"
                   disabled={cart.length === 0 || !selectedLocation}
+                  sx={{
+                    py: 1.5,
+                    fontSize: '1.1rem',
+                    fontWeight: 600,
+                  }}
                 >
                   Zakończ sprzedaż
                 </Button>

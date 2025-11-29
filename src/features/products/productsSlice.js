@@ -144,6 +144,21 @@ export const fetchProductInventory = createAsyncThunk(
   }
 );
 
+export const fetchAllProducts = createAsyncThunk(
+  'products/fetchAll',
+  async (params = {}, { rejectWithValue }) => {
+    try {
+      const response = await productService.getAllProducts(params);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch all products');
+    }
+  }
+);
+
 export const searchAllProducts = createAsyncThunk(
   'products/searchAll',
   async ({ query, params }, { rejectWithValue }) => {
@@ -304,6 +319,27 @@ const productsSlice = createSlice({
         state.loading = false;
       })
       .addCase(fetchProductInventory.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Fetch All Products
+      .addCase(fetchAllProducts.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAllProducts.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload.content || action.payload;
+        if (action.payload.page !== undefined) {
+          state.pagination = {
+            page: action.payload.page,
+            size: action.payload.size,
+            totalElements: action.payload.totalElements,
+            totalPages: action.payload.totalPages,
+          };
+        }
+      })
+      .addCase(fetchAllProducts.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

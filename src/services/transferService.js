@@ -183,6 +183,16 @@ export const transferService = {
   },
 
   /**
+   * Delete transfer permanently
+   * Only allowed for CANCELLED or REJECTED transfers
+   * @param {string} id - Transfer ID
+   * @returns {Promise} Response with success message
+   */
+  deleteTransfer: (id) => {
+    return api.delete(`/transfers/${id}`);
+  },
+
+  /**
    * Get transfers by date range
    * @param {string} startDate - Start date (ISO format)
    * @param {string} endDate - End date (ISO format)

@@ -18,23 +18,24 @@ import {
   TableHead,
   TableRow,
   Alert,
+  Divider,
+  Stack,
 } from '@mui/material';
-import { ArrowLeft, Plus, Trash2, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import FormField from '../../../shared/components/FormField';
 import { createTransfer } from '../transfersSlice';
-import { fetchProducts, selectProducts } from '../../products/productsSlice';
 import { fetchActiveLocations, selectActiveLocations } from '../../locations/locationsSlice';
-import { fetchInventoryByProductAndLocation } from '../../inventory/inventorySlice';
+import { fetchInventory, selectInventoryItems, clearInventory } from '../../inventory/inventorySlice';
 import { VALIDATION } from '../../../constants';
 
 function CreateTransferPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const products = useSelector(selectProducts);
+  const inventoryItems = useSelector(selectInventoryItems);
   const locations = useSelector(selectActiveLocations);
 
   const [selectedFromLocation, setSelectedFromLocation] = useState(null);
@@ -54,30 +55,37 @@ function CreateTransferPage() {
   });
 
   const fromLocationId = watch('fromLocationId');
+  const toLocationId = watch('toLocationId');
 
   useEffect(() => {
-    dispatch(fetchProducts({ page: 0, size: 1000 }));
     dispatch(fetchActiveLocations());
+    return () => {
+      dispatch(clearInventory());
+    };
   }, [dispatch]);
 
+  // Fetch inventory when source location changes
   useEffect(() => {
-    if (selectedProduct && selectedFromLocation) {
-      dispatch(
-        fetchInventoryByProductAndLocation({
-          productId: selectedProduct.id,
-          locationId: selectedFromLocation.id,
-        })
-      ).then((result) => {
-        if (result.payload) {
-          setAvailableStock(result.payload.availableQuantity);
-        } else {
-          setAvailableStock(0);
-        }
-      });
+    if (selectedFromLocation) {
+      dispatch(fetchInventory({ locationId: selectedFromLocation.id, params: { size: 1000 } }));
+    } else {
+      dispatch(clearInventory());
+    }
+  }, [dispatch, selectedFromLocation]);
+
+  // Update available stock when product is selected
+  useEffect(() => {
+    if (selectedProduct) {
+      const item = inventoryItems.find(i => i.product.id === selectedProduct.id);
+      if (item) {
+        setAvailableStock(item.quantity);
+      } else {
+        setAvailableStock(0);
+      }
     } else {
       setAvailableStock(null);
     }
-  }, [dispatch, selectedProduct, selectedFromLocation]);
+  }, [selectedProduct, inventoryItems]);
 
   const handleAddItem = () => {
     if (!selectedProduct) {
@@ -171,15 +179,19 @@ function CreateTransferPage() {
     }
   };
 
-  const productOptions = products.map((product) => ({
-    id: product.id,
-    label: `${product.brand?.name || ''} ${product.model || product.name || ''}`.trim(),
-    product: product,
+  // Map inventory items to options
+  const productOptions = inventoryItems.map((item) => ({
+    id: item.product.id,
+    label: `${item.product.brand?.name || ''} ${item.product.model || item.product.name || ''}`,
+    product: item.product,
+    quantity: item.quantity,
+    brand: item.product.brand?.name
   }));
 
   const locationOptions = locations.map((location) => ({
     id: location.id,
     label: location.name,
+    type: location.type
   }));
 
   const filteredToLocations = locationOptions.filter(
@@ -187,7 +199,7 @@ function CreateTransferPage() {
   );
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth={false} sx={{ px: { xs: 2, sm: 4, md: 6, lg: 8 } }}>
       <PageHeader
         title="Nowy transfer"
         subtitle="Transferuj towar między lokalizacjami"
@@ -206,92 +218,134 @@ function CreateTransferPage() {
         ]}
       />
 
-      <Paper sx={{ p: 3 }}>
+      <Paper sx={{ p: 3, mx: 'auto', maxWidth: '100%' }}>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <Grid container spacing={3}>
-            {/* Wybór lokalizacji */}
-            <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
+          <Stack spacing={3}>
+
+            {/* SECTION 1: Transfer Route */}
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 600, mb: 2 }}>
                 Trasa transferu
               </Typography>
-            </Grid>
-
-            <Grid item xs={12} md={5}>
-              <Controller
-                name="fromLocationId"
-                control={control}
-                rules={{ required: 'Lokalizacja źródłowa jest wymagana' }}
-                render={({ field, fieldState: { error } }) => (
-                  <Autocomplete
-                    {...field}
-                    options={locationOptions}
-                    value={locationOptions.find((opt) => opt.id === field.value) || null}
-                    onChange={(_, newValue) => {
-                      field.onChange(newValue?.id || '');
-                      const location = locations.find((l) => l.id === newValue?.id);
-                      setSelectedFromLocation(location || null);
-                      setTransferItems([]);
-                    }}
-                    getOptionLabel={(option) => option.label || ''}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Lokalizacja źródłowa"
-                        required
-                        error={!!error}
-                        helperText={error?.message}
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Controller
+                    name="fromLocationId"
+                    control={control}
+                    rules={{ required: 'Lokalizacja źródłowa jest wymagana' }}
+                    render={({ field, fieldState: { error } }) => (
+                      <Autocomplete
+                        {...field}
+                        fullWidth
+                        disableClearable
+                        options={locationOptions}
+                        value={locationOptions.find((opt) => opt.id === field.value) || null}
+                        onChange={(_, newValue) => {
+                          field.onChange(newValue?.id || '');
+                          if (newValue) {
+                            const location = locations.find((l) => l.id === newValue.id);
+                            setSelectedFromLocation(location || null);
+                          } else {
+                            setSelectedFromLocation(null);
+                          }
+                          setTransferItems([]);
+                          setSelectedProduct(null);
+                        }}
+                        getOptionLabel={(option) => option.label || ''}
+                        sx={{ width: '100%', minWidth: { md: '600px' } }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Lokalizacja źródłowa"
+                            required
+                            error={!!error}
+                            helperText={error?.message}
+                            fullWidth
+                            sx={{
+                              '& .MuiInputBase-root': {
+                                fontSize: '1rem',
+                                minHeight: '50px',
+                                padding: '8px 12px',
+                                width: '100%'
+                              },
+                              '& .MuiInputLabel-root': {
+                                fontSize: '1rem',
+                              },
+                              '& .MuiInputBase-input': {
+                                minWidth: '200px'
+                              }
+                            }}
+                          />
+                        )}
                       />
                     )}
                   />
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={2} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ArrowRight size={32} />
-            </Grid>
-
-            <Grid item xs={12} md={5}>
-              <Controller
-                name="toLocationId"
-                control={control}
-                rules={{ required: 'Lokalizacja docelowa jest wymagana' }}
-                render={({ field, fieldState: { error } }) => (
-                  <Autocomplete
-                    {...field}
-                    options={filteredToLocations}
-                    value={filteredToLocations.find((opt) => opt.id === field.value) || null}
-                    onChange={(_, newValue) => {
-                      field.onChange(newValue?.id || '');
-                      const location = locations.find((l) => l.id === newValue?.id);
-                      setSelectedToLocation(location || null);
-                    }}
-                    getOptionLabel={(option) => option.label || ''}
-                    disabled={!selectedFromLocation}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Lokalizacja docelowa"
-                        required
-                        error={!!error}
-                        helperText={error?.message || (!selectedFromLocation ? 'Najpierw wybierz lokalizację źródłową' : '')}
-                      />
-                    )}
-                  />
-                )}
-              />
-            </Grid>
-
-            {/* Sekcja dodawania produktów */}
-            {selectedFromLocation && selectedToLocation && (
-              <>
-                <Grid item xs={12}>
-                  <Typography variant="h6" sx={{ mb: 2, mt: 2 }}>
-                    Dodaj produkty do transferu
-                  </Typography>
                 </Grid>
 
                 <Grid item xs={12} md={6}>
+                  <Controller
+                    name="toLocationId"
+                    control={control}
+                    rules={{ required: 'Lokalizacja docelowa jest wymagana' }}
+                    render={({ field, fieldState: { error } }) => (
+                      <Autocomplete
+                        {...field}
+                        fullWidth
+                        disableClearable
+                        options={filteredToLocations}
+                        value={filteredToLocations.find((opt) => opt.id === field.value) || null}
+                        onChange={(_, newValue) => {
+                          field.onChange(newValue?.id || '');
+                          if (newValue) {
+                            const location = locations.find((l) => l.id === newValue.id);
+                            setSelectedToLocation(location || null);
+                          } else {
+                            setSelectedToLocation(null);
+                          }
+                        }}
+                        getOptionLabel={(option) => option.label || ''}
+                        disabled={!selectedFromLocation}
+                        sx={{ width: '100%', minWidth: { md: '600px' } }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Lokalizacja docelowa"
+                            required
+                            error={!!error}
+                            helperText={error?.message || (!selectedFromLocation ? 'Najpierw wybierz lokalizację źródłową' : '')}
+                            fullWidth
+                            sx={{
+                              '& .MuiInputBase-root': {
+                                fontSize: '1rem',
+                                minHeight: '50px',
+                                padding: '8px 12px',
+                                width: '100%'
+                              },
+                              '& .MuiInputLabel-root': {
+                                fontSize: '1rem',
+                              },
+                              '& .MuiInputBase-input': {
+                                minWidth: '200px'
+                              }
+                            }}
+                          />
+                        )}
+                      />
+                    )}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+
+            <Divider />
+
+            {/* SECTION 2: Product Selector (Always Visible) */}
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 600, mb: 2 }}>
+                Wybór produktów
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
                   <Autocomplete
                     options={productOptions}
                     value={
@@ -304,35 +358,105 @@ function CreateTransferPage() {
                       setQuantity('');
                     }}
                     getOptionLabel={(option) => option.label || ''}
-                    renderInput={(params) => <TextField {...params} label="Wybierz produkt" />}
+                    disabled={!selectedFromLocation}
+                    noOptionsText={
+                      !selectedFromLocation
+                        ? "Wybierz lokalizację źródłową"
+                        : inventoryItems.length === 0
+                          ? "Brak produktów w tej lokalizacji"
+                          : "Brak wyników"
+                    }
+                    sx={{ width: '100%', minWidth: { md: '600px' } }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Wybierz produkt"
+                        placeholder={!selectedFromLocation ? "Najpierw wybierz lokalizację źródłową..." : "Wpisz nazwę, model lub markę..."}
+                        fullWidth
+                        sx={{
+                          '& .MuiInputBase-root': {
+                            fontSize: '1rem',
+                            minHeight: '50px',
+                            padding: '8px 12px',
+                            width: '100%'
+                          },
+                          '& .MuiInputLabel-root': {
+                            fontSize: '1rem',
+                          }
+                        }}
+                      />
+                    )}
+                    renderOption={(props, option) => {
+                      const { key, ...otherProps } = props;
+                      return (
+                        <li key={key} {...otherProps} style={{ display: 'block', padding: '12px 16px' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                            <Box>
+                              <Typography variant="body1" fontWeight="600" sx={{ fontSize: '1.1rem' }}>
+                                {option.label}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {option.brand}
+                              </Typography>
+                            </Box>
+                            <Typography variant="body2" sx={{
+                              bgcolor: option.quantity > 0 ? 'success.lighter' : 'error.lighter',
+                              color: option.quantity > 0 ? 'success.dark' : 'error.dark',
+                              px: 2,
+                              py: 0.75,
+                              borderRadius: 1,
+                              fontWeight: 600,
+                              fontSize: '1rem'
+                            }}>
+                              {option.quantity} szt.
+                            </Typography>
+                          </Box>
+                        </li>
+                      );
+                    }}
                   />
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     label="Ilość"
                     type="number"
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value)}
                     fullWidth
+                    disabled={!selectedProduct}
                     inputProps={{ min: 1 }}
                     helperText={
                       availableStock !== null
                         ? `Dostępne w ${selectedFromLocation.name}: ${availableStock}`
                         : undefined
                     }
+                    sx={{
+                      '& .MuiInputBase-root': {
+                        fontSize: '1rem',
+                        minHeight: '50px'
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: '1rem'
+                      }
+                    }}
                   />
                 </Grid>
 
-                <Grid item xs={12} md={2}>
+                <Grid item xs={12} md={6}>
                   <Button
                     variant="contained"
-                    startIcon={<Plus size={16} />}
+                    startIcon={<Plus size={20} />}
                     onClick={handleAddItem}
                     fullWidth
-                    sx={{ height: '56px' }}
+                    disabled={!selectedProduct}
+                    sx={{
+                      height: '50px',
+                      fontSize: '1rem',
+                      fontWeight: 600
+                    }}
                   >
-                    Dodaj
+                    Dodaj do listy
                   </Button>
                 </Grid>
 
@@ -344,7 +468,6 @@ function CreateTransferPage() {
                   </Grid>
                 )}
 
-                {/* Tabela produktów transferu */}
                 {transferItems.length > 0 && (
                   <Grid item xs={12}>
                     <Typography variant="h6" sx={{ mb: 2, mt: 2 }}>
@@ -408,65 +531,101 @@ function CreateTransferPage() {
                     </TableContainer>
                   </Grid>
                 )}
-              </>
-            )}
+              </Grid>
+            </Box>
 
-            {/* Powód i uwagi */}
-            <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mb: 2, mt: 2 }}>
-                Szczegóły transferu
+            <Divider />
+
+            {/* SECTION 3: Transfer Details (Moved Down) */}
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 600, mb: 2 }}>
+                Szczegóły
               </Typography>
-            </Grid>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <FormField
+                    name="reason"
+                    control={control}
+                    label="Powód transferu (opcjonalnie)"
+                    type="text"
+                    rules={{
+                      maxLength: {
+                        value: VALIDATION.DESCRIPTION_MAX_LENGTH,
+                        message: `Powód nie może przekraczać ${VALIDATION.DESCRIPTION_MAX_LENGTH} znaków`,
+                      },
+                    }}
+                    sx={{
+                      '& .MuiInputBase-root': {
+                        fontSize: '1rem',
+                        minHeight: '50px'
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: '1rem'
+                      }
+                    }}
+                  />
+                </Grid>
 
-            <Grid item xs={12}>
-              <FormField
-                name="reason"
-                control={control}
-                label="Powód"
-                type="text"
-                required
-                rules={{
-                  maxLength: {
-                    value: VALIDATION.DESCRIPTION_MAX_LENGTH,
-                    message: `Powód nie może przekraczać ${VALIDATION.DESCRIPTION_MAX_LENGTH} znaków`,
-                  },
+                <Grid item xs={12} md={6}>
+                  <FormField
+                    name="notes"
+                    control={control}
+                    label="Dodatkowe uwagi (opcjonalnie)"
+                    type="text"
+                    multiline
+                    rows={3}
+                    rules={{
+                      maxLength: {
+                        value: VALIDATION.NOTES_MAX_LENGTH,
+                        message: `Notatki nie mogą przekraczać ${VALIDATION.NOTES_MAX_LENGTH} znaków`,
+                      },
+                    }}
+                    sx={{
+                      '& .MuiInputBase-root': {
+                        fontSize: '1rem'
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: '1rem'
+                      }
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+
+            {/* SECTION 4: Actions */}
+            <Box sx={{ display: 'flex', gap: 3, justifyContent: 'flex-end', pt: 2 }}>
+              <Button
+                variant="outlined"
+                onClick={() => navigate('/transfers')}
+                size="large"
+                sx={{
+                  px: 5,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  fontWeight: 600
                 }}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <FormField
-                name="notes"
-                control={control}
-                label="Notatki (opcjonalnie)"
-                type="text"
-                multiline
-                rows={3}
-                rules={{
-                  maxLength: {
-                    value: VALIDATION.NOTES_MAX_LENGTH,
-                    message: `Notatki nie mogą przekraczać ${VALIDATION.NOTES_MAX_LENGTH} znaków`,
-                  },
+              >
+                Anuluj
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={
+                  transferItems.length === 0 || !fromLocationId || !toLocationId
+                }
+                size="large"
+                sx={{
+                  px: 5,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  fontWeight: 600
                 }}
-              />
-            </Grid>
-          </Grid>
-
-          {/* Akcje formularza */}
-          <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-            <Button variant="outlined" onClick={() => navigate('/transfers')}>
-              Anuluj
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={
-                transferItems.length === 0 || !selectedFromLocation || !selectedToLocation
-              }
-            >
-              Utwórz transfer
-            </Button>
-          </Box>
+              >
+                Utwórz transfer
+              </Button>
+            </Box>
+          </Stack>
         </form>
       </Paper>
     </Container>

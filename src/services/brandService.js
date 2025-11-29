@@ -61,6 +61,15 @@ export const brandService = {
   },
 
   /**
+   * Delete brand
+   * @param {string} id - Brand ID
+   * @returns {Promise} Response with success message
+   */
+  deleteBrand: (id) => {
+    return api.delete(`/brands/${id}`);
+  },
+
+  /**
    * Get active brands only (for dropdowns)
    * @returns {Promise} Response with active brands list
    */
