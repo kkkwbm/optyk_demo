@@ -183,13 +183,13 @@ const PendingTransfersPage = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>From Location</TableCell>
-                      <TableCell>Items</TableCell>
-                      <TableCell>Reason</TableCell>
-                      <TableCell>Initiated By</TableCell>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell align="right">Actions</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>From Location</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Items</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Reason</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Initiated By</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -263,12 +263,12 @@ const PendingTransfersPage = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>To Location</TableCell>
-                      <TableCell>Items</TableCell>
-                      <TableCell>Reason</TableCell>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell align="right">Actions</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>To Location</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Items</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Reason</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>

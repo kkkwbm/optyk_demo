@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Container, Paper, Box, Button, Grid } from '@mui/material';
 import { ArrowLeft } from 'lucide-react';
@@ -8,13 +7,11 @@ import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import FormField from '../../../shared/components/FormField';
 import { createUser } from '../usersSlice';
-import { fetchActiveLocations, selectActiveLocations } from '../../locations/locationsSlice';
 import { USER_ROLES, USER_ROLE_LABELS, VALIDATION } from '../../../constants';
 
 function CreateUserPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const locations = useSelector(selectActiveLocations);
 
   const { control, handleSubmit, reset } = useForm({
     defaultValues: {
@@ -23,15 +20,10 @@ function CreateUserPage() {
       lastName: '',
       phone: '',
       role: USER_ROLES.EMPLOYEE,
-      locationId: '',
       password: '',
       confirmPassword: '',
     },
   });
-
-  useEffect(() => {
-    dispatch(fetchActiveLocations());
-  }, [dispatch]);
 
   const onSubmit = async (data) => {
     try {
@@ -55,11 +47,6 @@ function CreateUserPage() {
   const roleOptions = Object.values(USER_ROLES).map((role) => ({
     value: role,
     label: USER_ROLE_LABELS[role],
-  }));
-
-  const locationOptions = locations.map((location) => ({
-    value: location.id,
-    label: location.name,
   }));
 
   return (
@@ -164,18 +151,6 @@ function CreateUserPage() {
                 label="Rola"
                 type="select"
                 options={roleOptions}
-                required
-              />
-            </Grid>
-
-            {/* Location */}
-            <Grid item xs={12} md={6}>
-              <FormField
-                name="locationId"
-                control={control}
-                label="Lokalizacja"
-                type="select"
-                options={locationOptions}
                 required
               />
             </Grid>

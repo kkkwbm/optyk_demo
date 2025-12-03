@@ -18,8 +18,8 @@ import {
   TableHead,
   TableRow,
 } from '@mui/material';
-import { ArrowLeft, XCircle, Receipt } from 'lucide-react';
-import { format } from 'date-fns';
+import { ArrowLeft, XCircle } from 'lucide-react';
+import { formatDate } from '../../../utils/dateFormat';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
@@ -104,7 +104,7 @@ function SaleDetailsPage() {
     <Container maxWidth="lg">
       <PageHeader
         title={`Sprzedaż ${getSaleNumber()}`}
-        subtitle={`${SALE_STATUS_LABELS[sale.status]} - ${format(new Date(sale.createdAt), DATE_FORMATS.DISPLAY_WITH_TIME)}`}
+        subtitle={`${SALE_STATUS_LABELS[sale.status]} - ${formatDate(sale.createdAt, DATE_FORMATS.DISPLAY_WITH_TIME)}`}
         breadcrumbs={[
           { label: 'Panel', to: '/' },
           { label: 'Sprzedaż', to: '/sales' },
@@ -122,27 +122,22 @@ function SaleDetailsPage() {
 
       <Paper sx={{ p: 3, mb: 3 }}>
         {/* Akcje */}
-        <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-          {sale.status === SALE_STATUS.COMPLETED && (
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<XCircle size={16} />}
-              onClick={handleOpenConfirm}
-            >
-              Anuluj sprzedaż
-            </Button>
-          )}
-          <Button
-            variant="outlined"
-            startIcon={<Receipt size={16} />}
-            onClick={() => toast.info('Funkcja drukowania wkrótce')}
-          >
-            Drukuj paragon
-          </Button>
-        </Box>
+        {sale.status === SALE_STATUS.COMPLETED && (
+          <>
+            <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<XCircle size={16} />}
+                onClick={handleOpenConfirm}
+              >
+                Anuluj sprzedaż
+              </Button>
+            </Box>
 
-        <Divider sx={{ mb: 3 }} />
+            <Divider sx={{ mb: 3 }} />
+          </>
+        )}
 
         {/* Informacje sprzedaży */}
         <Typography variant="h6" sx={{ mb: 2 }}>
@@ -184,7 +179,7 @@ function SaleDetailsPage() {
               Sprzedawca
             </Typography>
             <Typography variant="body1" sx={{ mb: 2 }}>
-              {`${sale.user?.firstName || ''} ${sale.user?.lastName || ''}`.trim() || '-'}
+              {sale.userFullName || '-'}
             </Typography>
           </Grid>
 
@@ -193,16 +188,7 @@ function SaleDetailsPage() {
               Data i godzina
             </Typography>
             <Typography variant="body1" sx={{ mb: 2 }}>
-              {format(new Date(sale.createdAt), DATE_FORMATS.DISPLAY_WITH_TIME)}
-            </Typography>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Typography variant="body2" color="text.secondary">
-              Metoda płatności
-            </Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              {PAYMENT_METHOD_LABELS[sale.paymentMethod] || sale.paymentMethod}
+              {formatDate(sale.createdAt, DATE_FORMATS.DISPLAY_WITH_TIME)}
             </Typography>
           </Grid>
 
@@ -228,20 +214,20 @@ function SaleDetailsPage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Produkt</TableCell>
-                <TableCell>Marka</TableCell>
-                <TableCell align="right">Ilość</TableCell>
-                <TableCell align="right">Cena jednostkowa</TableCell>
-                <TableCell align="right">Suma</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Produkt</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Marka</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Ilość</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Cena jednostkowa</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Suma</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {sale.items?.map((item, index) => (
                 <TableRow key={index}>
                   <TableCell>
-                    {item.product?.model || item.product?.name || '-'}
+                    {item.productModel || item.productName || '-'}
                   </TableCell>
-                  <TableCell>{item.product?.brand?.name || '-'}</TableCell>
+                  <TableCell>{item.brand?.name || '-'}</TableCell>
                   <TableCell align="right">{item.quantity}</TableCell>
                   <TableCell align="right">${item.unitPrice.toFixed(2)}</TableCell>
                   <TableCell align="right">
@@ -267,7 +253,7 @@ function SaleDetailsPage() {
 
         {/* Podsumowanie */}
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={4}>
             <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'primary.light', color: 'primary.contrastText' }}>
               <Typography variant="body2">Łączna ilość</Typography>
               <Typography variant="h5">
@@ -275,21 +261,13 @@ function SaleDetailsPage() {
               </Typography>
             </Paper>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={4}>
             <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'success.light', color: 'success.contrastText' }}>
               <Typography variant="body2">Produkty</Typography>
               <Typography variant="h5">{sale.items?.length || 0}</Typography>
             </Paper>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'info.light', color: 'info.contrastText' }}>
-              <Typography variant="body2">Płatność</Typography>
-              <Typography variant="h6">
-                {PAYMENT_METHOD_LABELS[sale.paymentMethod]}
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={4}>
             <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'secondary.light', color: 'secondary.contrastText' }}>
               <Typography variant="body2">Suma całkowita</Typography>
               <Typography variant="h5">${sale.totalAmount?.toFixed(2)}</Typography>

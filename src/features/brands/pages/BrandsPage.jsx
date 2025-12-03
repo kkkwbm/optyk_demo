@@ -163,13 +163,13 @@ function BrandsPage() {
       id: 'name',
       label: 'Nazwa marki',
       sortable: true,
-      render: (value, row) => (
+      render: (row) => (
         <span style={{
           opacity: row.status === BRAND_STATUS.INACTIVE ? 0.5 : 1,
           fontSize: '0.95rem',
           fontWeight: 500
         }}>
-          {value}
+          {row.name}
         </span>
       ),
     },
@@ -177,13 +177,13 @@ function BrandsPage() {
       id: 'status',
       label: 'Status',
       sortable: true,
-      render: (value) => <StatusBadge status={value} type="brand" />,
+      render: (row) => <StatusBadge status={row.status} type="brand" />,
     },
     {
       id: 'createdAt',
       label: 'Data utworzenia',
       sortable: true,
-      render: (value) => value ? new Date(value).toLocaleDateString('pl-PL', {
+      render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString('pl-PL', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -195,7 +195,7 @@ function BrandsPage() {
       id: 'updatedAt',
       label: 'Ostatnia aktualizacja',
       sortable: true,
-      render: (value) => value ? new Date(value).toLocaleDateString('pl-PL', {
+      render: (row) => row.updatedAt ? new Date(row.updatedAt).toLocaleDateString('pl-PL', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -208,7 +208,7 @@ function BrandsPage() {
       label: 'Akcje',
       sortable: false,
       align: 'right',
-      render: (value, row) => (
+      render: (row) => (
         <IconButton size="small" onClick={(e) => handleMenuOpen(e, row)}>
           <MoreVertical size={20} />
         </IconButton>

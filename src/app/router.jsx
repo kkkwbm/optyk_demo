@@ -90,13 +90,15 @@ const router = createBrowserRouter([
         element: <Navigate to="/inventory" replace />,
       },
 
-      // Statistics (All roles)
+      // Statistics (ADMIN only)
       {
         path: 'statistics',
         element: (
-          <SuspenseWrapper>
-            <StatisticsPage />
-          </SuspenseWrapper>
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <SuspenseWrapper>
+              <StatisticsPage />
+            </SuspenseWrapper>
+          </ProtectedRoute>
         ),
       },
 

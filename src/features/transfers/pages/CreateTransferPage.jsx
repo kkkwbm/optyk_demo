@@ -477,11 +477,11 @@ function CreateTransferPage() {
                       <Table>
                         <TableHead>
                           <TableRow>
-                            <TableCell>Produkt</TableCell>
-                            <TableCell>Marka</TableCell>
-                            <TableCell align="right">Dostępne</TableCell>
-                            <TableCell align="right">Ilość</TableCell>
-                            <TableCell align="right">Akcje</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Produkt</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Marka</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }}>Dostępne</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }}>Ilość</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }}>Akcje</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>

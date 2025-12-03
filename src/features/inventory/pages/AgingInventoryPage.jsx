@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import { TrendingDown } from 'lucide-react';
 import PageHeader from '../../../shared/components/PageHeader';
-import api from '../../../app/api';
+import api from '../../../config/api';
 import { useSelector } from 'react-redux';
 import { selectCurrentLocation } from '../../locations/locationsSlice';
 import { format } from 'date-fns';
@@ -50,7 +50,7 @@ function AgingInventoryPage() {
         <Container maxWidth="xl">
             <PageHeader
                 title="Zalegający towar"
-                subtitle="Produkty w magazynie powyżej 90 dni"
+                subtitle="Produkty w magazynie powyżej 2 lat"
                 breadcrumbs={[
                     { label: 'Statystyki', href: '/statistics' },
                     { label: 'Zalegający towar' },
@@ -68,13 +68,13 @@ function AgingInventoryPage() {
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell>Produkt</TableCell>
-                                    <TableCell>Marka</TableCell>
-                                    <TableCell>Model/Nazwa</TableCell>
-                                    <TableCell>Data przyjęcia</TableCell>
-                                    <TableCell>Dni w magazynie</TableCell>
-                                    <TableCell>Ilość</TableCell>
-                                    <TableCell>Lokalizacja</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Produkt</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Marka</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Model/Nazwa</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Data przyjęcia</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Dni w magazynie</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Ilość</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Lokalizacja</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>

@@ -6,7 +6,6 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import {
   Box,
-  Container,
   Paper,
   TextField,
   Button,
@@ -80,7 +79,7 @@ function LoginPage() {
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       }}
     >
-      <Container maxWidth="sm">
+      <Box sx={{ width: '100%', maxWidth: '500px', px: 2 }}>
         <Paper
           elevation={6}
           sx={{
@@ -157,7 +156,7 @@ function LoginPage() {
             </Typography>
           </Box>
         </Paper>
-      </Container>
+      </Box>
     </Box>
   );
 }

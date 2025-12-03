@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import { Glasses } from 'lucide-react';
 import PageHeader from '../../../shared/components/PageHeader';
-import api from '../../../app/api';
+import api from '../../../config/api';
 import { useSelector } from 'react-redux';
 import { selectCurrentLocation } from '../../locations/locationsSlice';
 
@@ -67,13 +67,13 @@ function UniqueFramesPage() {
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell>Marka</TableCell>
-                                    <TableCell>Model</TableCell>
-                                    <TableCell>Kolor</TableCell>
-                                    <TableCell>Rozmiar</TableCell>
-                                    <TableCell>Cena</TableCell>
-                                    <TableCell>Ilość</TableCell>
-                                    <TableCell>Lokalizacja</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Marka</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Model</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Kolor</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Rozmiar</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Cena</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Ilość</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Lokalizacja</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>

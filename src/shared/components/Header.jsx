@@ -123,7 +123,7 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
       text: 'Statystyki',
       icon: <BarChart3 size={18} />,
       path: '/statistics',
-      permission: null,
+      permission: 'VIEW_STATISTICS_ALL',
     },
     {
       text: 'Historia',

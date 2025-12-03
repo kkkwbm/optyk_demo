@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -17,8 +17,6 @@ import {
   TableRow,
   Button,
   Chip,
-  TextField,
-  MenuItem,
 } from '@mui/material';
 import {
   BarChart3,
@@ -30,12 +28,10 @@ import {
   DollarSign,
   Glasses,
 } from 'lucide-react';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
-import { selectUser } from '../../auth/authSlice';
+import { formatDate } from '../../../utils/dateFormat';
 import {
   fetchDashboardStats,
   selectDashboardStats,
-  selectStatisticsLoading,
 } from '../statisticsSlice';
 import { fetchRecentSales, selectSales } from '../../sales/salesSlice';
 import { selectCurrentLocation } from '../../locations/locationsSlice';
@@ -45,51 +41,21 @@ function DashboardPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const user = useSelector(selectUser);
   const stats = useSelector(selectDashboardStats);
-  const loading = useSelector(selectStatisticsLoading);
   const recentSales = useSelector(selectSales);
   const currentLocation = useSelector(selectCurrentLocation);
 
-  const [dateRange, setDateRange] = useState('today');
-
   useEffect(() => {
-    // Calculate date range based on selected period
-    const end = endOfDay(new Date());
-    let start;
-
-    switch (dateRange) {
-      case 'today':
-        start = startOfDay(new Date());
-        break;
-      case 'week':
-        start = startOfDay(subDays(new Date(), 7));
-        break;
-      case 'month':
-        start = startOfDay(subDays(new Date(), 30));
-        break;
-      case 'quarter':
-        start = startOfDay(subDays(new Date(), 90));
-        break;
-      case 'year':
-        start = startOfDay(subDays(new Date(), 365));
-        break;
-      default:
-        start = startOfDay(new Date());
-    }
-
-    const startDate = format(start, 'yyyy-MM-dd');
-    const endDate = format(end, 'yyyy-MM-dd');
-
+    // Fetch all-time statistics (no date range filter)
     // Handle "All Stores" by sending undefined (which becomes null in backend)
     // If currentLocation is null (Global view), it's also undefined
     const locationId = (currentLocation?.id === 'ALL_STORES' || !currentLocation)
       ? undefined
       : currentLocation.id;
 
-    dispatch(fetchDashboardStats({ startDate, endDate, locationId }));
+    dispatch(fetchDashboardStats({ locationId }));
     dispatch(fetchRecentSales({ limit: 5, locationId }));
-  }, [dispatch, dateRange, currentLocation]);
+  }, [dispatch, currentLocation]);
 
   const formatCurrency = (value) => {
     return `$${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -113,23 +79,10 @@ function DashboardPage() {
 
   return (
     <Container maxWidth="xl">
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 600 }}>
           Statystyki
         </Typography>
-        <TextField
-          select
-          size="small"
-          value={dateRange}
-          onChange={(e) => setDateRange(e.target.value)}
-          sx={{ minWidth: 150 }}
-        >
-          <MenuItem value="today">Dziś</MenuItem>
-          <MenuItem value="week">Ostatnie 7 dni</MenuItem>
-          <MenuItem value="month">Ostatnie 30 dni</MenuItem>
-          <MenuItem value="quarter">Ostatnie 90 dni</MenuItem>
-          <MenuItem value="year">Ostatni rok</MenuItem>
-        </TextField>
       </Box>
 
       {/* Welcome Message */}
@@ -313,7 +266,7 @@ function DashboardPage() {
                 {stats?.inventoryAgingCount || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Zalegający towar (&gt;90 dni)
+                Zalegający towar (&gt;2 lata)
               </Typography>
             </CardContent>
           </Card>
@@ -322,8 +275,8 @@ function DashboardPage() {
 
       <Grid container spacing={3}>
         {/* Revenue Trends */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3, mb: 3 }}>
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3, height: '100%' }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Trend przychodów (Dzienny)
             </Typography>
@@ -343,7 +296,7 @@ function DashboardPage() {
                       title={`${item.date}: ${formatCurrency(item.revenue)}`}
                     />
                     <Typography variant="caption" sx={{ mt: 1, fontSize: '0.7rem', whiteSpace: 'nowrap', transform: 'rotate(-45deg)', transformOrigin: 'left top' }}>
-                      {format(new Date(item.date), 'dd.MM')}
+                      {formatDate(new Date(item.date), 'dd.MM')}
                     </Typography>
                   </Box>
                 ))
@@ -459,15 +412,15 @@ function DashboardPage() {
                 Zobacz wszystkie
               </Button>
             </Box>
-            <TableContainer>
+            <TableContainer sx={{ bgcolor: 'background.default' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Sprzedaż #</TableCell>
-                    <TableCell>Data</TableCell>
-                    <TableCell>Lokalizacja</TableCell>
-                    <TableCell align="right">Razem</TableCell>
-                    <TableCell>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>Sprzedaż #</TableCell>
+                    <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>Data</TableCell>
+                    <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>Lokalizacja</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>Razem</TableCell>
+                    <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>Status</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -481,7 +434,7 @@ function DashboardPage() {
                       >
                         <TableCell>#{sale.saleNumber || sale.id.slice(0, 8)}</TableCell>
                         <TableCell>
-                          {format(new Date(sale.createdAt), DATE_FORMATS.DISPLAY)}
+                          {formatDate(new Date(sale.createdAt), DATE_FORMATS.DISPLAY)}
                         </TableCell>
                         <TableCell>{sale.location?.name || '-'}</TableCell>
                         <TableCell align="right">

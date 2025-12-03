@@ -116,7 +116,7 @@ function ProductsListPage() {
         id: 'brand',
         label: 'Marka',
         sortable: true,
-        render: (value) => value?.name || '-',
+        render: (row) => row.brand?.name || '-',
       },
     ];
 
@@ -129,13 +129,13 @@ function ProductsListPage() {
           id: 'purchasePrice',
           label: 'Cena zakupu',
           sortable: true,
-          render: (value) => value ? `$${value.toFixed(2)}` : '-',
+          render: (row) => row.purchasePrice ? `$${row.purchasePrice.toFixed(2)}` : '-',
         },
         {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
           sortable: true,
-          render: (value) => value ? `$${value.toFixed(2)}` : '-',
+          render: (row) => row.sellingPrice ? `$${row.sellingPrice.toFixed(2)}` : '-',
         },
       ],
       [PRODUCT_TYPES.CONTACT_LENS]: [
@@ -146,13 +146,13 @@ function ProductsListPage() {
           id: 'purchasePrice',
           label: 'Cena zakupu',
           sortable: true,
-          render: (value) => value ? `$${value.toFixed(2)}` : '-',
+          render: (row) => row.purchasePrice ? `$${row.purchasePrice.toFixed(2)}` : '-',
         },
         {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
           sortable: true,
-          render: (value) => value ? `$${value.toFixed(2)}` : '-',
+          render: (row) => row.sellingPrice ? `$${row.sellingPrice.toFixed(2)}` : '-',
         },
       ],
       [PRODUCT_TYPES.SOLUTION]: [
@@ -162,13 +162,13 @@ function ProductsListPage() {
           id: 'purchasePrice',
           label: 'Cena zakupu',
           sortable: true,
-          render: (value) => value ? `$${value.toFixed(2)}` : '-',
+          render: (row) => row.purchasePrice ? `$${row.purchasePrice.toFixed(2)}` : '-',
         },
         {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
           sortable: true,
-          render: (value) => value ? `$${value.toFixed(2)}` : '-',
+          render: (row) => row.sellingPrice ? `$${row.sellingPrice.toFixed(2)}` : '-',
         },
       ],
       [PRODUCT_TYPES.OTHER]: [
@@ -178,13 +178,13 @@ function ProductsListPage() {
           id: 'purchasePrice',
           label: 'Cena zakupu',
           sortable: true,
-          render: (value) => value ? `$${value.toFixed(2)}` : '-',
+          render: (row) => row.purchasePrice ? `$${row.purchasePrice.toFixed(2)}` : '-',
         },
         {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
           sortable: true,
-          render: (value) => value ? `$${value.toFixed(2)}` : '-',
+          render: (row) => row.sellingPrice ? `$${row.sellingPrice.toFixed(2)}` : '-',
         },
       ],
     };
@@ -196,14 +196,14 @@ function ProductsListPage() {
         id: 'status',
         label: 'Status',
         sortable: true,
-        render: (value) => <StatusBadge status={value} type="product" />,
+        render: (row) => <StatusBadge status={row.status} type="product" />,
       },
       {
         id: 'actions',
         label: 'Akcje',
         sortable: false,
         align: 'right',
-        render: (value, row) => (
+        render: (row) => (
           <IconButton size="small" onClick={(e) => handleMenuOpen(e, row)}>
             <MoreVertical size={20} />
           </IconButton>

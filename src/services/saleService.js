@@ -39,7 +39,7 @@ export const saleService = {
    * @returns {Promise} Response with success message
    */
   cancelSale: (id, reason) => {
-    return api.patch(`/sales/${id}/cancel`, { reason });
+    return api.post(`/sales/${id}/cancel`, { reason });
   },
 
   /**

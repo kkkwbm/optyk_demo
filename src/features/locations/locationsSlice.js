@@ -119,10 +119,11 @@ export const deleteLocation = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       const response = await locationService.deleteLocation(id);
-      if (response.data.success) {
+      // Handle 204 No Content response (successful deletion with empty body)
+      if (response.status === 204 || response.data?.success) {
         return id;
       }
-      return rejectWithValue(response.data.error);
+      return rejectWithValue(response.data?.error || 'Failed to delete location');
     } catch (error) {
       return rejectWithValue(error.response?.data?.error || 'Failed to delete location');
     }
@@ -445,6 +446,7 @@ export const selectLocations = (state) => state.locations.items;
 export const selectActiveLocations = (state) => state.locations.activeLocations;
 export const selectMyLocations = (state) => state.locations.myLocations;
 export const selectCurrentLocation = (state) => state.locations.currentLocation;
+export const selectCurrentLocationId = (state) => state.locations.currentLocation?.id;
 export const selectLocationsLoading = (state) => state.locations.loading;
 export const selectLocationsError = (state) => state.locations.error;
 export const selectLocationsPagination = (state) => state.locations.pagination;

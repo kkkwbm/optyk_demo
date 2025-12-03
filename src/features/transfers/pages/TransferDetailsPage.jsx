@@ -22,14 +22,14 @@ import {
   StepLabel,
 } from '@mui/material';
 import { ArrowLeft, XCircle, ArrowRight, CheckCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatDate } from '../../../utils/dateFormat';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
 import {
   fetchTransferById,
   cancelTransfer,
-  updateTransferStatus,
+  confirmTransfer,
   selectCurrentTransfer,
   selectTransfersLoading,
 } from '../transfersSlice';
@@ -67,18 +67,13 @@ function TransferDetailsPage() {
     const { action } = confirmDialog;
     try {
       if (action === 'cancel') {
-        await dispatch(cancelTransfer(transfer.id)).unwrap();
+        await dispatch(cancelTransfer({ id: transfer.id, cancellationReason: 'Cancelled by user' })).unwrap();
         toast.success('Transfer anulowany pomyślnie');
       } else if (action === 'complete') {
         await dispatch(
-          updateTransferStatus({ id: transfer.id, status: TRANSFER_STATUS.COMPLETED })
+          confirmTransfer({ id: transfer.id, notes: 'Transfer completed' })
         ).unwrap();
         toast.success('Transfer ukończony pomyślnie');
-      } else if (action === 'in_transit') {
-        await dispatch(
-          updateTransferStatus({ id: transfer.id, status: TRANSFER_STATUS.IN_TRANSIT })
-        ).unwrap();
-        toast.success('Status transferu zaktualizowany na w transporcie');
       }
       dispatch(fetchTransferById(id));
     } catch (error) {
@@ -278,7 +273,7 @@ function TransferDetailsPage() {
               Utworzono
             </Typography>
             <Typography variant="body1" sx={{ mb: 2 }}>
-              {format(new Date(transfer.createdAt), DATE_FORMATS.DISPLAY_WITH_TIME)}
+              {formatDate(transfer.createdAt, DATE_FORMATS.DISPLAY_WITH_TIME)}
             </Typography>
           </Grid>
 
@@ -313,22 +308,22 @@ function TransferDetailsPage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Produkt</TableCell>
-                <TableCell>Marka</TableCell>
-                <TableCell>Typ</TableCell>
-                <TableCell align="right">Ilość</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Produkt</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Marka</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Typ</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Ilość</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {transfer.items?.map((item, index) => (
                 <TableRow key={index}>
                   <TableCell>
-                    {item.product?.model || item.product?.name || '-'}
+                    {item.productModel || item.productName || '-'}
                   </TableCell>
-                  <TableCell>{item.product?.brand?.name || '-'}</TableCell>
+                  <TableCell>{item.brand?.name || '-'}</TableCell>
                   <TableCell>
                     <Chip
-                      label={item.product?.type || 'Nieznany'}
+                      label={item.productType || 'Nieznany'}
                       size="small"
                       variant="outlined"
                     />

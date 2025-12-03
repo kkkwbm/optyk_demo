@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Plus, XCircle, Warehouse, Store, CheckCircle2, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatDate } from '../../../utils/dateFormat';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import DataTable from '../../../shared/components/DataTable';
@@ -165,55 +165,55 @@ function TransfersListPage() {
       id: 'transferNumber',
       label: 'Transfer #',
       sortable: true,
-      render: (_, row) => `#${row.transferNumber || row.id.slice(0, 8)}`,
+      render: (row) => `#${row.transferNumber || row.id.slice(0, 8)}`,
     },
     {
       id: 'date',
       label: 'Data',
       sortable: true,
-      render: (_, row) => format(new Date(row.createdAt), DATE_FORMATS.DISPLAY_WITH_TIME),
+      render: (row) => formatDate(row.createdAt, DATE_FORMATS.DISPLAY_WITH_TIME),
     },
     {
       id: 'from',
       label: 'Z',
       sortable: true,
-      render: (_, row) => row.fromLocation?.name || '-',
+      render: (row) => row.fromLocation?.name || '-',
     },
     {
       id: 'to',
       label: 'Do',
       sortable: true,
-      render: (_, row) => row.toLocation?.name || '-',
+      render: (row) => row.toLocation?.name || '-',
     },
     {
       id: 'itemsCount',
       label: 'Produkty',
       sortable: false,
-      render: (_, row) => row.items?.length || 0,
+      render: (row) => row.items?.length || 0,
     },
     {
       id: 'totalQuantity',
       label: 'Ilość',
       sortable: false,
-      render: (_, row) => row.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
+      render: (row) => row.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
     },
     {
       id: 'createdBy',
       label: 'Utworzony przez',
       sortable: false,
-      render: (_, row) => `${row.user?.firstName || ''} ${row.user?.lastName || ''}`.trim() || '-',
+      render: (row) => `${row.user?.firstName || ''} ${row.user?.lastName || ''}`.trim() || '-',
     },
     {
       id: 'status',
       label: 'Status',
       sortable: true,
-      render: (_, row) => <TransferStatusChip status={row.status} />,
+      render: (row) => <TransferStatusChip status={row.status} />,
     },
     {
       id: 'actions',
       label: 'Akcje',
       sortable: false,
-      render: (_, row) => (
+      render: (row) => (
         <Box sx={{ display: 'flex', gap: 1 }}>
           {(row.status === TRANSFER_STATUS.PENDING || row.status === TRANSFER_STATUS.IN_TRANSIT) && (
             <>

@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -101,8 +101,6 @@ function DataTable({
 
   const isSelected = useCallback((rowId) => selected.indexOf(rowId) !== -1, [selected]);
 
-  const selectedSet = useMemo(() => new Set(selected), [selected]);
-
   return (
     <Paper sx={{ width: '100%', overflow: 'hidden' }}>
       <TableContainer>
@@ -110,7 +108,10 @@ function DataTable({
           <TableHead>
             <TableRow>
               {selectable && (
-                <TableCell padding="checkbox">
+                <TableCell
+                  padding="checkbox"
+                  sx={{ bgcolor: 'background.paper' }}
+                >
                   <Checkbox
                     color="primary"
                     indeterminate={selected.length > 0 && selected.length < data.length}
@@ -125,6 +126,10 @@ function DataTable({
                   align={column.align || 'left'}
                   style={{ minWidth: column.minWidth }}
                   sortDirection={sort.sortBy === column.id ? sort.sortDirection : false}
+                  sx={{
+                    bgcolor: 'background.paper',
+                    fontWeight: 600,
+                  }}
                 >
                   {column.sortable !== false ? (
                     <TableSortLabel
@@ -190,7 +195,7 @@ function DataTable({
                       const value = row[column.id];
                       return (
                         <TableCell key={column.id} align={column.align || 'left'}>
-                          {column.render ? column.render(value, row) : value}
+                          {column.render ? column.render(row) : value}
                         </TableCell>
                       );
                     })}

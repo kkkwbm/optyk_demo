@@ -13,7 +13,7 @@ import {
   Alert,
 } from '@mui/material';
 import { Plus, Eye, XCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatDate } from '../../../utils/dateFormat';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import DataTable from '../../../shared/components/DataTable';
@@ -84,11 +84,11 @@ function SalesListPage() {
   const handleConfirmCancel = async () => {
     const { sale } = confirmDialog;
     try {
-      await dispatch(cancelSale(sale.id)).unwrap();
-      toast.success('Sprzedaż została anulowana');
+      await dispatch(cancelSale({ id: sale.id })).unwrap();
+      toast.success('Sprzedaż została usunięta');
       dispatch(fetchSales({ page: pagination.page, size: pagination.size }));
     } catch (error) {
-      toast.error(error || 'Nie udało się anulować sprzedaży');
+      toast.error(error || 'Nie udało się usunąć sprzedaży');
     }
     handleCloseConfirm();
   };
@@ -153,7 +153,7 @@ function SalesListPage() {
       id: 'date',
       label: 'Data',
       sortable: true,
-      render: (row) => format(new Date(row.createdAt), DATE_FORMATS.DISPLAY_WITH_TIME),
+      render: (row) => formatDate(row.createdAt, DATE_FORMATS.DISPLAY_WITH_TIME),
     },
     {
       id: 'location',
@@ -223,7 +223,7 @@ function SalesListPage() {
                 handleOpenConfirm(row);
               }}
             >
-              Anuluj
+              Usuń
             </Button>
           )}
         </Box>
@@ -352,9 +352,9 @@ function SalesListPage() {
         open={confirmDialog.open}
         onClose={handleCloseConfirm}
         onConfirm={handleConfirmCancel}
-        title="Anuluj sprzedaż"
-        message={`Czy na pewno chcesz anulować sprzedaż #${confirmDialog.sale?.saleNumber || confirmDialog.sale?.id.slice(0, 8)}? Spowoduje to zwrot produktów do magazynu.`}
-        confirmText="Anuluj sprzedaż"
+        title="Usuń sprzedaż"
+        message={`Czy na pewno chcesz usunąć sprzedaż #${confirmDialog.sale?.saleNumber || confirmDialog.sale?.id?.slice(0, 8)}? Spowoduje to zwrot produktów do magazynu.`}
+        confirmText="Usuń sprzedaż"
         confirmColor="error"
       />
     </Container>

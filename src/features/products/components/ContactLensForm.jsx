@@ -19,13 +19,24 @@ function ContactLensForm({ control, brands = [] }) {
       <Grid size={{ xs: 12, md: 6 }}>
         <FormField name="model" control={control} label="Model" type="text" required />
       </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
-        <FormField name="color" control={control} label="Kolor" type="text" required />
+      <Grid size={{ xs: 12, md: 6 }}>
+        <FormField
+          name="lensType"
+          control={control}
+          label="Typ soczewki"
+          type="select"
+          options={[
+            { value: 'DAILY', label: 'Jednorazowe' },
+            { value: 'MONTHLY', label: 'Miesięczne' },
+            { value: 'YEARLY', label: 'Roczne' },
+          ]}
+          required
+        />
       </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
-        <FormField name="size" control={control} label="Rozmiar" type="text" required />
+      <Grid size={{ xs: 12, md: 6 }}>
+        <FormField name="power" control={control} label="Moc" type="text" />
       </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <FormField
           name="sellingPrice"
           control={control}
@@ -37,7 +48,7 @@ function ContactLensForm({ control, brands = [] }) {
           }}
         />
       </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <FormField
           name="quantity"
           control={control}

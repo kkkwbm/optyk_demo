@@ -195,13 +195,20 @@ function HistoryListPage() {
         return 'info';
       case OPERATION_TYPES.DELETE:
       case OPERATION_TYPES.DEACTIVATE:
+      case OPERATION_TYPES.TRANSFER_REJECTED:
+      case OPERATION_TYPES.TRANSFER_CANCELLED:
         return 'error';
       case OPERATION_TYPES.RESTORE:
       case OPERATION_TYPES.ACTIVATE:
+      case OPERATION_TYPES.TRANSFER_CONFIRMED:
         return 'success';
       case OPERATION_TYPES.TRANSFER:
+      case OPERATION_TYPES.TRANSFER_INITIATED:
       case OPERATION_TYPES.SALE:
         return 'primary';
+      case OPERATION_TYPES.REVERT:
+      case OPERATION_TYPES.RETURN:
+        return 'warning';
       default:
         return 'default';
     }
@@ -212,7 +219,7 @@ function HistoryListPage() {
       id: 'operation',
       label: 'Operacja',
       sortable: true,
-      render: (value, row) => (
+      render: (row) => (
         <Chip
           label={OPERATION_TYPE_LABELS[row.operationType]}
           size="small"
@@ -224,7 +231,7 @@ function HistoryListPage() {
       id: 'entity',
       label: 'Encja',
       sortable: true,
-      render: (value, row) => (
+      render: (row) => (
         <Chip
           label={ENTITY_TYPE_LABELS[row.entityType] || row.entityType}
           size="small"
@@ -236,20 +243,21 @@ function HistoryListPage() {
       id: 'userFullName',
       label: 'Użytkownik',
       sortable: false,
-      render: (value) => value || '-',
+      render: (row) => row.userFullName || '-',
     },
     {
       id: 'operationTimestamp',
       label: 'Data i godzina',
       sortable: true,
-      render: (value) => {
+      render: (row) => {
         try {
+          const value = row.operationTimestamp;
           if (!value) return '-';
           const date = new Date(value);
           if (isNaN(date.getTime())) return '-';
           return format(date, DATE_FORMATS.DISPLAY_WITH_TIME, { locale: pl });
         } catch (error) {
-          console.error('Error formatting date:', value, error);
+          console.error('Error formatting date:', row.operationTimestamp, error);
           return '-';
         }
       },
@@ -258,13 +266,13 @@ function HistoryListPage() {
       id: 'location',
       label: 'Lokalizacja',
       sortable: false,
-      render: (value, row) => row.location?.name || '-',
+      render: (row) => row.location?.name || '-',
     },
     {
       id: 'reason',
       label: 'Opis',
       sortable: false,
-      render: (value, row) => (
+      render: (row) => (
         <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {row.reason || '-'}
         </Typography>
@@ -274,7 +282,7 @@ function HistoryListPage() {
       id: 'actions',
       label: 'Akcje',
       sortable: false,
-      render: (value, row) => (
+      render: (row) => (
         <IconButton
           size="small"
           onClick={(e) => handleMenuClick(e, row)}

@@ -118,9 +118,9 @@ function HistoryDetailsPage() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Pole</TableCell>
-              <TableCell>Stara wartość</TableCell>
-              <TableCell>Nowa wartość</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Pole</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Stara wartość</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Nowa wartość</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

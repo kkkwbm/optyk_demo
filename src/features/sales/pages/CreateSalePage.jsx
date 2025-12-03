@@ -21,16 +21,16 @@ import {
   Card,
   CardContent,
   Alert,
+  Chip,
 } from '@mui/material';
 import { ArrowLeft, Plus, Trash2, ShoppingCart } from 'lucide-react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import FormField from '../../../shared/components/FormField';
 import { createSale } from '../salesSlice';
-import { fetchAllProducts, selectProducts } from '../../products/productsSlice';
-import { fetchActiveLocations, selectActiveLocations, selectCurrentLocation } from '../../locations/locationsSlice';
-import { fetchInventoryByProductAndLocation } from '../../inventory/inventorySlice';
+import { selectCurrentLocation } from '../../locations/locationsSlice';
+import { fetchInventory, selectInventoryItems, fetchInventoryByProductAndLocation } from '../../inventory/inventorySlice';
 import {
   VALIDATION,
   LOCATION_TYPES,
@@ -40,43 +40,54 @@ function CreateSalePage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const products = useSelector(selectProducts);
-  const locations = useSelector(selectActiveLocations);
+  const inventoryItems = useSelector(selectInventoryItems);
   const currentLocation = useSelector(selectCurrentLocation);
 
-  const [selectedLocation, setSelectedLocation] = useState(null);
   const [cart, setCart] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
   const [availableStock, setAvailableStock] = useState(null);
 
-  const { control, handleSubmit, watch } = useForm({
+  const { control, handleSubmit } = useForm({
     defaultValues: {
-      locationId: '',
       notes: '',
     },
   });
 
-  useEffect(() => {
-    dispatch(fetchAllProducts({ page: 0, size: 1000 }));
-    dispatch(fetchActiveLocations());
-  }, [dispatch]);
+  // Check if current location is a warehouse
+  const isWarehouseSelected = currentLocation && (currentLocation.type === LOCATION_TYPES.WAREHOUSE || currentLocation.type === 'WAREHOUSE');
 
+  // Fetch inventory for the current location
   useEffect(() => {
-    if (selectedProduct && selectedLocation) {
-      dispatch(
-        fetchInventoryByProductAndLocation({
-          productId: selectedProduct.id,
-          locationId: selectedLocation.id,
-        })
-      ).then((result) => {
-        if (result.payload) {
-          setAvailableStock(result.payload.availableQuantity);
-        } else {
-          setAvailableStock(0);
-        }
-      });
+    if (currentLocation && !isWarehouseSelected) {
+      dispatch(fetchInventory({
+        locationId: currentLocation.id,
+        params: { page: 0, size: 1000 }
+      }));
+    }
+  }, [dispatch, currentLocation, isWarehouseSelected]);
+
+  // Clear cart and reset form when location changes
+  useEffect(() => {
+    setCart([]);
+    setSelectedProduct(null);
+    setQuantity('');
+    setPrice('');
+    setAvailableStock(null);
+  }, [currentLocation]);
+
+  // Update available stock when product is selected
+  useEffect(() => {
+    if (selectedProduct) {
+      // Find the inventory item for the selected product
+      const inventoryItem = inventoryItems.find(item => item.product?.id === selectedProduct.id);
+
+      if (inventoryItem) {
+        setAvailableStock(inventoryItem.availableQuantity || 0);
+      } else {
+        setAvailableStock(0);
+      }
 
       // Set default price from product
       if (selectedProduct.sellingPrice) {
@@ -85,7 +96,7 @@ function CreateSalePage() {
     } else {
       setAvailableStock(null);
     }
-  }, [dispatch, selectedProduct, selectedLocation]);
+  }, [selectedProduct, inventoryItems]);
 
   const handleAddToCart = () => {
     if (!selectedProduct) {
@@ -148,8 +159,8 @@ function CreateSalePage() {
 
   const onSubmit = async (data) => {
     try {
-      if (!selectedLocation) {
-        toast.error('Proszę wybrać lokalizację');
+      if (!currentLocation || isWarehouseSelected) {
+        toast.error('Proszę wybrać prawidłową lokalizację (nie magazyn)');
         return;
       }
 
@@ -159,7 +170,7 @@ function CreateSalePage() {
       }
 
       const saleData = {
-        locationId: selectedLocation.id,
+        locationId: currentLocation.id,
         notes: data.notes || undefined,
         items: cart.map((item) => ({
           productId: item.product.id,
@@ -178,19 +189,15 @@ function CreateSalePage() {
   };
 
 
-  const productOptions = products.map((product) => ({
-    id: product.id,
-    label: `${product.brand?.name || ''} ${product.model || product.name || ''}`.trim(),
-    product: product,
-  }));
-
-  const locationOptions = locations.map((location) => ({
-    id: location.id,
-    label: location.name,
-  }));
-
-  // Check if current location is a warehouse
-  const isWarehouseSelected = currentLocation && (currentLocation.type === LOCATION_TYPES.WAREHOUSE || currentLocation.type === 'WAREHOUSE');
+  // Build product options from inventory items (only products with stock at current location)
+  const productOptions = inventoryItems
+    .filter(item => item.product && (item.availableQuantity > 0 || item.quantity > 0))
+    .map((item) => ({
+      id: item.product.id,
+      label: `${item.product.brand?.name || ''} ${item.product.model || item.product.name || ''}`.trim() + ` (${item.availableQuantity || 0} szt.)`,
+      product: item.product,
+      availableQuantity: item.availableQuantity || 0,
+    }));
 
   return (
     <Container maxWidth="xl">
@@ -227,54 +234,22 @@ function CreateSalePage() {
         <Grid container spacing={3}>
           {/* Lewa kolumna - Wybór produktu */}
           <Grid item xs={12} lg={8}>
-            <Paper sx={{ p: 4, mb: 3, minHeight: '160px' }}>
+            <Paper sx={{ p: 4, mb: 3 }}>
               <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
                 Informacje sprzedaży
               </Typography>
 
-              <Grid container spacing={3}>
-                {/* Selektor lokalizacji */}
-                <Grid item xs={12} md={8} lg={6}>
-                  <Controller
-                    name="locationId"
-                    control={control}
-                    rules={{ required: 'Lokalizacja jest wymagana' }}
-                    render={({ field, fieldState: { error } }) => (
-                      <Autocomplete
-                        {...field}
-                        options={locationOptions}
-                        value={locationOptions.find((opt) => opt.id === field.value) || null}
-                        onChange={(_, newValue) => {
-                          field.onChange(newValue?.id || '');
-                          const location = locations.find((l) => l.id === newValue?.id);
-                          setSelectedLocation(location || null);
-                          setCart([]);
-                        }}
-                        getOptionLabel={(option) => option.label || ''}
-                        sx={{ width: '300%' }}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Lokalizacja"
-                            required
-                            error={!!error}
-                            helperText={error?.message}
-                            size="large"
-                            sx={{
-                              '& .MuiInputBase-root': {
-                                fontSize: '1.1rem',
-                              },
-                              '& .MuiInputLabel-root': {
-                                fontSize: '1.1rem',
-                              },
-                            }}
-                          />
-                        )}
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  Lokalizacja:
+                </Typography>
+                <Chip
+                  label={currentLocation?.name || 'Brak lokalizacji'}
+                  color={currentLocation && !isWarehouseSelected ? 'primary' : 'default'}
+                  size="medium"
+                  sx={{ fontSize: '1rem', fontWeight: 600, py: 2.5 }}
+                />
+              </Box>
             </Paper>
 
             <Paper sx={{ p: 4, mb: 3 }}>
@@ -283,93 +258,93 @@ function CreateSalePage() {
                 Dodaj produkty
               </Typography>
 
-              {!selectedLocation ? (
-                <Alert severity="info">
-                  Proszę najpierw wybrać lokalizację, aby dodać produkty do sprzedaży.
+              {(!currentLocation || isWarehouseSelected) && (
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  Proszę wybrać prawidłową lokalizację (nie magazyn) z selektora po lewej stronie, aby dodać produkty do sprzedaży.
                 </Alert>
-              ) : (
-                <>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={7}>
-                      <Autocomplete
-                        options={productOptions}
-                        value={
-                          selectedProduct
-                            ? productOptions.find((opt) => opt.id === selectedProduct.id)
-                            : null
-                        }
-                        onChange={(_, newValue) => {
-                          setSelectedProduct(newValue?.product || null);
-                          setQuantity('');
-                          setPrice(newValue?.product?.sellingPrice?.toString() || '');
+              )}
+
+              <Box>
+                <Box sx={{ mb: 2 }}>
+                  <Autocomplete
+                    options={productOptions}
+                    value={
+                      selectedProduct
+                        ? productOptions.find((opt) => opt.id === selectedProduct.id)
+                        : null
+                    }
+                    onChange={(_, newValue) => {
+                      setSelectedProduct(newValue?.product || null);
+                      setQuantity('');
+                      setPrice(newValue?.product?.sellingPrice?.toString() || '');
+                    }}
+                    getOptionLabel={(option) => option.label || ''}
+                    fullWidth
+                    disabled={!currentLocation || isWarehouseSelected}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Wybierz produkt"
+                        sx={{
+                          '& .MuiInputBase-root': {
+                            fontSize: '1rem',
+                          },
+                          '& .MuiInputLabel-root': {
+                            fontSize: '1rem',
+                          },
                         }}
-                        getOptionLabel={(option) => option.label || ''}
-                        fullWidth
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Wybierz produkt"
-                            sx={{
-                              '& .MuiInputBase-root': {
-                                fontSize: '1rem',
-                              },
-                              '& .MuiInputLabel-root': {
-                                fontSize: '1rem',
-                              },
-                            }}
-                          />
-                        )}
                       />
-                    </Grid>
+                    )}
+                  />
+                </Box>
 
-                    <Grid item xs={4} md={1.5}>
-                      <Box sx={{ width: '100%' }}>
-                        <TextField
-                          label="Ilość"
-                          type="number"
-                          value={quantity}
-                          onChange={(e) => setQuantity(e.target.value)}
-                          fullWidth
-                          inputProps={{ min: 1 }}
-                          helperText={
-                            availableStock !== null ? `Dostępne: ${availableStock}` : undefined
-                          }
-                        />
-                      </Box>
-                    </Grid>
-
-                    <Grid item xs={4} md={1.5}>
-                      <Box sx={{ width: '100%' }}>
-                        <TextField
-                          label="Cena"
-                          type="number"
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          fullWidth
-                          inputProps={{ min: 0, step: 0.01 }}
-                        />
-                      </Box>
-                    </Grid>
-
-                    <Grid item xs={4} md={2}>
-                      <Button
-                        variant="contained"
-                        startIcon={<Plus size={16} />}
-                        onClick={handleAddToCart}
-                        fullWidth
-                        sx={{ height: '56px' }}
-                      >
-                        Dodaj
-                      </Button>
-                    </Grid>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4} md={3}>
+                    <TextField
+                      label="Ilość"
+                      type="number"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      fullWidth
+                      disabled={!currentLocation || isWarehouseSelected}
+                      inputProps={{ min: 1 }}
+                      helperText={
+                        availableStock !== null ? `Dostępne: ${availableStock}` : undefined
+                      }
+                    />
                   </Grid>
 
-                  {availableStock === 0 && selectedProduct && (
-                    <Alert severity="error" sx={{ mt: 2 }}>
-                      Ten produkt jest niedostępny na wybranej lokalizacji
-                    </Alert>
-                  )}
-                </>
+                  <Grid item xs={12} sm={4} md={3}>
+                    <TextField
+                      label="Cena"
+                      type="number"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      fullWidth
+                      disabled={!currentLocation || isWarehouseSelected}
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={4} md={3}>
+                    <Button
+                      variant="contained"
+                      startIcon={<Plus size={16} />}
+                      onClick={handleAddToCart}
+                      fullWidth
+                      disabled={!currentLocation || isWarehouseSelected}
+                      sx={{ height: '56px' }}
+                    >
+                      Dodaj
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {availableStock === 0 && selectedProduct && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  Ten produkt jest niedostępny na wybranej lokalizacji
+                </Alert>
               )}
             </Paper>
 
@@ -390,12 +365,12 @@ function CreateSalePage() {
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Produkt</TableCell>
-                        <TableCell>Marka</TableCell>
-                        <TableCell align="right">Ilość</TableCell>
-                        <TableCell align="right">Cena</TableCell>
-                        <TableCell align="right">Suma</TableCell>
-                        <TableCell align="right">Akcje</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Produkt</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Marka</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600 }}>Ilość</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600 }}>Cena</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600 }}>Suma</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600 }}>Akcje</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -503,7 +478,7 @@ function CreateSalePage() {
                   variant="contained"
                   fullWidth
                   size="large"
-                  disabled={cart.length === 0 || !selectedLocation}
+                  disabled={cart.length === 0 || !currentLocation || isWarehouseSelected}
                   sx={{
                     py: 1.5,
                     fontSize: '1.1rem',

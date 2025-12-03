@@ -236,7 +236,7 @@ function InventoryDashboardPage() {
         id: 'brand',
         label: 'Marka',
         sortable: true,
-        render: (value) => value?.name || '-',
+        render: (row) => row.brand?.name || '-',
       },
     ];
 
@@ -249,7 +249,7 @@ function InventoryDashboardPage() {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
           sortable: true,
-          render: (value) => value ? `${value.toFixed(2)} zł` : '-',
+          render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
         },
       ],
       [PRODUCT_TYPES.CONTACT_LENS]: [
@@ -260,7 +260,7 @@ function InventoryDashboardPage() {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
           sortable: true,
-          render: (value) => value ? `${value.toFixed(2)} zł` : '-',
+          render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
         },
       ],
       [PRODUCT_TYPES.SOLUTION]: [
@@ -270,7 +270,7 @@ function InventoryDashboardPage() {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
           sortable: true,
-          render: (value) => value ? `${value.toFixed(2)} zł` : '-',
+          render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
         },
       ],
       [PRODUCT_TYPES.OTHER]: [
@@ -280,7 +280,7 @@ function InventoryDashboardPage() {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
           sortable: true,
-          render: (value) => value ? `${value.toFixed(2)} zł` : '-',
+          render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
         },
       ],
     };
@@ -290,17 +290,17 @@ function InventoryDashboardPage() {
       id: 'inventoryQuantity',
       label: 'Ilość',
       sortable: true,
-      render: (value) => value !== undefined ? value : '-',
+      render: (row) => row.inventoryQuantity !== undefined ? row.inventoryQuantity : '-',
     }] : [{
       id: 'location',
       label: 'Lokalizacja',
       sortable: true,
-      render: (value) => value?.name || '-',
+      render: (row) => row.location?.name || '-',
     }, {
       id: 'inventoryQuantity',
       label: 'Ilość',
       sortable: true,
-      render: (value) => value !== undefined ? value : '-',
+      render: (row) => row.inventoryQuantity !== undefined ? row.inventoryQuantity : '-',
     }];
 
     return [
@@ -312,7 +312,7 @@ function InventoryDashboardPage() {
         label: 'Akcje',
         sortable: false,
         align: 'right',
-        render: (value, row) => (
+        render: (row) => (
           <IconButton size="small" onClick={(e) => handleMenuOpen(e, row)}>
             <MoreVertical size={20} />
           </IconButton>
