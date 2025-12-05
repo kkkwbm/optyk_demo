@@ -79,7 +79,7 @@ function LoginPage() {
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       }}
     >
-      <Box sx={{ width: '100%', maxWidth: '500px', px: 2 }}>
+      <Box sx={{ width: '100%', maxWidth: '500px', px: 2, mx: 'auto' }}>
         <Paper
           elevation={6}
           sx={{

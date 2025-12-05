@@ -176,30 +176,12 @@ function TransferDetailsPage() {
           {transfer.status === TRANSFER_STATUS.PENDING && (
             <>
               <Button
-                variant="outlined"
-                startIcon={<ArrowRight size={16} />}
-                onClick={() => handleOpenConfirm('in_transit')}
-              >
-                Oznacz jako w transporcie
-              </Button>
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<XCircle size={16} />}
-                onClick={() => handleOpenConfirm('cancel')}
-              >
-                Anuluj transfer
-              </Button>
-            </>
-          )}
-          {transfer.status === TRANSFER_STATUS.IN_TRANSIT && (
-            <>
-              <Button
                 variant="contained"
+                color="success"
                 startIcon={<CheckCircle size={16} />}
                 onClick={() => handleOpenConfirm('complete')}
               >
-                Ukończ transfer
+                Odbierz transfer
               </Button>
               <Button
                 variant="outlined"

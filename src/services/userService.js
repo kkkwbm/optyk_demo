@@ -100,6 +100,28 @@ export const userService = {
   },
 
   /**
+   * Update user's tab permissions for a specific location
+   * @param {string} userId - User ID
+   * @param {string} locationId - Location ID
+   * @param {Array} allowedTabs - Array of allowed tab names (e.g., ['WAREHOUSE', 'SALES'])
+   * @returns {Promise} Response with updated user location data
+   */
+  updateUserLocationPermissions: (userId, locationId, allowedTabs) => {
+    return api.put(`/users/${userId}/locations/${locationId}/permissions`, { allowedTabs });
+  },
+
+  /**
+   * Assign user to location with specific tab permissions
+   * @param {string} userId - User ID
+   * @param {string} locationId - Location ID
+   * @param {Array} allowedTabs - Array of allowed tab names (e.g., ['WAREHOUSE', 'SALES'])
+   * @returns {Promise} Response with created user location assignment
+   */
+  assignUserLocationWithPermissions: (userId, locationId, allowedTabs) => {
+    return api.post(`/users/${userId}/locations`, { locationId, allowedTabs });
+  },
+
+  /**
    * Search users
    * @param {string} query - Search query
    * @param {Object} params - Additional query parameters

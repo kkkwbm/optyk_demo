@@ -87,6 +87,31 @@ export const LOCATION_STATUS_LABELS = {
   [LOCATION_STATUS.INACTIVE]: 'Nieaktywny',
 };
 
+// Location Tabs (for user permissions)
+export const LOCATION_TABS = {
+  WAREHOUSE: 'WAREHOUSE',
+  SALES: 'SALES',
+  TRANSFERS: 'TRANSFERS',
+  STATISTICS: 'STATISTICS',
+  HISTORY: 'HISTORY',
+};
+
+export const LOCATION_TAB_LABELS = {
+  [LOCATION_TABS.WAREHOUSE]: 'Magazyn',
+  [LOCATION_TABS.SALES]: 'Sprzedaż',
+  [LOCATION_TABS.TRANSFERS]: 'Transfery',
+  [LOCATION_TABS.STATISTICS]: 'Statystyki',
+  [LOCATION_TABS.HISTORY]: 'Historia',
+};
+
+export const LOCATION_TAB_DESCRIPTIONS = {
+  [LOCATION_TABS.WAREHOUSE]: 'Zarządzanie magazynem i stanem towaru',
+  [LOCATION_TABS.SALES]: 'Rejestrowanie i przeglądanie sprzedaży',
+  [LOCATION_TABS.TRANSFERS]: 'Zarządzanie transferami produktów',
+  [LOCATION_TABS.STATISTICS]: 'Przeglądanie statystyk i analiz',
+  [LOCATION_TABS.HISTORY]: 'Historia operacji i zmian',
+};
+
 // Brand Status
 export const BRAND_STATUS = {
   ACTIVE: 'ACTIVE',

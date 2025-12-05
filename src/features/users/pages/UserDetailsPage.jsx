@@ -32,6 +32,7 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import EditUserDialog from '../components/EditUserDialog';
+import PermissionsSelector from '../../../components/PermissionsSelector';
 import {
   fetchUserById,
   assignLocationsToUser,
@@ -40,7 +41,7 @@ import {
 } from '../usersSlice';
 import { fetchActiveLocations, selectActiveLocations } from '../../locations/locationsSlice';
 import { selectUser } from '../../auth/authSlice';
-import { USER_ROLES, USER_ROLE_LABELS, USER_STATUS, DATE_FORMATS, PERMISSIONS } from '../../../constants';
+import { USER_ROLES, USER_ROLE_LABELS, USER_STATUS, DATE_FORMATS, PERMISSIONS, LOCATION_TAB_LABELS } from '../../../constants';
 import userService from '../../../services/userService';
 
 function UserDetailsPage() {
@@ -55,9 +56,12 @@ function UserDetailsPage() {
 
   const [locationDialog, setLocationDialog] = useState({ open: false, type: null });
   const [editDialog, setEditDialog] = useState(false);
+  const [permissionsDialog, setPermissionsDialog] = useState({ open: false, userLocation: null });
   const [selectedLocations, setSelectedLocations] = useState([]);
+  const [locationPermissions, setLocationPermissions] = useState({}); // Map of locationId -> allowedTabs array
   const [userLocations, setUserLocations] = useState([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
 
   useEffect(() => {
     dispatch(fetchActiveLocations());
@@ -99,12 +103,21 @@ function UserDetailsPage() {
   const handleOpenLocationDialog = () => {
     const assignedLocationIds = userLocations.map(ul => ul.location.id);
     setSelectedLocations(assignedLocationIds);
+
+    // Initialize permissions map with existing user location permissions
+    const permissionsMap = {};
+    userLocations.forEach(ul => {
+      permissionsMap[ul.location.id] = ul.allowedTabs || [];
+    });
+    setLocationPermissions(permissionsMap);
+
     setLocationDialog({ open: true, type: 'assign' });
   };
 
   const handleCloseLocationDialog = () => {
     setLocationDialog({ open: false, type: null });
     setSelectedLocations([]);
+    setLocationPermissions({});
   };
 
   const handleLocationToggle = (locationId) => {
@@ -117,14 +130,42 @@ function UserDetailsPage() {
     });
   };
 
+  const handleLocationPermissionsChange = (locationId, allowedTabs) => {
+    setLocationPermissions(prev => ({
+      ...prev,
+      [locationId]: allowedTabs
+    }));
+  };
+
   const handleSaveLocations = async () => {
     try {
-      await dispatch(assignLocationsToUser({ id, locationIds: selectedLocations })).unwrap();
-      toast.success('Lokalizacje zostały zaktualizowane');
+      // First, remove locations that are no longer selected
+      const currentLocationIds = userLocations.map(ul => ul.location.id);
+      const locationsToRemove = currentLocationIds.filter(locId => !selectedLocations.includes(locId));
+
+      for (const locationId of locationsToRemove) {
+        await userService.removeLocation(id, locationId);
+      }
+
+      // Then, add or update locations with their permissions
+      for (const locationId of selectedLocations) {
+        const allowedTabs = locationPermissions[locationId] || [];
+        const existingLocation = userLocations.find(ul => ul.location.id === locationId);
+
+        if (existingLocation) {
+          // Update permissions for existing location
+          await userService.updateUserLocationPermissions(id, locationId, allowedTabs);
+        } else {
+          // Assign new location with permissions
+          await userService.assignUserLocationWithPermissions(id, locationId, allowedTabs);
+        }
+      }
+
+      toast.success('Lokalizacje i uprawnienia zostały zaktualizowane');
       await loadUserLocations();
       handleCloseLocationDialog();
     } catch (error) {
-      toast.error(error || 'Nie udało się zaktualizować lokalizacji');
+      toast.error(error.response?.data?.error || 'Nie udało się zaktualizować lokalizacji');
     }
   };
 
@@ -148,6 +189,31 @@ function UserDetailsPage() {
 
   const handleEditSuccess = () => {
     dispatch(fetchUserById(id));
+  };
+
+  const handleOpenPermissionsDialog = (userLocation) => {
+    setPermissionsDialog({ open: true, userLocation });
+    setSelectedPermissions(userLocation.allowedTabs || []);
+  };
+
+  const handleClosePermissionsDialog = () => {
+    setPermissionsDialog({ open: false, userLocation: null });
+    setSelectedPermissions([]);
+  };
+
+  const handleSavePermissions = async () => {
+    try {
+      await userService.updateUserLocationPermissions(
+        id,
+        permissionsDialog.userLocation.location.id,
+        selectedPermissions
+      );
+      toast.success('Uprawnienia zostały zaktualizowane');
+      await loadUserLocations();
+      handleClosePermissionsDialog();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Nie udało się zaktualizować uprawnień');
+    }
   };
 
   if (loading || !user) {
@@ -350,14 +416,24 @@ function UserDetailsPage() {
                 <ListItem
                   key={userLocation.id}
                   secondaryAction={
-                    <IconButton
-                      edge="end"
-                      aria-label="delete"
-                      onClick={() => handleRemoveLocation(userLocation.location.id)}
-                      disabled={user.status === USER_STATUS.INACTIVE}
-                    >
-                      <Trash2 size={18} />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <IconButton
+                        edge="end"
+                        aria-label="edit permissions"
+                        onClick={() => handleOpenPermissionsDialog(userLocation)}
+                        disabled={user.status === USER_STATUS.INACTIVE}
+                      >
+                        <Edit size={18} />
+                      </IconButton>
+                      <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        onClick={() => handleRemoveLocation(userLocation.location.id)}
+                        disabled={user.status === USER_STATUS.INACTIVE}
+                      >
+                        <Trash2 size={18} />
+                      </IconButton>
+                    </Box>
                   }
                 >
                   <ListItemIcon>
@@ -366,9 +442,19 @@ function UserDetailsPage() {
                   <ListItemText
                     primary={userLocation.location.name}
                     secondary={
-                      userLocation.assignedAt
-                        ? `Przypisano: ${format(new Date(userLocation.assignedAt), DATE_FORMATS.DISPLAY)}`
-                        : null
+                      <>
+                        {userLocation.assignedAt && (
+                          <Typography component="span" variant="caption" display="block">
+                            Przypisano: {format(new Date(userLocation.assignedAt), DATE_FORMATS.DISPLAY)}
+                          </Typography>
+                        )}
+                        <Typography component="span" variant="caption" display="block" sx={{ mt: 0.5 }}>
+                          {userLocation.allowedTabs && userLocation.allowedTabs.length > 0
+                            ? `Dostęp do: ${userLocation.allowedTabs.map(tab => LOCATION_TAB_LABELS[tab]).join(', ')}`
+                            : 'Dostęp do wszystkich zakładek'
+                          }
+                        </Typography>
+                      </>
                     }
                   />
                 </ListItem>
@@ -382,39 +468,56 @@ function UserDetailsPage() {
       <Dialog
         open={locationDialog.open}
         onClose={handleCloseLocationDialog}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>Zarządzaj uprawnieniami do lokalizacji</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Wybierz lokalizacje, do których użytkownik ma mieć dostęp. Użytkownik będzie mógł przeglądać i zarządzać danymi tylko z wybranych lokalizacji.
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Wybierz lokalizacje i uprawnienia dla użytkownika. Dla każdej lokalizacji możesz określić, do jakich zakładek użytkownik ma mieć dostęp.
           </Typography>
-          <List>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {allLocations.map((location) => {
               const isChecked = selectedLocations.includes(location.id);
               return (
-                <ListItem
+                <Paper
                   key={location.id}
-                  button
-                  onClick={() => handleLocationToggle(location.id)}
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    backgroundColor: isChecked ? 'action.selected' : 'background.paper',
+                    border: isChecked ? 2 : 1,
+                    borderColor: isChecked ? 'primary.main' : 'divider'
+                  }}
                 >
-                  <ListItemIcon>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: isChecked ? 2 : 0 }}>
                     <Checkbox
-                      edge="start"
                       checked={isChecked}
-                      tabIndex={-1}
-                      disableRipple
+                      onChange={() => handleLocationToggle(location.id)}
                     />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={location.name}
-                    secondary={`Typ: ${location.type === 'STORE' ? 'Salon' : 'Magazyn'}`}
-                  />
-                </ListItem>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="subtitle1" fontWeight="medium">
+                        {location.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Typ: {location.type === 'STORE' ? 'Salon' : 'Magazyn'}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {isChecked && (
+                    <Box sx={{ ml: 5 }}>
+                      <PermissionsSelector
+                        selectedTabs={locationPermissions[location.id] || []}
+                        onChange={(tabs) => handleLocationPermissionsChange(location.id, tabs)}
+                        locationName={null}
+                      />
+                    </Box>
+                  )}
+                </Paper>
               );
             })}
-          </List>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseLocationDialog}>Anuluj</Button>
@@ -431,6 +534,35 @@ function UserDetailsPage() {
         userId={id}
         onSuccess={handleEditSuccess}
       />
+
+      {/* Permissions Dialog */}
+      <Dialog
+        open={permissionsDialog.open}
+        onClose={handleClosePermissionsDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Zarządzaj uprawnieniami dostępu</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Wybierz zakładki, do których użytkownik ma mieć dostęp w tej lokalizacji.
+            Jeśli nie wybierzesz żadnych zakładek, użytkownik będzie miał dostęp do wszystkich.
+          </Typography>
+          {permissionsDialog.userLocation && (
+            <PermissionsSelector
+              selectedTabs={selectedPermissions}
+              onChange={setSelectedPermissions}
+              locationName={permissionsDialog.userLocation.location.name}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePermissionsDialog}>Anuluj</Button>
+          <Button onClick={handleSavePermissions} variant="contained">
+            Zapisz
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

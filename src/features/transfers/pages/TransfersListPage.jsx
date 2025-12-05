@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,6 +11,7 @@ import {
   Chip,
   Grid,
   Typography,
+  Divider,
 } from '@mui/material';
 import { Plus, XCircle, Warehouse, Store, CheckCircle2, Trash2 } from 'lucide-react';
 import { formatDate } from '../../../utils/dateFormat';
@@ -19,6 +20,7 @@ import PageHeader from '../../../shared/components/PageHeader';
 import DataTable from '../../../shared/components/DataTable';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
 import TransferStatusChip from '../components/TransferStatusChip';
+import transferService from '../../../services/transferService';
 import {
   fetchTransfers,
   fetchTransfersByLocation,
@@ -53,6 +55,8 @@ function TransfersListPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [allPendingTransfers, setAllPendingTransfers] = useState([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
 
   // Dialog state: type can be 'CANCEL', 'ACCEPT', or 'DELETE'
   const [confirmDialog, setConfirmDialog] = useState({ open: false, transfer: null, type: null });
@@ -62,10 +66,67 @@ function TransfersListPage() {
     defaultSize: 20,
   });
 
+  // Fetch locations on mount
   useEffect(() => {
     dispatch(fetchActiveLocations());
   }, [dispatch]);
 
+  // Fetch all pending transfers independently (not affected by history filters)
+  useEffect(() => {
+    const fetchPendingTransfers = async () => {
+      console.log('🔄 Fetching pending transfers...');
+      console.log('   Current location:', currentLocation);
+      setPendingLoading(true);
+      try {
+        // Use transferService directly to avoid Redux state conflicts
+        const params = {
+          status: 'PENDING',
+          page: 0,
+          size: 100,
+        };
+
+        console.log('   Fetching with params:', params);
+        const response = await transferService.getTransfers(params);
+        console.log('   API response:', response);
+
+        if (response.data.success) {
+          const result = response.data.data;
+          console.log('   API result:', result);
+          const pendingData = result.content || result || [];
+          console.log('   Pending data extracted:', pendingData);
+
+          // If currentLocation is set AND is not "ALL_STORES", filter to show only transfers related to this location
+          if (currentLocation && currentLocation.id !== 'ALL_STORES') {
+            console.log('   Filtering for specific location:', currentLocation.id);
+            const filtered = pendingData.filter(
+              (t) => {
+                const matches = t.fromLocation?.id === currentLocation.id || t.toLocation?.id === currentLocation.id;
+                console.log(`     Transfer ${t.id}: from=${t.fromLocation?.id}, to=${t.toLocation?.id}, matches=${matches}`);
+                return matches;
+              }
+            );
+            console.log('   Filtered result:', filtered);
+            setAllPendingTransfers(filtered);
+          } else {
+            console.log('   No location filter (viewing all stores), using all:', pendingData);
+            setAllPendingTransfers(pendingData);
+          }
+        } else {
+          console.error('❌ API returned error:', response.data.error);
+          setAllPendingTransfers([]);
+        }
+      } catch (error) {
+        console.error('❌ Failed to fetch pending transfers:', error);
+        setAllPendingTransfers([]);
+      } finally {
+        setPendingLoading(false);
+      }
+    };
+
+    fetchPendingTransfers();
+  }, [currentLocation]);
+
+  // Fetch transfer history with filters
   useEffect(() => {
     const params = {
       page: pagination.page,
@@ -106,7 +167,23 @@ function TransfersListPage() {
         toast.success('Transfer usunięty pomyślnie');
       }
 
-      // Refresh list
+      // Refresh pending transfers using transferService directly
+      const response = await transferService.getTransfers({ status: 'PENDING', page: 0, size: 100 });
+      if (response.data.success) {
+        const result = response.data.data;
+        const pendingData = result.content || result || [];
+
+        if (currentLocation && currentLocation.id !== 'ALL_STORES') {
+          const filtered = pendingData.filter(
+            (t) => t.fromLocation?.id === currentLocation.id || t.toLocation?.id === currentLocation.id
+          );
+          setAllPendingTransfers(filtered);
+        } else {
+          setAllPendingTransfers(pendingData);
+        }
+      }
+
+      // Refresh history list
       const params = {
         page: pagination.page,
         size: pagination.size,
@@ -290,6 +367,108 @@ function TransfersListPage() {
     return 'error';
   };
 
+  // Get pending transfers - just use the fetched pending transfers
+  const pendingTransfers = useMemo(() => {
+    console.log('🧮 Computing pendingTransfers');
+    console.log('   allPendingTransfers:', allPendingTransfers);
+    console.log('   TRANSFER_STATUS.PENDING:', TRANSFER_STATUS.PENDING);
+    console.log('   TRANSFER_STATUS.IN_TRANSIT:', TRANSFER_STATUS.IN_TRANSIT);
+
+    const result = allPendingTransfers.filter(
+      (transfer) => {
+        const matches = transfer.status === TRANSFER_STATUS.PENDING || transfer.status === TRANSFER_STATUS.IN_TRANSIT;
+        console.log(`   Transfer ${transfer.id} status=${transfer.status}, matches=${matches}`);
+        return matches;
+      }
+    );
+    console.log('   Final result:', result);
+    return result;
+  }, [allPendingTransfers]);
+
+  const pendingColumns = [
+    {
+      id: 'transferNumber',
+      label: 'Transfer #',
+      sortable: false,
+      render: (row) => `#${row.transferNumber || row.id.slice(0, 8)}`,
+    },
+    {
+      id: 'date',
+      label: 'Data',
+      sortable: false,
+      render: (row) => formatDate(row.createdAt, DATE_FORMATS.DISPLAY_WITH_TIME),
+    },
+    {
+      id: 'from',
+      label: 'Z',
+      sortable: false,
+      render: (row) => row.fromLocation?.name || '-',
+    },
+    {
+      id: 'to',
+      label: 'Do',
+      sortable: false,
+      render: (row) => row.toLocation?.name || '-',
+    },
+    {
+      id: 'itemsCount',
+      label: 'Produkty',
+      sortable: false,
+      render: (row) => row.items?.length || 0,
+    },
+    {
+      id: 'totalQuantity',
+      label: 'Ilość',
+      sortable: false,
+      render: (row) => row.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
+    },
+    {
+      id: 'createdBy',
+      label: 'Utworzony przez',
+      sortable: false,
+      render: (row) => `${row.user?.firstName || ''} ${row.user?.lastName || ''}`.trim() || '-',
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      sortable: false,
+      render: (row) => <TransferStatusChip status={row.status} />,
+    },
+    {
+      id: 'actions',
+      label: 'Akcje',
+      sortable: false,
+      render: (row) => (
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            size="small"
+            variant="text"
+            color="success"
+            startIcon={<CheckCircle2 size={14} />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenConfirm(row, 'ACCEPT');
+            }}
+          >
+            Odbierz
+          </Button>
+          <Button
+            size="small"
+            variant="text"
+            color="error"
+            startIcon={<XCircle size={14} />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenConfirm(row, 'CANCEL');
+            }}
+          >
+            Anuluj
+          </Button>
+        </Box>
+      ),
+    },
+  ];
+
   return (
     <Container maxWidth="xl">
       <PageHeader
@@ -309,7 +488,29 @@ function TransfersListPage() {
         ]}
       />
 
+      {/* Pending Transfers Section */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+          Bieżące transfery oczekujące
+          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+            (Count: {pendingTransfers.length}, All Pending: {allPendingTransfers.length}, Loading: {pendingLoading ? 'Yes' : 'No'})
+          </Typography>
+        </Typography>
+        <DataTable
+          columns={pendingColumns}
+          data={pendingTransfers}
+          loading={pendingLoading}
+          onRowClick={(row) => navigate(`/transfers/${row.id}`)}
+          emptyMessage="Brak oczekujących transferów"
+          pagination={null}
+        />
+      </Paper>
+
+      {/* Transfer History Section */}
       <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+          Historia transferów
+        </Typography>
         {/* Location Filters in Two Columns */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           {/* Source Locations Column */}
