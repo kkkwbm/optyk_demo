@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import {
   IconButton,
   Menu,
@@ -20,7 +20,7 @@ import {
  * Actions menu for transfer row
  * Shows different actions based on transfer status and user permissions
  */
-const TransferActionsMenu = ({
+const TransferActionsMenu = memo(function TransferActionsMenu({
   transfer,
   canConfirm,
   canReject,
@@ -124,6 +124,6 @@ const TransferActionsMenu = ({
       </Menu>
     </>
   );
-};
+});
 
 export default TransferActionsMenu;

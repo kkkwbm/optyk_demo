@@ -1,4 +1,5 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   Table,
   TableBody,
@@ -19,7 +20,7 @@ import { PAGINATION } from '../../constants';
 
 /**
  * DataTable Component
- * Reusable table with sorting, pagination, and selection
+ * Reusable table with sorting, pagination, selection, and virtual scrolling
  *
  * @param {Object} props
  * @param {Array} props.columns - Column definitions
@@ -35,6 +36,9 @@ import { PAGINATION } from '../../constants';
  * @param {Function} props.onSelectionChange - Selection change handler
  * @param {Function} props.onRowClick - Row click handler
  * @param {String} props.emptyMessage - Message when no data
+ * @param {Boolean} props.enableVirtualization - Enable virtual scrolling for large datasets
+ * @param {Number} props.rowHeight - Row height in pixels for virtualization (default: 53)
+ * @param {Number} props.maxHeight - Max container height in pixels (default: 600)
  */
 function DataTable({
   columns = [],
@@ -55,7 +59,20 @@ function DataTable({
   onRowClick,
   emptyMessage = 'Brak dostępnych danych',
   rowIdField = 'id',
+  enableVirtualization = false,
+  rowHeight = 53,
+  maxHeight = 600,
 }) {
+  const tableContainerRef = useRef(null);
+
+  // Virtual scrolling for large datasets
+  const rowVirtualizer = useVirtualizer({
+    count: data.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => rowHeight,
+    enabled: enableVirtualization && data.length > 0,
+    overscan: 10,
+  });
   const handleSelectAllClick = useCallback(
     (event) => {
       if (event.target.checked) {
@@ -101,10 +118,136 @@ function DataTable({
 
   const isSelected = useCallback((rowId) => selected.indexOf(rowId) !== -1, [selected]);
 
+  // Render table rows (virtual or regular)
+  const renderTableRows = () => {
+    if (loading) {
+      return (
+        <TableRow>
+          <TableCell colSpan={columns.length + (selectable ? 1 : 0)} align="center">
+            <Box sx={{ py: 4 }}>
+              <CircularProgress />
+            </Box>
+          </TableCell>
+        </TableRow>
+      );
+    }
+
+    if (data.length === 0) {
+      return (
+        <TableRow>
+          <TableCell colSpan={columns.length + (selectable ? 1 : 0)} align="center">
+            <Box sx={{ py: 4 }}>
+              <Typography variant="body2" color="text.secondary">
+                {emptyMessage}
+              </Typography>
+            </Box>
+          </TableCell>
+        </TableRow>
+      );
+    }
+
+    // Virtual scrolling enabled
+    if (enableVirtualization) {
+      const virtualRows = rowVirtualizer.getVirtualItems();
+      const paddingTop = virtualRows.length > 0 ? virtualRows[0]?.start || 0 : 0;
+      const paddingBottom =
+        virtualRows.length > 0
+          ? rowVirtualizer.getTotalSize() - (virtualRows[virtualRows.length - 1]?.end || 0)
+          : 0;
+
+      return (
+        <>
+          {paddingTop > 0 && (
+            <TableRow>
+              <TableCell colSpan={columns.length + (selectable ? 1 : 0)} style={{ height: paddingTop, padding: 0, border: 0 }} />
+            </TableRow>
+          )}
+          {virtualRows.map((virtualRow) => {
+            const row = data[virtualRow.index];
+            const rowId = row[rowIdField];
+            const isItemSelected = isSelected(rowId);
+
+            return (
+              <TableRow
+                key={rowId}
+                hover
+                onClick={(event) => handleRowClick(event, row)}
+                role="checkbox"
+                aria-checked={isItemSelected}
+                tabIndex={-1}
+                selected={isItemSelected}
+                sx={{ cursor: onRowClick || selectable ? 'pointer' : 'default' }}
+                data-index={virtualRow.index}
+              >
+                {selectable && (
+                  <TableCell padding="checkbox">
+                    <Checkbox color="primary" checked={isItemSelected} />
+                  </TableCell>
+                )}
+                {columns.map((column) => {
+                  const value = row[column.id];
+                  return (
+                    <TableCell key={column.id} align={column.align || 'left'}>
+                      {column.render ? column.render(row) : value}
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            );
+          })}
+          {paddingBottom > 0 && (
+            <TableRow>
+              <TableCell colSpan={columns.length + (selectable ? 1 : 0)} style={{ height: paddingBottom, padding: 0, border: 0 }} />
+            </TableRow>
+          )}
+        </>
+      );
+    }
+
+    // Regular rendering (no virtualization)
+    return data.map((row) => {
+      const rowId = row[rowIdField];
+      const isItemSelected = isSelected(rowId);
+
+      return (
+        <TableRow
+          key={rowId}
+          hover
+          onClick={(event) => handleRowClick(event, row)}
+          role="checkbox"
+          aria-checked={isItemSelected}
+          tabIndex={-1}
+          selected={isItemSelected}
+          sx={{ cursor: onRowClick || selectable ? 'pointer' : 'default' }}
+        >
+          {selectable && (
+            <TableCell padding="checkbox">
+              <Checkbox color="primary" checked={isItemSelected} />
+            </TableCell>
+          )}
+          {columns.map((column) => {
+            const value = row[column.id];
+            return (
+              <TableCell key={column.id} align={column.align || 'left'}>
+                {column.render ? column.render(row) : value}
+              </TableCell>
+            );
+          })}
+        </TableRow>
+      );
+    });
+  };
+
   return (
     <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-      <TableContainer>
-        <Table stickyHeader>
+      <TableContainer
+        ref={tableContainerRef}
+        sx={{
+          maxHeight: enableVirtualization ? maxHeight : 'none',
+          overflow: enableVirtualization ? 'auto' : 'visible',
+        }}
+      >
+        <Table stickyHeader={enableVirtualization}>
           <TableHead>
             <TableRow>
               {selectable && (
@@ -151,59 +294,7 @@ function DataTable({
               ))}
             </TableRow>
           </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={columns.length + (selectable ? 1 : 0)} align="center">
-                  <Box sx={{ py: 4 }}>
-                    <CircularProgress />
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ) : data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={columns.length + (selectable ? 1 : 0)} align="center">
-                  <Box sx={{ py: 4 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {emptyMessage}
-                    </Typography>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((row) => {
-                const rowId = row[rowIdField];
-                const isItemSelected = isSelected(rowId);
-
-                return (
-                  <TableRow
-                    hover
-                    onClick={(event) => handleRowClick(event, row)}
-                    role="checkbox"
-                    aria-checked={isItemSelected}
-                    tabIndex={-1}
-                    key={rowId}
-                    selected={isItemSelected}
-                    sx={{ cursor: onRowClick || selectable ? 'pointer' : 'default' }}
-                  >
-                    {selectable && (
-                      <TableCell padding="checkbox">
-                        <Checkbox color="primary" checked={isItemSelected} />
-                      </TableCell>
-                    )}
-                    {columns.map((column) => {
-                      const value = row[column.id];
-                      return (
-                        <TableCell key={column.id} align={column.align || 'left'}>
-                          {column.render ? column.render(row) : value}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
+          <TableBody>{renderTableRows()}</TableBody>
         </Table>
       </TableContainer>
       {onPageChange && (
@@ -215,6 +306,8 @@ function DataTable({
           page={pagination.page || 0}
           onPageChange={(event, newPage) => onPageChange(newPage)}
           onRowsPerPageChange={(event) => onRowsPerPageChange(parseInt(event.target.value, 10))}
+          labelRowsPerPage="Wierszy na stronę:"
+          labelDisplayedRows={({ from, to, count }) => `${from}–${to} z ${count !== -1 ? count : `więcej niż ${to}`}`}
         />
       )}
     </Paper>

@@ -1,7 +1,8 @@
+import { memo } from 'react';
 import { Box, Paper, Typography, Button } from '@mui/material';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
-function RetryableError({ message = 'Nie udało się załadować danych', onRetry, compact = false }) {
+const RetryableError = memo(function RetryableError({ message = 'Nie udało się załadować danych', onRetry, compact = false }) {
   if (compact) {
     return (
       <Box
@@ -64,6 +65,6 @@ function RetryableError({ message = 'Nie udało się załadować danych', onRetr
       )}
     </Paper>
   );
-}
+});
 
 export default RetryableError;

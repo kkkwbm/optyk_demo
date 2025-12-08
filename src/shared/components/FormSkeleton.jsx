@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import { Paper, Box, Skeleton, Grid } from '@mui/material';
 
-function FormSkeleton({ fields = 6 }) {
+const FormSkeleton = memo(function FormSkeleton({ fields = 6 }) {
   return (
     <Paper sx={{ p: 3 }}>
       <Grid container spacing={3}>
@@ -17,6 +18,6 @@ function FormSkeleton({ fields = 6 }) {
       </Box>
     </Paper>
   );
-}
+});
 
 export default FormSkeleton;

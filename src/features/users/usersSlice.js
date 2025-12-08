@@ -127,20 +127,6 @@ export const resetUserPassword = createAsyncThunk(
   }
 );
 
-export const assignLocationsToUser = createAsyncThunk(
-  'users/assignLocations',
-  async ({ id, locationIds }, { rejectWithValue }) => {
-    try {
-      const response = await userService.assignLocations(id, locationIds);
-      if (response.data.success) {
-        return response.data.data;
-      }
-      return rejectWithValue(response.data.error);
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to assign locations');
-    }
-  }
-);
 
 export const searchUsers = createAsyncThunk(
   'users/searchUsers',
@@ -290,21 +276,6 @@ const usersSlice = createSlice({
         state.loading = false;
       })
       .addCase(resetUserPassword.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      // Assign Locations
-      .addCase(assignLocationsToUser.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(assignLocationsToUser.fulfilled, (state, action) => {
-        state.loading = false;
-        if (state.currentUser?.id === action.payload.id) {
-          state.currentUser = action.payload;
-        }
-      })
-      .addCase(assignLocationsToUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import { Box, CircularProgress, Typography, Backdrop } from '@mui/material';
 
-function LoadingOverlay({ open = true, message = 'Loading...', fullScreen = false }) {
+const LoadingOverlay = memo(function LoadingOverlay({ open = true, message = 'Loading...', fullScreen = false }) {
   if (fullScreen) {
     return (
       <Backdrop
@@ -43,6 +44,6 @@ function LoadingOverlay({ open = true, message = 'Loading...', fullScreen = fals
       )}
     </Box>
   );
-}
+});
 
 export default LoadingOverlay;

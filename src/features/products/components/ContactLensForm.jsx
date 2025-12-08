@@ -1,7 +1,8 @@
+import { memo } from 'react';
 import { Grid } from '@mui/material';
 import FormField from '../../../shared/components/FormField';
 
-function ContactLensForm({ control, brands = [] }) {
+const ContactLensForm = memo(function ContactLensForm({ control, brands = [] }) {
   const brandOptions = brands.map((brand) => ({ value: brand.id, label: brand.name }));
 
   return (
@@ -72,6 +73,6 @@ function ContactLensForm({ control, brands = [] }) {
       </Grid>
     </Grid>
   );
-}
+});
 
 export default ContactLensForm;

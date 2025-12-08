@@ -1,7 +1,8 @@
+import { memo } from 'react';
 import { Box, Paper, Typography, Button } from '@mui/material';
 import { Package, Plus } from 'lucide-react';
 
-function EmptyState({
+const EmptyState = memo(function EmptyState({
   icon: Icon = Package,
   title = 'Brak danych',
   description = 'Zacznij od utworzenia nowego elementu',
@@ -72,6 +73,6 @@ function EmptyState({
       )}
     </Paper>
   );
-}
+});
 
 export default EmptyState;

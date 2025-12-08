@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import { Box, CircularProgress } from '@mui/material';
 
-function LoadingSpinner({ size = 40 }) {
+const LoadingSpinner = memo(function LoadingSpinner({ size = 40 }) {
   return (
     <Box
       sx={{
@@ -14,6 +15,6 @@ function LoadingSpinner({ size = 40 }) {
       <CircularProgress size={size} />
     </Box>
   );
-}
+});
 
 export default LoadingSpinner;

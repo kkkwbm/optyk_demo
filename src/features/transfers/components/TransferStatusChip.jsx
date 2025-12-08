@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Chip } from '@mui/material';
 import {
   Clock,
@@ -5,41 +6,42 @@ import {
   XCircle,
   X,
 } from 'lucide-react';
+import { TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '../../../constants';
 
 /**
  * Status chip component for transfers
  * Shows different colors and icons based on status
  */
-const TransferStatusChip = ({ status, size = 'small' }) => {
+const TransferStatusChip = memo(function TransferStatusChip({ status, size = 'small' }) {
   const getStatusConfig = () => {
     switch (status) {
-      case 'PENDING':
+      case TRANSFER_STATUS.PENDING:
         return {
-          label: 'Pending',
+          label: TRANSFER_STATUS_LABELS[TRANSFER_STATUS.PENDING],
           color: 'warning',
           icon: <Clock size={16} />,
         };
-      case 'COMPLETED':
+      case TRANSFER_STATUS.COMPLETED:
         return {
-          label: 'Completed',
+          label: TRANSFER_STATUS_LABELS[TRANSFER_STATUS.COMPLETED],
           color: 'success',
           icon: <CheckCircle size={16} />,
         };
-      case 'REJECTED':
+      case TRANSFER_STATUS.REJECTED:
         return {
-          label: 'Rejected',
+          label: TRANSFER_STATUS_LABELS[TRANSFER_STATUS.REJECTED],
           color: 'error',
           icon: <XCircle size={16} />,
         };
-      case 'CANCELLED':
+      case TRANSFER_STATUS.CANCELLED:
         return {
-          label: 'Cancelled',
+          label: TRANSFER_STATUS_LABELS[TRANSFER_STATUS.CANCELLED],
           color: 'default',
           icon: <X size={16} />,
         };
       default:
         return {
-          label: status,
+          label: TRANSFER_STATUS_LABELS[status] || status,
           color: 'default',
           icon: null,
         };
@@ -62,6 +64,6 @@ const TransferStatusChip = ({ status, size = 'small' }) => {
       }}
     />
   );
-};
+});
 
 export default TransferStatusChip;

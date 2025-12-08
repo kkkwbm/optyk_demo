@@ -35,7 +35,6 @@ import EditUserDialog from '../components/EditUserDialog';
 import PermissionsSelector from '../../../components/PermissionsSelector';
 import {
   fetchUserById,
-  assignLocationsToUser,
   selectCurrentUser as selectCurrentUserDetails,
   selectUsersLoading,
 } from '../usersSlice';

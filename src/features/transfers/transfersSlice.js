@@ -76,9 +76,9 @@ export const createTransfer = createAsyncThunk(
 
 export const confirmTransfer = createAsyncThunk(
   'transfers/confirmTransfer',
-  async ({ id, notes }, { rejectWithValue }) => {
+  async ({ id, notes, acceptedItems }, { rejectWithValue }) => {
     try {
-      const response = await transferService.confirmTransfer(id, { notes });
+      const response = await transferService.confirmTransfer(id, { notes, acceptedItems });
       if (response.data.success) {
         return response.data.data;
       }

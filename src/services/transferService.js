@@ -183,6 +183,17 @@ export const transferService = {
   },
 
   /**
+   * Update transfer details (reason and notes)
+   * Only allowed for COMPLETED transfers
+   * @param {string} id - Transfer ID
+   * @param {Object} data - { reason: string, notes: string }
+   * @returns {Promise} Response with updated transfer
+   */
+  updateTransfer: (id, data) => {
+    return api.patch(`/transfers/${id}`, data);
+  },
+
+  /**
    * Delete transfer permanently
    * Only allowed for CANCELLED or REJECTED transfers
    * @param {string} id - Transfer ID

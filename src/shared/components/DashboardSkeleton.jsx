@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import { Container, Grid, Skeleton, Paper, Box } from '@mui/material';
 
-function DashboardSkeleton() {
+const DashboardSkeleton = memo(function DashboardSkeleton() {
   return (
     <Container maxWidth="xl">
       {/* Header Skeleton */}
@@ -44,6 +45,6 @@ function DashboardSkeleton() {
       </Grid>
     </Container>
   );
-}
+});
 
 export default DashboardSkeleton;

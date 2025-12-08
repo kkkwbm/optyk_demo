@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -28,22 +28,22 @@ import {
   DollarSign,
   Glasses,
 } from 'lucide-react';
-import { formatDate } from '../../../utils/dateFormat';
 import {
   fetchDashboardStats,
   selectDashboardStats,
 } from '../statisticsSlice';
-import { fetchRecentSales, selectSales } from '../../sales/salesSlice';
+import locationService from '../../../services/locationService';
 import { selectCurrentLocation } from '../../locations/locationsSlice';
-import { DATE_FORMATS, SALE_STATUS_LABELS, PRODUCT_TYPE_LABELS } from '../../../constants';
+import { PRODUCT_TYPE_LABELS } from '../../../constants';
 
 function DashboardPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const stats = useSelector(selectDashboardStats);
-  const recentSales = useSelector(selectSales);
   const currentLocation = useSelector(selectCurrentLocation);
+
+  const [storeComparison, setStoreComparison] = useState([]);
 
   useEffect(() => {
     // Fetch all-time statistics (no date range filter)
@@ -54,8 +54,57 @@ function DashboardPage() {
       : currentLocation.id;
 
     dispatch(fetchDashboardStats({ locationId }));
-    dispatch(fetchRecentSales({ limit: 5, locationId }));
   }, [dispatch, currentLocation]);
+
+  // Fetch store comparison data
+  useEffect(() => {
+    const fetchStoreComparison = async () => {
+      try {
+        const response = await locationService.getLocations({
+          page: 0,
+          size: 1000,
+          status: 'ACTIVE'
+        });
+        const locations = response.data?.content || response.data?.data || response.data || [];
+
+        // Filter only stores (exclude warehouses)
+        const storesOnly = locations.filter(location => location.type === 'STORE');
+
+        // Fetch stats for each store
+        const comparisonData = await Promise.all(
+          storesOnly.map(async (location) => {
+            try {
+              const statsResponse = await dispatch(fetchDashboardStats({ locationId: location.id })).unwrap();
+              return {
+                id: location.id,
+                name: location.name,
+                type: location.type,
+                totalSales: statsResponse?.totalSales || 0,
+                salesCount: statsResponse?.salesCount || 0,
+                totalProducts: statsResponse?.totalProducts || 0,
+              };
+            } catch (error) {
+              console.error(`Failed to fetch stats for location ${location.id}:`, error);
+              return {
+                id: location.id,
+                name: location.name,
+                type: location.type,
+                totalSales: 0,
+                salesCount: 0,
+                totalProducts: 0,
+              };
+            }
+          })
+        );
+
+        setStoreComparison(comparisonData.sort((a, b) => b.totalSales - a.totalSales));
+      } catch (error) {
+        console.error('Failed to fetch store comparison:', error);
+      }
+    };
+
+    fetchStoreComparison();
+  }, [dispatch]);
 
   const formatCurrency = (value) => {
     return `$${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -115,7 +164,6 @@ function DashboardPage() {
                 >
                   <DollarSign size={24} color="#fff" />
                 </Box>
-                {renderTrend(stats?.salesTrend)}
               </Box>
               <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
                 {formatCurrency(stats?.totalSales)}
@@ -179,7 +227,7 @@ function DashboardPage() {
                 {stats?.activeTransfers || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Aktywne przesunięcia
+                Aktywne transfery
               </Typography>
             </CardContent>
           </Card>
@@ -273,197 +321,179 @@ function DashboardPage() {
         </Grid>
       </Grid >
 
-      <Grid container spacing={3}>
-        {/* Revenue Trends */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Trend przychodów (Dzienny)
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'flex-end', height: 200, gap: 1, overflowX: 'auto', pb: 1 }}>
-              {stats?.revenueTrends && stats.revenueTrends.length > 0 ? (
-                stats.revenueTrends.map((item) => (
-                  <Box key={item.date} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 40, flex: 1 }}>
-                    <Box
-                      sx={{
-                        width: '100%',
-                        height: `${Math.max((item.revenue / (Math.max(...stats.revenueTrends.map(i => i.revenue)) || 1)) * 100, 5)}%`,
-                        bgcolor: 'primary.main',
-                        borderRadius: '4px 4px 0 0',
-                        transition: 'height 0.3s',
-                        '&:hover': { bgcolor: 'primary.dark' },
-                      }}
-                      title={`${item.date}: ${formatCurrency(item.revenue)}`}
-                    />
-                    <Typography variant="caption" sx={{ mt: 1, fontSize: '0.7rem', whiteSpace: 'nowrap', transform: 'rotate(-45deg)', transformOrigin: 'left top' }}>
-                      {formatDate(new Date(item.date), 'dd.MM')}
-                    </Typography>
-                  </Box>
-                ))
-              ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ width: '100%', textAlign: 'center', alignSelf: 'center' }}>
-                  Brak danych o przychodach
-                </Typography>
-              )}
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* Sales by Product Type */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Sprzedaż wg typu produktu
-            </Typography>
-            {stats?.salesByType && stats.salesByType.length > 0 ? (
-              <Box>
-                {stats.salesByType.map((item) => (
-                  <Box key={item.type} sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2">
-                        {PRODUCT_TYPE_LABELS[item.type] || item.type}
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {formatCurrency(item.total)}
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{
-                        width: '100%',
-                        height: 8,
-                        bgcolor: 'grey.200',
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: `${(item.total / (stats.totalSales || 1)) * 100}%`,
-                          height: '100%',
-                          bgcolor: 'primary.main',
-                          borderRadius: 1,
-                        }}
-                      />
-                    </Box>
-                  </Box>
-                ))}
+      {/* Sales by Product Type */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+          Sprzedaż wg typu produktu
+        </Typography>
+        {stats?.salesByType && stats.salesByType.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+            {stats.salesByType.map((item) => (
+              <Box key={item.type} sx={{ flex: '1 1 200px', minWidth: 200 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    {PRODUCT_TYPE_LABELS[item.type] || item.type}
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {formatCurrency(item.total)}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: 10,
+                    bgcolor: 'grey.200',
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: `${(item.total / (stats.totalSales || 1)) * 100}%`,
+                      height: '100%',
+                      bgcolor: 'primary.main',
+                      borderRadius: 1,
+                    }}
+                  />
+                </Box>
               </Box>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Brak danych sprzedażowych za ten okres
-              </Typography>
-            )}
-          </Paper>
-        </Grid>
+            ))}
+          </Box>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            Brak danych sprzedażowych za ten okres
+          </Typography>
+        )}
+      </Paper>
 
-        {/* Sales by Brand */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Sprzedaż wg marki
-            </Typography>
-            {stats?.salesByBrand && stats.salesByBrand.length > 0 ? (
-              <Box>
-                {stats.salesByBrand.slice(0, 5).map((item, index) => (
-                  <Box key={index} sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2">
-                        {item.brand || 'Nieznana marka'}
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {formatCurrency(item.totalSales)}
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{
-                        width: '100%',
-                        height: 8,
-                        bgcolor: 'grey.200',
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: `${(item.totalSales / (stats.totalSales || 1)) * 100}%`,
-                          height: '100%',
-                          bgcolor: 'secondary.main',
-                          borderRadius: 1,
-                        }}
-                      />
-                    </Box>
-                  </Box>
-                ))}
+      {/* Sales by Brand */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+          Sprzedaż wg marki
+        </Typography>
+        {stats?.salesByBrand && stats.salesByBrand.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+            {stats.salesByBrand.slice(0, 10).map((item, index) => (
+              <Box key={index} sx={{ flex: '1 1 200px', minWidth: 200 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    {item.brand || 'Nieznana marka'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {formatCurrency(item.totalSales)}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: 10,
+                    bgcolor: 'grey.200',
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: `${(item.totalSales / (stats.totalSales || 1)) * 100}%`,
+                      height: '100%',
+                      bgcolor: 'secondary.main',
+                      borderRadius: 1,
+                    }}
+                  />
+                </Box>
               </Box>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Brak danych sprzedażowych za ten okres
-              </Typography>
-            )}
-          </Paper>
-        </Grid>
+            ))}
+          </Box>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            Brak danych sprzedażowych za ten okres
+          </Typography>
+        )}
+      </Paper>
 
-        {/* Recent Sales */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Ostatnie sprzedaże</Typography>
-              <Button size="small" onClick={() => navigate('/sales')}>
-                Zobacz wszystkie
-              </Button>
-            </Box>
-            <TableContainer sx={{ bgcolor: 'background.default' }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>Sprzedaż #</TableCell>
-                    <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>Data</TableCell>
-                    <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>Lokalizacja</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>Razem</TableCell>
-                    <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>Status</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {recentSales.length > 0 ? (
-                    recentSales.slice(0, 5).map((sale) => (
-                      <TableRow
-                        key={sale.id}
-                        hover
-                        sx={{ cursor: 'pointer' }}
-                        onClick={() => navigate(`/sales/${sale.id}`)}
-                      >
-                        <TableCell>#{sale.saleNumber || sale.id.slice(0, 8)}</TableCell>
-                        <TableCell>
-                          {formatDate(new Date(sale.createdAt), DATE_FORMATS.DISPLAY)}
-                        </TableCell>
-                        <TableCell>{sale.location?.name || '-'}</TableCell>
-                        <TableCell align="right">
-                          {formatCurrency(sale.totalAmount)}
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={SALE_STATUS_LABELS[sale.status]}
-                            size="small"
-                            color="success"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} align="center">
-                        <Typography variant="body2" color="text.secondary">
-                          Brak ostatnich sprzedaży
+      {/* Store Comparison */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+          Porównanie salonów
+        </Typography>
+        {storeComparison.length > 0 ? (
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Salon</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>Łączna sprzedaż</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>Liczba sprzedaży</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>Produkty w magazynie</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Udział w sprzedaży</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {storeComparison.map((store) => {
+                  const totalRevenue = storeComparison.reduce((sum, s) => sum + s.totalSales, 0);
+                  const salesPercentage = totalRevenue > 0 ? (store.totalSales / totalRevenue) * 100 : 0;
+
+                  return (
+                    <TableRow key={store.id} hover>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {store.name}
                         </Typography>
                       </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {formatCurrency(store.totalSales)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2">
+                          {store.salesCount}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2">
+                          {store.totalProducts}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box
+                            sx={{
+                              flex: 1,
+                              height: 8,
+                              bgcolor: 'grey.200',
+                              borderRadius: 1,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: `${salesPercentage}%`,
+                                height: '100%',
+                                bgcolor: 'primary.main',
+                                borderRadius: 1,
+                              }}
+                            />
+                          </Box>
+                          <Typography variant="caption" sx={{ minWidth: 45, textAlign: 'right' }}>
+                            {salesPercentage.toFixed(1)}%
+                          </Typography>
+                        </Box>
+                      </TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </Grid>
-      </Grid>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Typography variant="body2" color="text.secondary">
+              Brak danych do porównania
+            </Typography>
+          </Box>
+        )}
+      </Paper>
     </Container >
   );
 }

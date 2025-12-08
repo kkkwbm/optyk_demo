@@ -32,7 +32,6 @@ import {
 import {
   SALE_STATUS,
   SALE_STATUS_LABELS,
-  PAYMENT_METHOD_LABELS,
   DATE_FORMATS,
 } from '../../../constants';
 

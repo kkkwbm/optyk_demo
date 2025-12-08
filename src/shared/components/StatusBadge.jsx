@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Chip } from '@mui/material';
 import {
   USER_STATUS,
@@ -18,7 +19,7 @@ import {
  * @param {String} props.size - Badge size (small, medium)
  * @param {String} props.variant - Badge variant (filled, outlined)
  */
-function StatusBadge({ status, type = 'generic', size = 'small', variant = 'filled' }) {
+const StatusBadge = memo(function StatusBadge({ status, type = 'generic', size = 'small', variant = 'filled' }) {
   if (!status) return null;
 
   const getStatusConfig = () => {
@@ -111,6 +112,6 @@ function StatusBadge({ status, type = 'generic', size = 'small', variant = 'fill
   const { label, color } = getStatusConfig();
 
   return <Chip label={label} color={color} size={size} variant={variant} />;
-}
+});
 
 export default StatusBadge;

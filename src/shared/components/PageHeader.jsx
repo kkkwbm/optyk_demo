@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Box, Typography, Breadcrumbs, Link, Button, Stack } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
@@ -12,7 +13,7 @@ import { ChevronRight } from 'lucide-react';
  * @param {Array} props.breadcrumbs - Breadcrumb items
  * @param {Array} props.actions - Action buttons
  */
-function PageHeader({ title, subtitle, breadcrumbs = [], actions = [] }) {
+const PageHeader = memo(function PageHeader({ title, subtitle, breadcrumbs = [], actions = [] }) {
   return (
     <Box sx={{ mb: 3 }}>
       {/* Breadcrumbs */}
@@ -87,6 +88,6 @@ function PageHeader({ title, subtitle, breadcrumbs = [], actions = [] }) {
       </Box>
     </Box>
   );
-}
+});
 
 export default PageHeader;

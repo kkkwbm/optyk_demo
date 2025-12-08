@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import { Container, Paper, Box, Typography, Button } from '@mui/material';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import errorLoggingService from '../../services/errorLoggingService';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -12,7 +13,7 @@ class ErrorBoundary extends Component {
     };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
@@ -23,11 +24,11 @@ class ErrorBoundary extends Component {
       errorInfo,
     });
 
-    // Log to error reporting service (e.g., Sentry, LogRocket)
-    if (process.env.NODE_ENV === 'production') {
-      // TODO: Send error to logging service
-      // logErrorToService(error, errorInfo);
-    }
+    // Log to error reporting service
+    errorLoggingService.logError(error, errorInfo, {
+      boundary: 'ErrorBoundary',
+      timestamp: new Date().toISOString(),
+    });
   }
 
   handleReset = () => {
@@ -89,7 +90,7 @@ class ErrorBoundary extends Component {
               </Button>
             </Box>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.MODE === 'development' && this.state.error && (
               <Box
                 sx={{
                   textAlign: 'left',

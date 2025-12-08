@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import { Box, Paper, Skeleton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 
-function TableSkeleton({ rows = 5, columns = 6 }) {
+const TableSkeleton = memo(function TableSkeleton({ rows = 5, columns = 6 }) {
   return (
     <TableContainer component={Paper}>
       <Table>
@@ -27,6 +28,6 @@ function TableSkeleton({ rows = 5, columns = 6 }) {
       </Table>
     </TableContainer>
   );
-}
+});
 
 export default TableSkeleton;

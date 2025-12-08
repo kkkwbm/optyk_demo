@@ -1,7 +1,8 @@
+import { memo } from 'react';
 import { Grid } from '@mui/material';
 import FormField from '../../../shared/components/FormField';
 
-function OtherProductForm({ control, brands = [] }) {
+const OtherProductForm = memo(function OtherProductForm({ control, brands = [] }) {
   const brandOptions = brands.map((brand) => ({ value: brand.id, label: brand.name }));
 
   return (
@@ -61,6 +62,6 @@ function OtherProductForm({ control, brands = [] }) {
       </Grid>
     </Grid>
   );
-}
+});
 
 export default OtherProductForm;

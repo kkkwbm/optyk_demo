@@ -70,15 +70,6 @@ export const userService = {
     return api.patch(`/users/${id}/reset-password`, data);
   },
 
-  /**
-   * Assign locations to user
-   * @param {string} id - User ID
-   * @param {Array} locationIds - Array of location IDs
-   * @returns {Promise} Response with updated user
-   */
-  assignLocations: (id, locationIds) => {
-    return api.post(`/users/${id}/locations`, { locationIds });
-  },
 
   /**
    * Remove location from user

@@ -28,6 +28,8 @@ import ConfirmTransferDialog from '../components/ConfirmTransferDialog';
 import RejectTransferDialog from '../components/RejectTransferDialog';
 import TransferStatusChip from '../components/TransferStatusChip';
 
+import transferService from '../../../services/transferService';
+
 import {
   fetchIncomingTransfers,
   fetchOutgoingTransfers,
@@ -76,15 +78,36 @@ const PendingTransfersPage = () => {
     navigate(`/transfers/${transferId}`);
   };
 
-  const handleConfirmClick = (transfer) => {
-    setConfirmDialog({ open: true, transfer });
+  const handleConfirmClick = async (transfer) => {
+    // Fetch full transfer details to get items for partial acceptance
+    try {
+      const response = await transferService.getTransferById(transfer.id);
+      if (response.data.success) {
+        setConfirmDialog({ open: true, transfer: response.data.data });
+      } else {
+        toast.error('Failed to load transfer details');
+      }
+    } catch (error) {
+      toast.error('Failed to load transfer details');
+    }
   };
 
   const handleConfirm = async (data) => {
     setActionLoading(true);
     try {
-      await dispatch(confirmTransfer({ id: confirmDialog.transfer.id, notes: data.notes })).unwrap();
-      toast.success('Transfer confirmed successfully');
+      const result = await dispatch(confirmTransfer({
+        id: confirmDialog.transfer.id,
+        notes: data.notes,
+        acceptedItems: data.acceptedItems,
+      })).unwrap();
+
+      // Check if partial acceptance created a return transfer
+      if (result.returnTransferId) {
+        toast.success('Transfer partially confirmed - a return transfer has been created');
+      } else {
+        toast.success('Transfer confirmed successfully');
+      }
+
       setConfirmDialog({ open: false, transfer: null });
       // Refresh lists
       dispatch(fetchIncomingTransfers({ locationId: currentLocationId, status: 'PENDING' }));

@@ -13,7 +13,7 @@ import {
   Typography,
   Divider,
 } from '@mui/material';
-import { Plus, XCircle, Warehouse, Store, CheckCircle2, Trash2 } from 'lucide-react';
+import { Plus, XCircle, Warehouse, Store, CheckCircle2, Trash2, Eye, Edit } from 'lucide-react';
 import { formatDate } from '../../../utils/dateFormat';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
@@ -292,7 +292,7 @@ function TransfersListPage() {
       sortable: false,
       render: (row) => (
         <Box sx={{ display: 'flex', gap: 1 }}>
-          {(row.status === TRANSFER_STATUS.PENDING || row.status === TRANSFER_STATUS.IN_TRANSIT) && (
+          {row.status === TRANSFER_STATUS.PENDING && (
             <>
               <Button
                 size="small"
@@ -317,6 +317,34 @@ function TransfersListPage() {
                 }}
               >
                 Anuluj
+              </Button>
+            </>
+          )}
+          {row.status === TRANSFER_STATUS.COMPLETED && (
+            <>
+              <Button
+                size="small"
+                variant="text"
+                color="primary"
+                startIcon={<Edit size={14} />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/transfers/${row.id}`);
+                }}
+              >
+                Edytuj
+              </Button>
+              <Button
+                size="small"
+                variant="text"
+                color="error"
+                startIcon={<Trash2 size={14} />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenConfirm(row, 'DELETE');
+                }}
+              >
+                Usuń
               </Button>
             </>
           )}
@@ -372,11 +400,10 @@ function TransfersListPage() {
     console.log('🧮 Computing pendingTransfers');
     console.log('   allPendingTransfers:', allPendingTransfers);
     console.log('   TRANSFER_STATUS.PENDING:', TRANSFER_STATUS.PENDING);
-    console.log('   TRANSFER_STATUS.IN_TRANSIT:', TRANSFER_STATUS.IN_TRANSIT);
 
     const result = allPendingTransfers.filter(
       (transfer) => {
-        const matches = transfer.status === TRANSFER_STATUS.PENDING || transfer.status === TRANSFER_STATUS.IN_TRANSIT;
+        const matches = transfer.status === TRANSFER_STATUS.PENDING;
         console.log(`   Transfer ${transfer.id} status=${transfer.status}, matches=${matches}`);
         return matches;
       }
@@ -384,6 +411,18 @@ function TransfersListPage() {
     console.log('   Final result:', result);
     return result;
   }, [allPendingTransfers]);
+
+  // Filter out PENDING from history unless user specifically filtered by that status
+  const historyTransfers = useMemo(() => {
+    // If user has selected a specific status filter, show all matching transfers (including PENDING if selected)
+    if (statusFilter) {
+      return transfers;
+    }
+    // Otherwise, exclude PENDING from history (they're shown in the pending table)
+    return transfers.filter(
+      (transfer) => transfer.status !== TRANSFER_STATUS.PENDING
+    );
+  }, [transfers, statusFilter]);
 
   const pendingColumns = [
     {
@@ -492,9 +531,6 @@ function TransfersListPage() {
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
           Bieżące transfery oczekujące
-          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-            (Count: {pendingTransfers.length}, All Pending: {allPendingTransfers.length}, Loading: {pendingLoading ? 'Yes' : 'No'})
-          </Typography>
         </Typography>
         <DataTable
           columns={pendingColumns}
@@ -607,7 +643,7 @@ function TransfersListPage() {
         {/* Tabela transferów */}
         <DataTable
           columns={columns}
-          data={transfers}
+          data={historyTransfers}
           loading={loading}
           pagination={{
             page: pagination.page,

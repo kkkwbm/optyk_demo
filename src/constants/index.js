@@ -224,16 +224,16 @@ export const PAYMENT_METHOD_LABELS = {
 // Transfer Status
 export const TRANSFER_STATUS = {
   PENDING: 'PENDING',
-  IN_TRANSIT: 'IN_TRANSIT',
   COMPLETED: 'COMPLETED',
   CANCELLED: 'CANCELLED',
+  REJECTED: 'REJECTED',
 };
 
 export const TRANSFER_STATUS_LABELS = {
   [TRANSFER_STATUS.PENDING]: 'Oczekujący',
-  [TRANSFER_STATUS.IN_TRANSIT]: 'W transporcie',
   [TRANSFER_STATUS.COMPLETED]: 'Zakończony',
   [TRANSFER_STATUS.CANCELLED]: 'Anulowany',
+  [TRANSFER_STATUS.REJECTED]: 'Odrzucony',
 };
 
 // Stock Adjustment Types

@@ -61,10 +61,15 @@ function SalesListPage() {
   }, [dispatch]);
 
   useEffect(() => {
+    // Filter by location: if "ALL_STORES" is selected or no location, send undefined to get all sales
+    const locationId = (currentLocation?.id === 'ALL_STORES' || !currentLocation)
+      ? undefined
+      : currentLocation.id;
+
     const params = {
       page: pagination.page,
       size: pagination.size,
-      locationId: currentLocation?.id || undefined,
+      locationId,
       statuses: statusFilters.length > 0 ? statusFilters.join(',') : undefined,
       productTypes: productTypeFilters.length > 0 ? productTypeFilters.join(',') : undefined,
       startDate: startDate || undefined,
@@ -86,7 +91,21 @@ function SalesListPage() {
     try {
       await dispatch(cancelSale({ id: sale.id })).unwrap();
       toast.success('Sprzedaż została usunięta');
-      dispatch(fetchSales({ page: pagination.page, size: pagination.size }));
+
+      // Refetch with current filters including location
+      const locationId = (currentLocation?.id === 'ALL_STORES' || !currentLocation)
+        ? undefined
+        : currentLocation.id;
+
+      dispatch(fetchSales({
+        page: pagination.page,
+        size: pagination.size,
+        locationId,
+        statuses: statusFilters.length > 0 ? statusFilters.join(',') : undefined,
+        productTypes: productTypeFilters.length > 0 ? productTypeFilters.join(',') : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      }));
     } catch (error) {
       toast.error(error || 'Nie udało się usunąć sprzedaży');
     }
@@ -165,7 +184,7 @@ function SalesListPage() {
       id: 'user',
       label: 'Sprzedawca',
       sortable: false,
-      render: (row) => `${row.user?.firstName || ''} ${row.user?.lastName || ''}`.trim() || '-',
+      render: (row) => row.userFullName || '-',
     },
     {
       id: 'itemsCount',

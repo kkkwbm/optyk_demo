@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import { Card, CardContent, Skeleton, Box } from '@mui/material';
 
-function CardSkeleton({ height = 200, showActions = false }) {
+const CardSkeleton = memo(function CardSkeleton({ height = 200, showActions = false }) {
   return (
     <Card>
       <CardContent>
@@ -15,6 +16,6 @@ function CardSkeleton({ height = 200, showActions = false }) {
       </CardContent>
     </Card>
   );
-}
+});
 
 export default CardSkeleton;
