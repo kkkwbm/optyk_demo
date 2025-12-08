@@ -231,14 +231,15 @@ function InventoryDashboardPage() {
 
   // Define columns based on product type
   const getColumns = () => {
-    const baseColumns = [
+    // Only show brand column for products that have brands (not OTHER)
+    const baseColumns = currentType !== PRODUCT_TYPES.OTHER ? [
       {
         id: 'brand',
         label: 'Marka',
         sortable: true,
         render: (row) => row.brand?.name || '-',
       },
-    ];
+    ] : [];
 
     const typeSpecificColumns = {
       [PRODUCT_TYPES.FRAME]: [
@@ -264,7 +265,6 @@ function InventoryDashboardPage() {
         },
       ],
       [PRODUCT_TYPES.SOLUTION]: [
-        { id: 'name', label: 'Nazwa', sortable: true },
         { id: 'volume', label: 'Pojemność', sortable: true },
         {
           id: 'sellingPrice',
@@ -276,12 +276,6 @@ function InventoryDashboardPage() {
       [PRODUCT_TYPES.OTHER]: [
         { id: 'name', label: 'Nazwa', sortable: true },
         { id: 'description', label: 'Opis', sortable: false },
-        {
-          id: 'sellingPrice',
-          label: 'Cena sprzedaży',
-          sortable: true,
-          render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
-        },
       ],
     };
 

@@ -2,43 +2,13 @@ import { memo } from 'react';
 import { Grid } from '@mui/material';
 import FormField from '../../../shared/components/FormField';
 
-const OtherProductForm = memo(function OtherProductForm({ control, brands = [] }) {
-  const brandOptions = brands.map((brand) => ({ value: brand.id, label: brand.name }));
-
+const OtherProductForm = memo(function OtherProductForm({ control }) {
   return (
     <Grid container spacing={3}>
       <Grid size={{ xs: 12, md: 6 }}>
-        <FormField
-          name="brandId"
-          control={control}
-          label="Marka"
-          type="select"
-          options={brandOptions}
-          required
-        />
+        <FormField name="name" control={control} label="Nazwa" type="text" required />
       </Grid>
       <Grid size={{ xs: 12, md: 6 }}>
-        <FormField name="model" control={control} label="Model" type="text" required />
-      </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
-        <FormField name="color" control={control} label="Kolor" type="text" required />
-      </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
-        <FormField name="size" control={control} label="Rozmiar" type="text" required />
-      </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
-        <FormField
-          name="sellingPrice"
-          control={control}
-          label="Cena"
-          type="number"
-          required
-          rules={{
-            min: { value: 0, message: 'Cena musi być dodatnia' },
-          }}
-        />
-      </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
         <FormField
           name="quantity"
           control={control}
@@ -46,18 +16,18 @@ const OtherProductForm = memo(function OtherProductForm({ control, brands = [] }
           type="number"
           required
           rules={{
-            min: { value: 0, message: 'Ilość nie może być ujemna' },
+            min: { value: 1, message: 'Ilość musi być większa niż 0' },
           }}
         />
       </Grid>
       <Grid size={{ xs: 12 }}>
         <FormField
-          name="notes"
+          name="description"
           control={control}
           label="Opis"
           type="text"
           multiline
-          rows={2}
+          rows={4}
         />
       </Grid>
     </Grid>

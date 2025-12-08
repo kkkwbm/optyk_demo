@@ -19,6 +19,7 @@ import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import DataTable from '../../../shared/components/DataTable';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
+import ConfirmTransferDialog from '../components/ConfirmTransferDialog';
 import TransferStatusChip from '../components/TransferStatusChip';
 import transferService from '../../../services/transferService';
 import {
@@ -58,8 +59,11 @@ function TransfersListPage() {
   const [allPendingTransfers, setAllPendingTransfers] = useState([]);
   const [pendingLoading, setPendingLoading] = useState(false);
 
-  // Dialog state: type can be 'CANCEL', 'ACCEPT', or 'DELETE'
+  // Dialog state: type can be 'CANCEL' or 'DELETE'
   const [confirmDialog, setConfirmDialog] = useState({ open: false, transfer: null, type: null });
+
+  // Confirm transfer dialog state (for partial acceptance)
+  const [confirmTransferDialog, setConfirmTransferDialog] = useState({ open: false, transfer: null });
 
   const pagination = usePagination({
     total: paginationData?.totalElements || 0,
@@ -159,9 +163,6 @@ function TransfersListPage() {
       if (type === 'CANCEL') {
         await dispatch(cancelTransfer({ id: transfer.id })).unwrap();
         toast.success('Transfer anulowany pomyślnie');
-      } else if (type === 'ACCEPT') {
-        await dispatch(confirmTransfer({ id: transfer.id, notes: '' })).unwrap();
-        toast.success('Transfer odebrany pomyślnie');
       } else if (type === 'DELETE') {
         await dispatch(deleteTransfer(transfer.id)).unwrap();
         toast.success('Transfer usunięty pomyślnie');
@@ -203,6 +204,81 @@ function TransfersListPage() {
       toast.error(error || 'Wystąpił błąd podczas przetwarzania transferu');
     }
     handleCloseConfirm();
+  };
+
+  const handleOpenReceiveDialog = async (transfer) => {
+    try {
+      // Fetch full transfer details including product information
+      const response = await transferService.getTransferById(transfer.id);
+      if (response.data.success) {
+        setConfirmTransferDialog({ open: true, transfer: response.data.data });
+      } else {
+        toast.error('Nie udało się pobrać szczegółów transferu');
+      }
+    } catch (error) {
+      toast.error('Wystąpił błąd podczas pobierania szczegółów transferu');
+      console.error('Error fetching transfer details:', error);
+    }
+  };
+
+  const handleCloseReceiveDialog = () => {
+    setConfirmTransferDialog({ open: false, transfer: null });
+  };
+
+  const handleConfirmTransfer = async (confirmData) => {
+    try {
+      await dispatch(confirmTransfer({
+        id: confirmTransferDialog.transfer.id,
+        ...confirmData
+      })).unwrap();
+
+      const hasPartialAcceptance = confirmData.acceptedItems && confirmData.acceptedItems.some(
+        item => item.acceptedQuantity < confirmTransferDialog.transfer.items.find(i => i.id === item.transferItemId)?.quantity
+      );
+
+      if (hasPartialAcceptance) {
+        toast.success('Transfer częściowo przyjęty. Utworzono transfer zwrotny dla odrzuconych produktów.');
+      } else {
+        toast.success('Transfer odebrany pomyślnie');
+      }
+
+      // Refresh pending transfers
+      const response = await transferService.getTransfers({ status: 'PENDING', page: 0, size: 100 });
+      if (response.data.success) {
+        const result = response.data.data;
+        const pendingData = result.content || result || [];
+
+        if (currentLocation && currentLocation.id !== 'ALL_STORES') {
+          const filtered = pendingData.filter(
+            (t) => t.fromLocation?.id === currentLocation.id || t.toLocation?.id === currentLocation.id
+          );
+          setAllPendingTransfers(filtered);
+        } else {
+          setAllPendingTransfers(pendingData);
+        }
+      }
+
+      // Refresh history list
+      const params = {
+        page: pagination.page,
+        size: pagination.size,
+        fromLocationIds: fromLocationFilters.length > 0 ? fromLocationFilters.join(',') : undefined,
+        toLocationIds: toLocationFilters.length > 0 ? toLocationFilters.join(',') : undefined,
+        status: statusFilter || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      };
+
+      if (currentLocation) {
+        dispatch(fetchTransfersByLocation({ locationId: currentLocation.id, params }));
+      } else {
+        dispatch(fetchTransfers(params));
+      }
+
+      handleCloseReceiveDialog();
+    } catch (error) {
+      toast.error(error || 'Wystąpił błąd podczas przyjmowania transferu');
+    }
   };
 
   const handleClearFilters = () => {
@@ -301,7 +377,7 @@ function TransfersListPage() {
                 startIcon={<CheckCircle2 size={14} />}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleOpenConfirm(row, 'ACCEPT');
+                  handleOpenReceiveDialog(row);
                 }}
               >
                 Odbierz
@@ -368,16 +444,12 @@ function TransfersListPage() {
   ];
 
   const getDialogTitle = () => {
-    if (confirmDialog.type === 'ACCEPT') return 'Odbierz transfer';
     if (confirmDialog.type === 'DELETE') return 'Usuń transfer';
     return 'Anuluj transfer';
   };
 
   const getDialogMessage = () => {
     const transferNum = confirmDialog.transfer?.transferNumber || confirmDialog.transfer?.id.slice(0, 8);
-    if (confirmDialog.type === 'ACCEPT') {
-      return `Czy na pewno chcesz odebrać transfer #${transferNum}? Spowoduje to zaktualizowanie stanów magazynowych w lokalizacji docelowej.`;
-    }
     if (confirmDialog.type === 'DELETE') {
       return `Czy na pewno chcesz usunąć transfer #${transferNum}? Ta operacja jest NIEODWRACALNA i trwale usunie transfer z systemu.`;
     }
@@ -385,13 +457,11 @@ function TransfersListPage() {
   };
 
   const getConfirmText = () => {
-    if (confirmDialog.type === 'ACCEPT') return 'Odbierz transfer';
     if (confirmDialog.type === 'DELETE') return 'Usuń';
     return 'Anuluj transfer';
   };
 
   const getConfirmColor = () => {
-    if (confirmDialog.type === 'ACCEPT') return 'success';
     return 'error';
   };
 
@@ -486,7 +556,7 @@ function TransfersListPage() {
             startIcon={<CheckCircle2 size={14} />}
             onClick={(e) => {
               e.stopPropagation();
-              handleOpenConfirm(row, 'ACCEPT');
+              handleOpenReceiveDialog(row);
             }}
           >
             Odbierz
@@ -666,6 +736,15 @@ function TransfersListPage() {
         message={getDialogMessage()}
         confirmText={getConfirmText()}
         confirmColor={getConfirmColor()}
+      />
+
+      {/* Dialog częściowego odbioru transferu */}
+      <ConfirmTransferDialog
+        open={confirmTransferDialog.open}
+        onClose={handleCloseReceiveDialog}
+        onConfirm={handleConfirmTransfer}
+        transfer={confirmTransferDialog.transfer}
+        loading={loading}
       />
     </Container>
   );

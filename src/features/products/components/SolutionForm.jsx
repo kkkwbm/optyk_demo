@@ -18,27 +18,9 @@ const SolutionForm = memo(function SolutionForm({ control, brands = [] }) {
         />
       </Grid>
       <Grid size={{ xs: 12, md: 6 }}>
-        <FormField name="model" control={control} label="Model" type="text" required />
+        <FormField name="volume" control={control} label="Pojemność" type="text" required />
       </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
-        <FormField name="color" control={control} label="Kolor" type="text" required />
-      </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
-        <FormField name="size" control={control} label="Rozmiar" type="text" required />
-      </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
-        <FormField
-          name="sellingPrice"
-          control={control}
-          label="Cena"
-          type="number"
-          required
-          rules={{
-            min: { value: 0, message: 'Cena musi być dodatnia' },
-          }}
-        />
-      </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
+      <Grid size={{ xs: 12, md: 4 }}>
         <FormField
           name="quantity"
           control={control}
@@ -47,6 +29,18 @@ const SolutionForm = memo(function SolutionForm({ control, brands = [] }) {
           required
           rules={{
             min: { value: 0, message: 'Ilość nie może być ujemna' },
+          }}
+        />
+      </Grid>
+      <Grid size={{ xs: 12, md: 4 }}>
+        <FormField
+          name="sellingPrice"
+          control={control}
+          label="Cena"
+          type="number"
+          required
+          rules={{
+            min: { value: 0, message: 'Cena musi być dodatnia' },
           }}
         />
       </Grid>
