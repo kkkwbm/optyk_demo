@@ -112,7 +112,7 @@ const PendingTransfersPage = () => {
       // Refresh lists
       dispatch(fetchIncomingTransfers({ locationId: currentLocationId, status: 'PENDING' }));
     } catch (error) {
-      toast.error(error || 'Failed to confirm transfer');
+      toast.error(error || 'Nie udało się potwierdzić transferu');
     } finally {
       setActionLoading(false);
     }

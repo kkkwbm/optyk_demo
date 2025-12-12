@@ -46,7 +46,7 @@ export const fetchProducts = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch products');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać produktów');
     }
   }
 );
@@ -65,7 +65,7 @@ export const fetchProductById = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch product');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać produktu');
     }
   }
 );
@@ -80,7 +80,7 @@ export const createProduct = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to create product');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się utworzyć produktu');
     }
   }
 );
@@ -95,7 +95,7 @@ export const updateProduct = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to update product');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się zaktualizować produktu');
     }
   }
 );
@@ -109,9 +109,9 @@ export const deleteProduct = createAsyncThunk(
       if (response.status === 204 || response.data?.success) {
         return { id };
       }
-      return rejectWithValue(response.data?.error || 'Failed to delete product');
+      return rejectWithValue(response.data?.error || 'Nie udało się usunąć produktu');
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || error.message || 'Failed to delete product');
+      return rejectWithValue(error.response?.data?.error || error.message || 'Nie udało się usunąć produktu');
     }
   }
 );
@@ -126,7 +126,7 @@ export const restoreProduct = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to restore product');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się przywrócić produktu');
     }
   }
 );
@@ -141,7 +141,7 @@ export const advancedSearchProducts = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to search products');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się wyszukać produktów');
     }
   }
 );
@@ -156,7 +156,7 @@ export const fetchProductInventory = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch product inventory');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać stanu produktu');
     }
   }
 );
@@ -171,7 +171,7 @@ export const fetchAllProducts = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch all products');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać wszystkich produktów');
     }
   }
 );
@@ -186,7 +186,7 @@ export const searchAllProducts = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to search products');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się wyszukać produktów');
     }
   }
 );

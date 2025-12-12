@@ -12,7 +12,7 @@ const FrameForm = memo(function FrameForm({ control, brands = [] }) {
           name="brandId"
           control={control}
           label="Marka"
-          type="select"
+          type="autocomplete"
           options={brandOptions}
           required
         />
@@ -24,7 +24,7 @@ const FrameForm = memo(function FrameForm({ control, brands = [] }) {
         <FormField name="color" control={control} label="Kolor" type="text" required />
       </Grid>
       <Grid size={{ xs: 12, md: 3 }}>
-        <FormField name="size" control={control} label="Rozmiar" type="text" required />
+        <FormField name="size" control={control} label="Rozmiar" type="text" />
       </Grid>
       <Grid size={{ xs: 12, md: 3 }}>
         <FormField

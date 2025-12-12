@@ -12,7 +12,7 @@ const ContactLensForm = memo(function ContactLensForm({ control, brands = [] }) 
           name="brandId"
           control={control}
           label="Marka"
-          type="select"
+          type="autocomplete"
           options={brandOptions}
           required
         />

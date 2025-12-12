@@ -39,7 +39,7 @@ export const fetchTransfers = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch transfers');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać transferów');
     }
   }
 );
@@ -54,7 +54,7 @@ export const fetchTransferById = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch transfer');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać transferu');
     }
   }
 );
@@ -69,7 +69,7 @@ export const createTransfer = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to create transfer');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się utworzyć transferu');
     }
   }
 );
@@ -84,7 +84,7 @@ export const confirmTransfer = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to confirm transfer');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się potwierdzić transferu');
     }
   }
 );
@@ -99,7 +99,7 @@ export const rejectTransfer = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to reject transfer');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się odrzucić transferu');
     }
   }
 );
@@ -114,7 +114,7 @@ export const cancelTransfer = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to cancel transfer');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się anulować transferu');
     }
   }
 );
@@ -129,7 +129,7 @@ export const fetchIncomingTransfers = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch incoming transfers');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać transferów przychodzących');
     }
   }
 );
@@ -144,7 +144,7 @@ export const fetchOutgoingTransfers = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch outgoing transfers');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać transferów wychodzących');
     }
   }
 );
@@ -159,7 +159,7 @@ export const fetchPendingIncomingCount = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch pending count');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać liczby oczekujących');
     }
   }
 );
@@ -174,7 +174,7 @@ export const fetchReturnTransfer = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch return transfer');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać transferu zwrotnego');
     }
   }
 );
@@ -189,7 +189,7 @@ export const fetchTransfersByLocation = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch transfers by location');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać transferów dla lokalizacji');
     }
   }
 );
@@ -204,7 +204,7 @@ export const fetchTransferStats = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch transfer stats');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać statystyk transferów');
     }
   }
 );
@@ -219,7 +219,7 @@ export const validateTransfer = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to validate transfer');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się zwalidować transferu');
     }
   }
 );
@@ -234,7 +234,7 @@ export const searchTransfers = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to search transfers');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się wyszukać transferów');
     }
   }
 );
@@ -249,7 +249,7 @@ export const deleteTransfer = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to delete transfer');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się usunąć transferu');
     }
   }
 );

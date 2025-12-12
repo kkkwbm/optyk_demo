@@ -70,7 +70,7 @@ export const changePassword = createAsyncThunk(
       return rejectWithValue(
         error.response?.data?.error ||
         error.response?.data?.data ||
-        'Failed to change password'
+        'Nie udało się zmienić hasła'
       );
     }
   }
@@ -89,7 +89,7 @@ export const getCurrentUser = createAsyncThunk(
       return rejectWithValue(response.data.error);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || 'Failed to fetch user data'
+        error.response?.data?.error || 'Nie udało się pobrać danych użytkownika'
       );
     }
   }

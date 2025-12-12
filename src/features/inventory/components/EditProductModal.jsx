@@ -104,8 +104,12 @@ function EditProductModal({ open, onClose, product }) {
         cleanedData.locationId = product.locationId;
       }
 
+      // Use productType field and handle backend's OTHER_PRODUCT vs frontend's OTHER mapping
+      const productType = product.productType || product.type;
+      const actualProductType = productType === 'OTHER_PRODUCT' ? 'OTHER' : productType;
+
       await dispatch(updateProduct({
-        type: product.type,
+        type: actualProductType,
         id: product.id,
         data: cleanedData
       })).unwrap();
@@ -131,7 +135,11 @@ function EditProductModal({ open, onClose, product }) {
 
     const formProps = { control, brands: formBrands };
 
-    switch (product.type) {
+    // Handle both 'type' and 'productType' fields, and map OTHER_PRODUCT to OTHER
+    const productType = product.productType || product.type;
+    const normalizedType = productType === 'OTHER_PRODUCT' ? 'OTHER' : productType;
+
+    switch (normalizedType) {
       case PRODUCT_TYPES.FRAME:
         return <FrameForm {...formProps} />;
       case PRODUCT_TYPES.CONTACT_LENS:
@@ -186,7 +194,7 @@ function EditProductModal({ open, onClose, product }) {
           </Box>
           <Box>
             <Typography variant="h6" component="div" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-              Edytuj {PRODUCT_TYPE_SINGULAR[product.type]?.toLowerCase() || 'produkt'}
+              Edytuj {PRODUCT_TYPE_SINGULAR[product.productType || product.type]?.toLowerCase() || 'produkt'}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               Wprowadź zmiany w formularzu poniżej

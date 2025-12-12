@@ -71,7 +71,7 @@ function InventoryDashboardPage() {
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // Derived State
-  const isLocationView = !!currentLocation && currentLocation.id !== 'ALL_STORES';
+  const isLocationView = !!currentLocation && currentLocation.id !== 'ALL_STORES' && currentLocation.id !== 'ALL_WAREHOUSES';
   const loading = inventoryLoading;
   const pagination = inventoryPagination;
 
@@ -85,8 +85,8 @@ function InventoryDashboardPage() {
         inventoryQuantity: item.quantity,
         inventoryId: item.id,
         // Ensure we have necessary fields
-        id: item.id, // Use inventory ID as the primary ID for React keys (fixes duplicate key issue)
-        productId: item.product?.id || item.productId, // Keep product ID separately
+        id: item.product?.id || item.productId, // Use product ID as the primary ID for editing
+        productId: item.product?.id || item.productId, // Keep product ID separately for backwards compatibility
         type: item.product?.type || item.productType, // Add type field for consistency
         location: item.location, // Add location for display
       }));
@@ -104,13 +104,21 @@ function InventoryDashboardPage() {
       params.search = debouncedSearchTerm.trim();
     }
 
-    // Handle "All Stores" special case
+    // Handle "All Stores" and "All Warehouses" special cases
     if (currentLocation?.id === 'ALL_STORES') {
       dispatch(fetchInventory({
         locationId: null,
         params: {
           ...params,
           locationType: 'STORE',
+        }
+      }));
+    } else if (currentLocation?.id === 'ALL_WAREHOUSES') {
+      dispatch(fetchInventory({
+        locationId: null,
+        params: {
+          ...params,
+          locationType: 'WAREHOUSE',
         }
       }));
     } else {
@@ -259,6 +267,14 @@ function InventoryDashboardPage() {
           locationType: 'STORE',
         }
       }));
+    } else if (currentLocation?.id === 'ALL_WAREHOUSES') {
+      dispatch(fetchInventory({
+        locationId: null,
+        params: {
+          ...params,
+          locationType: 'WAREHOUSE',
+        }
+      }));
     } else {
       dispatch(fetchInventory({ locationId: currentLocation?.id || null, params }));
     }
@@ -281,6 +297,14 @@ function InventoryDashboardPage() {
         params: {
           ...params,
           locationType: 'STORE',
+        }
+      }));
+    } else if (currentLocation?.id === 'ALL_WAREHOUSES') {
+      dispatch(fetchInventory({
+        locationId: null,
+        params: {
+          ...params,
+          locationType: 'WAREHOUSE',
         }
       }));
     } else {
@@ -420,12 +444,14 @@ function InventoryDashboardPage() {
   const getPageTitle = () => {
     if (!currentLocation) return "Wszystkie produkty";
     if (currentLocation.id === 'ALL_STORES') return "Wszystkie salony";
+    if (currentLocation.id === 'ALL_WAREHOUSES') return "Wszystkie magazyny";
     return `Magazyn - ${currentLocation.name}`;
   };
 
   const getPageSubtitle = () => {
     if (!currentLocation) return "Przeglądaj produkty ze wszystkich lokalizacji";
     if (currentLocation.id === 'ALL_STORES') return "Przeglądaj produkty ze wszystkich salonów";
+    if (currentLocation.id === 'ALL_WAREHOUSES') return "Przeglądaj produkty ze wszystkich magazynów";
     return `Zarządzaj produktami w: ${currentLocation.name}`;
   };
 
@@ -458,6 +484,7 @@ function InventoryDashboardPage() {
             icon: <Plus size={20} />,
             onClick: () => navigate('/inventory/create'),
             disabled: !isLocationView,
+            disabledTooltip: 'Wybierz konkretną lokalizację, aby dodać produkt',
           },
         ]}
       />

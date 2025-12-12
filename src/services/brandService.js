@@ -74,7 +74,7 @@ export const brandService = {
    * @returns {Promise} Response with active brands list
    */
   getActiveBrands: () => {
-    return api.get('/brands', { params: { status: 'ACTIVE' } });
+    return api.get('/brands/active');
   },
 
   /**

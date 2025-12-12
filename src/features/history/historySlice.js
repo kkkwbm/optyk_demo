@@ -37,7 +37,7 @@ export const fetchHistory = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch history');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać historii');
     }
   }
 );
@@ -52,7 +52,7 @@ export const fetchHistoryById = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch history entry');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać wpisu historii');
     }
   }
 );
@@ -67,7 +67,7 @@ export const fetchEntityHistory = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch entity history');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać historii encji');
     }
   }
 );
@@ -82,7 +82,7 @@ export const fetchHistoryByOperation = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch history by operation');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać historii według operacji');
     }
   }
 );
@@ -97,7 +97,7 @@ export const fetchUserHistory = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch user history');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać historii użytkownika');
     }
   }
 );
@@ -112,7 +112,7 @@ export const fetchLocationHistory = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch location history');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać historii lokalizacji');
     }
   }
 );
@@ -127,7 +127,7 @@ export const revertOperation = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to revert operation');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się cofnąć operacji');
     }
   }
 );
@@ -142,7 +142,7 @@ export const checkCanRevert = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to check revert status');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się sprawdzić statusu cofnięcia');
     }
   }
 );
@@ -157,7 +157,7 @@ export const fetchRevertibleOperations = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch revertible operations');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać operacji możliwych do cofnięcia');
     }
   }
 );
@@ -172,7 +172,7 @@ export const fetchHistoryStats = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch history stats');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać statystyk historii');
     }
   }
 );
@@ -187,7 +187,7 @@ export const fetchRecentOperations = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch recent operations');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać ostatnich operacji');
     }
   }
 );
@@ -202,7 +202,7 @@ export const searchHistory = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to search history');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się wyszukać historii');
     }
   }
 );
@@ -217,7 +217,7 @@ export const deleteHistory = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to delete history record');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się usunąć wpisu historii');
     }
   }
 );
@@ -232,7 +232,7 @@ export const deleteAllHistory = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to delete all history records');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się usunąć wszystkich wpisów historii');
     }
   }
 );

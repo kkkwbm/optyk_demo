@@ -31,7 +31,7 @@ export const fetchBrands = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch brands');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać marek');
     }
   }
 );
@@ -46,7 +46,7 @@ export const fetchBrandById = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch brand');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać marki');
     }
   }
 );
@@ -61,7 +61,7 @@ export const createBrand = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to create brand');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się utworzyć marki');
     }
   }
 );
@@ -76,7 +76,7 @@ export const updateBrand = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to update brand');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się zaktualizować marki');
     }
   }
 );
@@ -91,7 +91,7 @@ export const activateBrand = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to activate brand');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się aktywować marki');
     }
   }
 );
@@ -106,7 +106,7 @@ export const deactivateBrand = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to deactivate brand');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się dezaktywować marki');
     }
   }
 );
@@ -121,7 +121,7 @@ export const deleteBrand = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to delete brand');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się usunąć marki');
     }
   }
 );
@@ -136,7 +136,7 @@ export const fetchActiveBrands = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch active brands');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać aktywnych marek');
     }
   }
 );
@@ -151,7 +151,7 @@ export const searchBrands = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to search brands');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się wyszukać marek');
     }
   }
 );
@@ -166,7 +166,7 @@ export const fetchBrandStats = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch brand stats');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać statystyk marki');
     }
   }
 );

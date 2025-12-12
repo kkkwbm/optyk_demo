@@ -37,7 +37,7 @@ export const fetchDashboardStats = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch dashboard stats');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać statystyk pulpitu');
     }
   }
 );
@@ -52,7 +52,7 @@ export const fetchSalesStats = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch sales stats');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać statystyk sprzedaży');
     }
   }
 );
@@ -67,7 +67,7 @@ export const fetchSalesTrend = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch sales trend');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać trendu sprzedaży');
     }
   }
 );
@@ -82,7 +82,7 @@ export const fetchInventoryStats = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch inventory stats');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać statystyk magazynu');
     }
   }
 );
@@ -97,7 +97,7 @@ export const fetchTopProducts = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch top products');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać najpopularniejszych produktów');
     }
   }
 );
@@ -112,7 +112,7 @@ export const fetchSalesByLocation = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch sales by location');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać sprzedaży według lokalizacji');
     }
   }
 );
@@ -127,7 +127,7 @@ export const fetchSalesByProductType = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch sales by product type');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać sprzedaży według typu produktu');
     }
   }
 );
@@ -142,7 +142,7 @@ export const fetchRevenueStats = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch revenue stats');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać statystyk przychodów');
     }
   }
 );
@@ -157,7 +157,7 @@ export const fetchComparisonStats = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch comparison stats');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać statystyk porównania');
     }
   }
 );
@@ -172,7 +172,7 @@ export const fetchUserPerformance = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch user performance');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać wydajności użytkownika');
     }
   }
 );
@@ -187,7 +187,7 @@ export const fetchStockLevels = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch stock levels');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać poziomów stanów');
     }
   }
 );
@@ -202,7 +202,7 @@ export const fetchTransferStats = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch transfer stats');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać statystyk transferów');
     }
   }
 );
@@ -217,7 +217,7 @@ export const fetchBrandPerformance = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch brand performance');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać wydajności marki');
     }
   }
 );
@@ -229,7 +229,7 @@ export const exportStatisticsReport = createAsyncThunk(
       const response = await statisticsService.exportReport(reportType, params);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to export report');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się wyeksportować raportu');
     }
   }
 );

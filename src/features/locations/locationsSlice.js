@@ -34,7 +34,7 @@ export const fetchLocations = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch locations');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać lokalizacji');
     }
   }
 );
@@ -49,7 +49,7 @@ export const fetchLocationById = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch location');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać lokalizacji');
     }
   }
 );
@@ -64,7 +64,7 @@ export const createLocation = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to create location');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się utworzyć lokalizacji');
     }
   }
 );
@@ -79,7 +79,7 @@ export const updateLocation = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to update location');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się zaktualizować lokalizacji');
     }
   }
 );
@@ -94,7 +94,7 @@ export const activateLocation = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to activate location');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się aktywować lokalizacji');
     }
   }
 );
@@ -109,7 +109,7 @@ export const deactivateLocation = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to deactivate location');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się dezaktywować lokalizacji');
     }
   }
 );
@@ -123,9 +123,9 @@ export const deleteLocation = createAsyncThunk(
       if (response.status === 204 || response.data?.success) {
         return id;
       }
-      return rejectWithValue(response.data?.error || 'Failed to delete location');
+      return rejectWithValue(response.data?.error || 'Nie udało się usunąć lokalizacji');
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to delete location');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się usunąć lokalizacji');
     }
   }
 );
@@ -140,7 +140,7 @@ export const fetchActiveLocations = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch active locations');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać aktywnych lokalizacji');
     }
   }
 );
@@ -155,7 +155,7 @@ export const fetchMyLocations = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch my locations');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać moich lokalizacji');
     }
   }
 );
@@ -170,7 +170,7 @@ export const fetchLocationsByType = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch locations by type');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać lokalizacji według typu');
     }
   }
 );
@@ -185,7 +185,7 @@ export const fetchLocationStats = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch location stats');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać statystyk lokalizacji');
     }
   }
 );
@@ -200,7 +200,7 @@ export const searchLocations = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to search locations');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się wyszukać lokalizacji');
     }
   }
 );

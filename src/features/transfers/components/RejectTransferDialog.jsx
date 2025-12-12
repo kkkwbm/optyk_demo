@@ -24,12 +24,12 @@ const RejectTransferDialog = ({ open, onClose, onReject, transfer, loading }) =>
     const trimmedReason = rejectionReason.trim();
 
     if (!trimmedReason) {
-      setError('Rejection reason is required');
+      setError('Powód odrzucenia jest wymagany');
       return;
     }
 
     if (trimmedReason.length > 500) {
-      setError('Rejection reason must not exceed 500 characters');
+      setError('Powód odrzucenia nie może przekraczać 500 znaków');
       return;
     }
 
@@ -48,25 +48,25 @@ const RejectTransferDialog = ({ open, onClose, onReject, transfer, loading }) =>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <XCircle size={24} color="red" />
-          Reject Transfer
+          Odrzuć transfer
         </Box>
       </DialogTitle>
       <DialogContent>
         <Typography variant="body1" gutterBottom>
-          Are you sure you want to reject this transfer?
+          Czy na pewno chcesz odrzucić ten transfer?
         </Typography>
 
         {transfer && (
           <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              <strong>From:</strong> {transfer.fromLocation?.name || 'N/A'}
+              <strong>Z:</strong> {transfer.fromLocation?.name || 'Brak danych'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              <strong>Products:</strong> {transfer.transferItems?.length || 0} items
+              <strong>Produkty:</strong> {transfer.transferItems?.length || 0} pozycji
             </Typography>
             {transfer.reason && (
               <Typography variant="body2" color="text.secondary">
-                <strong>Reason:</strong> {transfer.reason}
+                <strong>Powód:</strong> {transfer.reason}
               </Typography>
             )}
           </Box>
@@ -79,7 +79,7 @@ const RejectTransferDialog = ({ open, onClose, onReject, transfer, loading }) =>
         )}
 
         <TextField
-          label="Rejection Reason *"
+          label="Powód odrzucenia *"
           multiline
           rows={4}
           fullWidth
@@ -89,18 +89,18 @@ const RejectTransferDialog = ({ open, onClose, onReject, transfer, loading }) =>
             setRejectionReason(e.target.value);
             setError('');
           }}
-          placeholder="Please explain why you are rejecting this transfer..."
+          placeholder="Proszę wyjaśnić, dlaczego odrzucasz ten transfer..."
           error={!!error}
           sx={{ mt: 2 }}
         />
 
         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-          Products will be returned to the source location's available stock.
+          Produkty zostaną zwrócone do dostępnego stanu w lokalizacji źródłowej.
         </Typography>
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} disabled={loading}>
-          Cancel
+          Anuluj
         </Button>
         <Button
           onClick={handleReject}
@@ -108,7 +108,7 @@ const RejectTransferDialog = ({ open, onClose, onReject, transfer, loading }) =>
           color="error"
           disabled={loading || !rejectionReason.trim()}
         >
-          {loading ? 'Rejecting...' : 'Reject Transfer'}
+          {loading ? 'Odrzucanie...' : 'Odrzuć transfer'}
         </Button>
       </DialogActions>
     </Dialog>
@@ -116,3 +116,4 @@ const RejectTransferDialog = ({ open, onClose, onReject, transfer, loading }) =>
 };
 
 export default RejectTransferDialog;
+

@@ -35,7 +35,7 @@ export const fetchSales = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch sales');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać sprzedaży');
     }
   }
 );
@@ -50,7 +50,7 @@ export const fetchSaleById = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch sale');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać sprzedaży');
     }
   }
 );
@@ -65,7 +65,7 @@ export const createSale = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to create sale');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się utworzyć sprzedaży');
     }
   }
 );
@@ -80,7 +80,7 @@ export const cancelSale = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to cancel sale');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się anulować sprzedaży');
     }
   }
 );
@@ -95,7 +95,7 @@ export const returnSale = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to process return');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się przetworzyć zwrotu');
     }
   }
 );
@@ -110,7 +110,7 @@ export const fetchSalesByLocation = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch sales by location');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać sprzedaży dla lokalizacji');
     }
   }
 );
@@ -125,7 +125,7 @@ export const fetchSalesStats = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch sales stats');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać statystyk sprzedaży');
     }
   }
 );
@@ -140,7 +140,7 @@ export const fetchTodaySales = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || "Failed to fetch today's sales");
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać dzisiejszych sprzedaży');
     }
   }
 );
@@ -155,7 +155,7 @@ export const fetchRecentSales = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch recent sales');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać ostatnich sprzedaży');
     }
   }
 );
@@ -170,7 +170,7 @@ export const searchSales = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to search sales');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się wyszukać sprzedaży');
     }
   }
 );

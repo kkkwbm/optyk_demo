@@ -182,7 +182,9 @@ function StockListPage() {
             startIcon={<Edit size={14} />}
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/products/${row.product?.id}/edit`);
+              // Pass product type in URL search params so ProductDetailsPage knows which type to fetch
+              const productType = row.product?.productType || row.product?.type;
+              navigate(`/products/${row.product?.id}/edit?type=${productType}`);
             }}
           >
             Edytuj

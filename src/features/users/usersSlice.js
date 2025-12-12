@@ -32,7 +32,7 @@ export const fetchUsers = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch users');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać użytkowników');
     }
   }
 );
@@ -47,7 +47,7 @@ export const fetchUserById = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch user');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać użytkownika');
     }
   }
 );
@@ -62,7 +62,7 @@ export const createUser = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to create user');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się utworzyć użytkownika');
     }
   }
 );
@@ -77,7 +77,7 @@ export const updateUser = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to update user');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się zaktualizować użytkownika');
     }
   }
 );
@@ -92,7 +92,7 @@ export const activateUser = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to activate user');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się aktywować użytkownika');
     }
   }
 );
@@ -107,7 +107,7 @@ export const deactivateUser = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to deactivate user');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się dezaktywować użytkownika');
     }
   }
 );
@@ -122,7 +122,7 @@ export const resetUserPassword = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to reset password');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się zresetować hasła');
     }
   }
 );
@@ -138,7 +138,7 @@ export const searchUsers = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to search users');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się wyszukać użytkowników');
     }
   }
 );

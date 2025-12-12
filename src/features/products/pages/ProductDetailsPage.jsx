@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -31,6 +31,7 @@ function ProductDetailsPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
 
   const product = useSelector(selectCurrentProduct);
   const loading = useSelector(selectProductsLoading);
@@ -39,11 +40,17 @@ function ProductDetailsPage() {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, action: null });
   const [editModalOpen, setEditModalOpen] = useState(false);
 
+  // Get product type from URL param if available, otherwise fall back to Redux currentType
+  const productTypeParam = searchParams.get('type');
+  const effectiveType = productTypeParam || currentType;
+
   useEffect(() => {
-    if (id) {
-      dispatch(fetchProductById({ type: currentType, id }));
+    if (id && effectiveType) {
+      // Handle backend's OTHER_PRODUCT vs frontend's OTHER mapping
+      const normalizedType = effectiveType === 'OTHER_PRODUCT' ? 'OTHER' : effectiveType;
+      dispatch(fetchProductById({ type: normalizedType, id }));
     }
-  }, [dispatch, id, currentType]);
+  }, [dispatch, id, effectiveType]);
 
   const handleOpenConfirm = (action) => {
     setConfirmDialog({ open: true, action });

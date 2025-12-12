@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Box, Typography, Breadcrumbs, Link, Button, Stack } from '@mui/material';
+import { Box, Typography, Breadcrumbs, Link, Button, Stack, Tooltip } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 
@@ -70,19 +70,32 @@ const PageHeader = memo(function PageHeader({ title, subtitle, breadcrumbs = [],
         {/* Actions Section */}
         {actions.length > 0 && (
           <Stack direction="row" spacing={1}>
-            {actions.map((action, index) => (
-              <Button
-                key={index}
-                variant={action.variant || 'contained'}
-                color={action.color || 'primary'}
-                startIcon={action.icon}
-                onClick={action.onClick}
-                disabled={action.disabled}
-                {...action.props}
-              >
-                {action.label}
-              </Button>
-            ))}
+            {actions.map((action, index) => {
+              const button = (
+                <Button
+                  key={index}
+                  variant={action.variant || 'contained'}
+                  color={action.color || 'primary'}
+                  startIcon={action.icon}
+                  onClick={action.onClick}
+                  disabled={action.disabled}
+                  {...action.props}
+                >
+                  {action.label}
+                </Button>
+              );
+
+              // Wrap with tooltip if provided and button is disabled
+              if (action.disabledTooltip && action.disabled) {
+                return (
+                  <Tooltip key={index} title={action.disabledTooltip} arrow>
+                    <span>{button}</span>
+                  </Tooltip>
+                );
+              }
+
+              return button;
+            })}
           </Stack>
         )}
       </Box>

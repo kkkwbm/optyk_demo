@@ -33,7 +33,7 @@ export const fetchInventory = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch inventory');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać magazynu');
     }
   }
 );
@@ -48,7 +48,7 @@ export const fetchInventoryItem = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch inventory item');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać pozycji magazynowej');
     }
   }
 );
@@ -63,7 +63,7 @@ export const adjustStock = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to adjust stock');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się dostosować stanu');
     }
   }
 );
@@ -78,7 +78,7 @@ export const reserveStock = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to reserve stock');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się zarezerwować stanu');
     }
   }
 );
@@ -93,7 +93,7 @@ export const releaseStock = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to release stock');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się zwolnić stanu');
     }
   }
 );
@@ -108,7 +108,7 @@ export const fetchInventoryStats = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch inventory stats');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać statystyk magazynu');
     }
   }
 );
@@ -123,7 +123,7 @@ export const fetchInventoryValue = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch inventory value');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać wartości magazynu');
     }
   }
 );
@@ -138,7 +138,7 @@ export const fetchStockHistory = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch stock history');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać historii stanu');
     }
   }
 );
@@ -153,7 +153,7 @@ export const batchAdjustStock = createAsyncThunk(
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to batch adjust stock');
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się masowo dostosować stanu');
     }
   }
 );
