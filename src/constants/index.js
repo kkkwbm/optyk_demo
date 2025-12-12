@@ -43,6 +43,7 @@ export const PRODUCT_TYPE_LABELS = {
   [PRODUCT_TYPES.CONTACT_LENS]: 'Soczewki kontaktowe',
   [PRODUCT_TYPES.SOLUTION]: 'Płyny',
   [PRODUCT_TYPES.OTHER]: 'Inne produkty',
+  'OTHER_PRODUCT': 'Inne produkty', // Backend returns OTHER_PRODUCT
 };
 
 export const PRODUCT_TYPE_SINGULAR = {
@@ -170,6 +171,7 @@ export const ENTITY_TYPES = {
   CONTACT_LENS: 'CONTACT_LENS',
   SOLUTION: 'SOLUTION',
   OTHER: 'OTHER',
+  OTHER_PRODUCT: 'OTHER_PRODUCT',
   USER: 'USER',
   LOCATION: 'LOCATION',
   BRAND: 'BRAND',
@@ -183,6 +185,7 @@ export const ENTITY_TYPE_LABELS = {
   [ENTITY_TYPES.CONTACT_LENS]: 'Soczewka kontaktowa',
   [ENTITY_TYPES.SOLUTION]: 'Płyn',
   [ENTITY_TYPES.OTHER]: 'Inny produkt',
+  [ENTITY_TYPES.OTHER_PRODUCT]: 'Inny produkt',
   [ENTITY_TYPES.USER]: 'Użytkownik',
   [ENTITY_TYPES.LOCATION]: 'Lokalizacja',
   [ENTITY_TYPES.BRAND]: 'Marka',

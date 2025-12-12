@@ -228,9 +228,9 @@ function SaleDetailsPage() {
                   </TableCell>
                   <TableCell>{item.brand?.name || '-'}</TableCell>
                   <TableCell align="right">{item.quantity}</TableCell>
-                  <TableCell align="right">${item.unitPrice.toFixed(2)}</TableCell>
+                  <TableCell align="right">{item.unitPrice.toFixed(2)} zł</TableCell>
                   <TableCell align="right">
-                    <strong>${(item.quantity * item.unitPrice).toFixed(2)}</strong>
+                    <strong>{(item.quantity * item.unitPrice).toFixed(2)} zł</strong>
                   </TableCell>
                 </TableRow>
               ))}
@@ -240,7 +240,7 @@ function SaleDetailsPage() {
                 </TableCell>
                 <TableCell align="right">
                   <Typography variant="h6" color="primary">
-                    ${sale.totalAmount?.toFixed(2)}
+                    {sale.totalAmount?.toFixed(2)} zł
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -269,7 +269,7 @@ function SaleDetailsPage() {
           <Grid item xs={12} sm={6} md={4}>
             <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'secondary.light', color: 'secondary.contrastText' }}>
               <Typography variant="body2">Suma całkowita</Typography>
-              <Typography variant="h5">${sale.totalAmount?.toFixed(2)}</Typography>
+              <Typography variant="h5">{sale.totalAmount?.toFixed(2)} zł</Typography>
             </Paper>
           </Grid>
         </Grid>

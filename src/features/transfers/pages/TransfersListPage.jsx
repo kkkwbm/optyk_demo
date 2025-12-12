@@ -33,12 +33,15 @@ import {
   selectTransfersPagination,
 } from '../transfersSlice';
 import { fetchActiveLocations, selectActiveLocations, selectCurrentLocation } from '../../locations/locationsSlice';
+import { selectUser } from '../../auth/authSlice';
 import { usePagination } from '../../../hooks/usePagination';
 import {
   TRANSFER_STATUS,
   TRANSFER_STATUS_LABELS,
   DATE_FORMATS,
   LOCATION_TYPES,
+  PERMISSIONS,
+  USER_ROLES,
 } from '../../../constants';
 
 function TransfersListPage() {
@@ -50,6 +53,7 @@ function TransfersListPage() {
   const paginationData = useSelector(selectTransfersPagination);
   const locations = useSelector(selectActiveLocations);
   const currentLocation = useSelector(selectCurrentLocation);
+  const currentUser = useSelector(selectUser);
 
   const [fromLocationFilters, setFromLocationFilters] = useState([]);
   const [toLocationFilters, setToLocationFilters] = useState([]);
@@ -58,6 +62,7 @@ function TransfersListPage() {
   const [endDate, setEndDate] = useState('');
   const [allPendingTransfers, setAllPendingTransfers] = useState([]);
   const [pendingLoading, setPendingLoading] = useState(false);
+  const [sort, setSort] = useState({ sortBy: 'date', sortDirection: 'desc' });
 
   // Dialog state: type can be 'CANCEL' or 'DELETE'
   const [confirmDialog, setConfirmDialog] = useState({ open: false, transfer: null, type: null });
@@ -132,9 +137,18 @@ function TransfersListPage() {
 
   // Fetch transfer history with filters
   useEffect(() => {
+    // Map frontend sort field to backend field
+    const sortFieldMap = {
+      'date': 'transferDate',
+    };
+    const backendSortField = sortFieldMap[sort.sortBy] || 'transferDate';
+    // Spring Data format: fieldName,direction (e.g., "transferDate,desc" or "transferDate,asc")
+    const sortParam = `${backendSortField},${sort.sortDirection}`;
+
     const params = {
       page: pagination.page,
       size: pagination.size,
+      sort: sortParam,
       fromLocationIds: fromLocationFilters.length > 0 ? fromLocationFilters.join(',') : undefined,
       toLocationIds: toLocationFilters.length > 0 ? toLocationFilters.join(',') : undefined,
       status: statusFilter || undefined,
@@ -147,7 +161,47 @@ function TransfersListPage() {
     } else {
       dispatch(fetchTransfers(params));
     }
-  }, [dispatch, pagination.page, pagination.size, fromLocationFilters, toLocationFilters, statusFilter, startDate, endDate, currentLocation]);
+  }, [dispatch, pagination.page, pagination.size, fromLocationFilters, toLocationFilters, statusFilter, startDate, endDate, currentLocation, sort]);
+
+  const hasPermission = (permission) => {
+    return PERMISSIONS[permission]?.includes(currentUser?.role);
+  };
+
+  // Check if user can view transfers:
+  // 1. ADMIN/OWNER can view all transfers
+  // 2. EMPLOYEE can view transfers if they have TRANSFERS tab access for the current location
+  const canViewTransfers = useMemo(() => {
+    // ADMIN and OWNER have full access
+    if (currentUser?.role === USER_ROLES.ADMIN || currentUser?.role === USER_ROLES.OWNER) {
+      return true;
+    }
+
+    // EMPLOYEE: check permissions based on current location
+    if (currentUser?.userLocations && currentUser.userLocations.length > 0) {
+      // If "All Stores" is selected, check if user has TRANSFERS access in at least one location
+      if (!currentLocation || currentLocation.id === 'ALL_STORES') {
+        return currentUser.userLocations.some(
+          (userLocation) =>
+            // Empty/null allowedTabs means full access to all tabs
+            !userLocation.allowedTabs ||
+            userLocation.allowedTabs.length === 0 ||
+            userLocation.allowedTabs.includes('TRANSFERS')
+        );
+      }
+
+      // If specific location is selected, check if user has TRANSFERS access for THAT location
+      return currentUser.userLocations.some(
+        (userLocation) =>
+          userLocation.location.id === currentLocation.id &&
+          // Empty/null allowedTabs means full access to all tabs
+          (!userLocation.allowedTabs ||
+           userLocation.allowedTabs.length === 0 ||
+           userLocation.allowedTabs.includes('TRANSFERS'))
+      );
+    }
+
+    return false;
+  }, [currentUser, currentLocation]);
 
   const handleOpenConfirm = (transfer, type) => {
     setConfirmDialog({ open: true, transfer, type });
@@ -289,6 +343,10 @@ function TransfersListPage() {
     setEndDate('');
   };
 
+  const handleSortChange = (columnId, direction) => {
+    setSort({ sortBy: columnId, sortDirection: direction });
+  };
+
   const toggleFromLocationFilter = (locationId) => {
     setFromLocationFilters(prev =>
       prev.includes(locationId)
@@ -317,7 +375,7 @@ function TransfersListPage() {
     {
       id: 'transferNumber',
       label: 'Transfer #',
-      sortable: true,
+      sortable: false,
       render: (row) => `#${row.transferNumber || row.id.slice(0, 8)}`,
     },
     {
@@ -329,13 +387,13 @@ function TransfersListPage() {
     {
       id: 'from',
       label: 'Z',
-      sortable: true,
+      sortable: false,
       render: (row) => row.fromLocation?.name || '-',
     },
     {
       id: 'to',
       label: 'Do',
-      sortable: true,
+      sortable: false,
       render: (row) => row.toLocation?.name || '-',
     },
     {
@@ -359,7 +417,7 @@ function TransfersListPage() {
     {
       id: 'status',
       label: 'Status',
-      sortable: true,
+      sortable: false,
       render: (row) => <TransferStatusChip status={row.status} />,
     },
     {
@@ -578,6 +636,21 @@ function TransfersListPage() {
     },
   ];
 
+  if (!canViewTransfers) {
+    return (
+      <Container maxWidth="xl">
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="h6" color="error">
+            Dostęp odmówiony
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Nie masz uprawnień do przeglądania transferów.
+          </Typography>
+        </Paper>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="xl">
       <PageHeader
@@ -720,6 +793,8 @@ function TransfersListPage() {
             total: paginationData?.totalElements || 0,
             size: pagination.size,
           }}
+          sort={sort}
+          onSortChange={handleSortChange}
           onPageChange={pagination.handlePageChange}
           onRowsPerPageChange={pagination.handleRowsPerPageChange}
           onRowClick={(row) => navigate(`/transfers/${row.id}`)}

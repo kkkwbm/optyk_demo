@@ -12,7 +12,7 @@ import SolutionForm from '../components/SolutionForm';
 import OtherProductForm from '../components/OtherProductForm';
 import { createProduct } from '../productsSlice';
 import { fetchActiveBrands, selectActiveBrands } from '../../brands/brandsSlice';
-import { selectCurrentLocation } from '../../locations/locationsSlice';
+import { selectCurrentLocation, selectActiveLocations } from '../../locations/locationsSlice';
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS, PRODUCT_TYPE_SINGULAR } from '../../../constants';
 
 function CreateProductPage() {
@@ -20,6 +20,7 @@ function CreateProductPage() {
   const navigate = useNavigate();
   const activeBrands = useSelector(selectActiveBrands);
   const currentLocation = useSelector(selectCurrentLocation);
+  const activeLocations = useSelector(selectActiveLocations);
 
   const [productType, setProductType] = useState(PRODUCT_TYPES.FRAME);
   const { control, handleSubmit, reset } = useForm({
@@ -61,13 +62,46 @@ function CreateProductPage() {
       if (cleanedData.purchasePrice) cleanedData.purchasePrice = parseFloat(cleanedData.purchasePrice);
       if (cleanedData.sellingPrice) cleanedData.sellingPrice = parseFloat(cleanedData.sellingPrice);
 
-      // Add location ID if selected
+      // Track if this is a bulk operation and the target locations
+      let isBulkOperation = false;
+      let targetLocationType = null;
+
+      // Handle location selection
       if (currentLocation) {
-        cleanedData.locationId = currentLocation.id;
+        if (currentLocation.id === 'ALL_STORES') {
+          // Add to all stores
+          cleanedData.addToAllOfType = 'STORE';
+          isBulkOperation = true;
+          targetLocationType = 'STORE';
+        } else if (currentLocation.id === 'ALL_WAREHOUSES') {
+          // Add to all warehouses
+          cleanedData.addToAllOfType = 'WAREHOUSE';
+          isBulkOperation = true;
+          targetLocationType = 'WAREHOUSE';
+        } else {
+          // Add to specific location
+          cleanedData.locationId = currentLocation.id;
+        }
       }
 
       await dispatch(createProduct({ type: productType, data: cleanedData })).unwrap();
-      toast.success(`${PRODUCT_TYPE_SINGULAR[productType]} został utworzony`);
+
+      // Generate detailed success message
+      let successMessage = '';
+      if (isBulkOperation) {
+        // Filter locations by type
+        const targetLocations = activeLocations.filter(loc => loc.type === targetLocationType);
+        const locationNames = targetLocations.map(loc => loc.name).join(', ');
+        const locationType = targetLocationType === 'STORE' ? 'salonach' : 'magazynach';
+
+        successMessage = `${PRODUCT_TYPE_SINGULAR[productType]} został dodany do ${targetLocations.length} ${locationType}: ${locationNames}`;
+      } else if (currentLocation) {
+        successMessage = `${PRODUCT_TYPE_SINGULAR[productType]} został utworzony w lokalizacji: ${currentLocation.name}`;
+      } else {
+        successMessage = `${PRODUCT_TYPE_SINGULAR[productType]} został utworzony`;
+      }
+
+      toast.success(successMessage);
       navigate('/inventory');
     } catch (error) {
       toast.error(error || 'Nie udało się utworzyć produktu');
@@ -94,7 +128,7 @@ function CreateProductPage() {
   return (
     <Container maxWidth="lg">
       <PageHeader
-        title="Dodaj nowy produkt"
+        title={currentLocation ? `Dodaj nowy produkt - ${currentLocation.name}` : "Dodaj nowy produkt"}
         subtitle="Utwórz nowy produkt w magazynie"
         breadcrumbs={[
           { label: 'Magazyn', to: '/inventory' },

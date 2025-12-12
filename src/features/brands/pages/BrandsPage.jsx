@@ -20,6 +20,7 @@ import PageHeader from '../../../shared/components/PageHeader';
 import DataTable from '../../../shared/components/DataTable';
 import StatusBadge from '../../../shared/components/StatusBadge';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
+import { useDebounce } from '../../../hooks/useDebounce';
 import {
   fetchBrands,
   createBrand,
@@ -46,12 +47,17 @@ function BrandsPage() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
   useEffect(() => {
-    dispatch(fetchBrands({ page: pagination.page, size: pagination.size }));
-  }, [dispatch, pagination.page, pagination.size]);
+    dispatch(fetchBrands({
+      page: 0,
+      size: pagination.size,
+      search: debouncedSearchTerm || undefined
+    }));
+  }, [dispatch, debouncedSearchTerm, pagination.size]);
 
   const handleOpenDialog = (brand = null) => {
     setEditingBrand(brand);
@@ -140,22 +146,23 @@ function BrandsPage() {
   };
 
   const handlePageChange = (newPage) => {
-    dispatch(fetchBrands({ page: newPage, size: pagination.size }));
+    dispatch(fetchBrands({
+      page: newPage,
+      size: pagination.size,
+      search: debouncedSearchTerm || undefined
+    }));
   };
 
   const handleRowsPerPageChange = (newSize) => {
-    dispatch(fetchBrands({ page: 0, size: newSize }));
+    dispatch(fetchBrands({
+      page: 0,
+      size: newSize,
+      search: debouncedSearchTerm || undefined
+    }));
   };
 
   const handleSearch = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-
-    if (value.trim()) {
-      dispatch(fetchBrands({ page: 0, size: pagination.size, search: value }));
-    } else {
-      dispatch(fetchBrands({ page: 0, size: pagination.size }));
-    }
+    setSearchTerm(e.target.value);
   };
 
   const columns = [

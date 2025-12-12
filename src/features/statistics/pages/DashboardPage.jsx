@@ -23,8 +23,6 @@ import {
   Package,
   ShoppingCart,
   ArrowLeftRight,
-  TrendingUp,
-  TrendingDown,
   DollarSign,
   Glasses,
 } from 'lucide-react';
@@ -81,7 +79,7 @@ function DashboardPage() {
                 type: location.type,
                 totalSales: statsResponse?.totalSales || 0,
                 salesCount: statsResponse?.salesCount || 0,
-                totalProducts: statsResponse?.totalProducts || 0,
+                totalProducts: statsResponse?.totalProductsInStock || 0,
               };
             } catch (error) {
               console.error(`Failed to fetch stats for location ${location.id}:`, error);
@@ -107,23 +105,7 @@ function DashboardPage() {
   }, [dispatch]);
 
   const formatCurrency = (value) => {
-    return `$${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  const renderTrend = (value, isReversed = false) => {
-    if (!value || value === 0) return null;
-    const isPositive = isReversed ? value < 0 : value > 0;
-    const Icon = isPositive ? TrendingUp : TrendingDown;
-    const color = isPositive ? 'success.main' : 'error.main';
-
-    return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color }}>
-        <Icon size={16} />
-        <Typography variant="caption" sx={{ fontWeight: 600 }}>
-          {Math.abs(value).toFixed(1)}%
-        </Typography>
-      </Box>
-    );
+    return `${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`;
   };
 
   return (
@@ -224,7 +206,7 @@ function DashboardPage() {
                 </Box>
               </Box>
               <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {stats?.activeTransfers || 0}
+                {stats?.pendingTransfers || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Aktywne transfery
@@ -253,7 +235,7 @@ function DashboardPage() {
                 </Box>
               </Box>
               <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {stats?.totalProducts || 0}
+                {stats?.totalProductsInStock || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Wszystkie produkty
@@ -282,7 +264,7 @@ function DashboardPage() {
                 </Box>
               </Box>
               <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {stats?.uniqueFramesCount || 0}
+                {stats?.uniqueFrameModels || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Unikalne modele opraw

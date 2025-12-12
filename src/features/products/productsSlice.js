@@ -29,7 +29,20 @@ export const fetchProducts = createAsyncThunk(
     try {
       const response = await productService.getProducts(type, params);
       if (response.data.success) {
-        return { type, data: response.data.data };
+        // Add productType to each product since individual product DTOs don't include it
+        const dataWithType = response.data.data;
+        if (dataWithType.content && Array.isArray(dataWithType.content)) {
+          dataWithType.content = dataWithType.content.map(product => ({
+            ...product,
+            productType: type
+          }));
+        } else if (Array.isArray(dataWithType)) {
+          return {
+            type,
+            data: dataWithType.map(product => ({ ...product, productType: type }))
+          };
+        }
+        return { type, data: dataWithType };
       }
       return rejectWithValue(response.data.error);
     } catch (error) {
@@ -44,7 +57,11 @@ export const fetchProductById = createAsyncThunk(
     try {
       const response = await productService.getProductById(type, id);
       if (response.data.success) {
-        return response.data.data;
+        // Add productType to the response since individual product DTOs don't include it
+        return {
+          ...response.data.data,
+          productType: type
+        };
       }
       return rejectWithValue(response.data.error);
     } catch (error) {

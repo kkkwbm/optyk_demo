@@ -51,7 +51,7 @@ function FormField({
   const fieldRules = {
     ...rules,
     ...(required && {
-      required: rules.required || `${label} is required`,
+      required: rules.required || `${label} jest wymagane`,
     }),
   };
 

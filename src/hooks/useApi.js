@@ -15,8 +15,8 @@ export const useApi = (apiFunction, options = {}) => {
     onError,
     showSuccessToast = false,
     showErrorToast = true,
-    successMessage = 'Operation completed successfully',
-    errorMessage = 'An error occurred',
+    successMessage = 'Operacja zakończona pomyślnie',
+    errorMessage = 'Wystąpił błąd',
   } = options;
 
   const [data, setData] = useState(null);

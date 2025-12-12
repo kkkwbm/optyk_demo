@@ -168,7 +168,7 @@ function AdjustStockPage() {
               <Controller
                 name="productId"
                 control={control}
-                rules={{ required: 'Product is required' }}
+                rules={{ required: 'Produkt jest wymagany' }}
                 render={({ field, fieldState: { error } }) => (
                   <Autocomplete
                     {...field}
@@ -199,7 +199,7 @@ function AdjustStockPage() {
               <Controller
                 name="locationId"
                 control={control}
-                rules={{ required: 'Location is required' }}
+                rules={{ required: 'Lokalizacja jest wymagana' }}
                 render={({ field, fieldState: { error } }) => (
                   <Autocomplete
                     {...field}

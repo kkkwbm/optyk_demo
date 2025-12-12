@@ -19,7 +19,7 @@ const PageHeader = memo(function PageHeader({ title, subtitle, breadcrumbs = [],
       {/* Breadcrumbs */}
       {breadcrumbs.length > 0 && (
         <Breadcrumbs
-          separator={<ChevronRight size={16} />}
+          separator="/"
           aria-label="breadcrumb"
           sx={{ mb: 1 }}
         >

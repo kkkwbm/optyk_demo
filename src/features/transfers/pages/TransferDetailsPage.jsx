@@ -43,6 +43,7 @@ import {
   TRANSFER_STATUS,
   TRANSFER_STATUS_LABELS,
   DATE_FORMATS,
+  PRODUCT_TYPE_LABELS,
 } from '../../../constants';
 
 function TransferDetailsPage() {
@@ -585,7 +586,7 @@ function TransferDetailsPage() {
                       <TableCell>
                         {item.productType && (
                           <Chip
-                            label={item.productType}
+                            label={PRODUCT_TYPE_LABELS[item.productType] || item.productType}
                             size="small"
                             variant="outlined"
                           />
@@ -633,7 +634,7 @@ function TransferDetailsPage() {
                         <TableCell>
                           {item.productType && (
                             <Chip
-                              label={item.productType}
+                              label={PRODUCT_TYPE_LABELS[item.productType] || item.productType}
                               size="small"
                               variant="outlined"
                             />
@@ -684,7 +685,7 @@ function TransferDetailsPage() {
                       <TableCell>{item.brand?.name || '-'}</TableCell>
                       <TableCell>
                         <Chip
-                          label={item.productType || 'Nieznany'}
+                          label={PRODUCT_TYPE_LABELS[item.productType] || 'Nieznany'}
                           size="small"
                           variant="outlined"
                         />

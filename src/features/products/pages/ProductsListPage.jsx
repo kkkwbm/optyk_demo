@@ -28,6 +28,7 @@ import {
   selectCurrentType,
   setCurrentType,
 } from '../productsSlice';
+import { selectCurrentLocation } from '../../locations/locationsSlice';
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS, PRODUCT_STATUS } from '../../../constants';
 
 function ProductsListPage() {
@@ -37,6 +38,7 @@ function ProductsListPage() {
   const loading = useSelector(selectProductsLoading);
   const pagination = useSelector(selectProductsPagination);
   const currentType = useSelector(selectCurrentType);
+  const currentLocation = useSelector(selectCurrentLocation);
 
   const [confirmDialog, setConfirmDialog] = useState({ open: false, product: null, action: null });
   const [anchorEl, setAnchorEl] = useState(null);
@@ -72,11 +74,15 @@ function ProductsListPage() {
   const handleConfirmAction = async () => {
     const { product, action } = confirmDialog;
     try {
+      // Use the product's actual type to ensure correct endpoint is called
+      // Handle backend's OTHER_PRODUCT vs frontend's OTHER mapping
+      const actualProductType = product.productType === 'OTHER_PRODUCT' ? 'OTHER' : product.productType;
+
       if (action === 'delete') {
-        await dispatch(deleteProduct({ type: currentType, id: product.id })).unwrap();
+        await dispatch(deleteProduct({ type: actualProductType, id: product.id })).unwrap();
         toast.success('Produkt został usunięty');
       } else if (action === 'restore') {
-        await dispatch(restoreProduct({ type: currentType, id: product.id })).unwrap();
+        await dispatch(restoreProduct({ type: actualProductType, id: product.id })).unwrap();
         toast.success('Produkt został przywrócony');
       }
       dispatch(fetchProducts({ type: currentType, params: { page: pagination.page, size: pagination.size } }));
@@ -111,6 +117,16 @@ function ProductsListPage() {
 
   // Define columns based on product type
   const getColumns = () => {
+    // Conditionally show location column when "All Stores" is selected
+    const locationColumn = currentLocation?.id === 'ALL_STORES' ? [
+      {
+        id: 'location',
+        label: 'Lokalizacja',
+        sortable: true,
+        render: (row) => row.location?.name || '-',
+      },
+    ] : [];
+
     // Only show brand column for products that have brands (not OTHER)
     const baseColumns = currentType !== PRODUCT_TYPES.OTHER ? [
       {
@@ -130,13 +146,13 @@ function ProductsListPage() {
           id: 'purchasePrice',
           label: 'Cena zakupu',
           sortable: true,
-          render: (row) => row.purchasePrice ? `$${row.purchasePrice.toFixed(2)}` : '-',
+          render: (row) => row.purchasePrice ? `${row.purchasePrice.toFixed(2)} zł` : '-',
         },
         {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
           sortable: true,
-          render: (row) => row.sellingPrice ? `$${row.sellingPrice.toFixed(2)}` : '-',
+          render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
         },
       ],
       [PRODUCT_TYPES.CONTACT_LENS]: [
@@ -147,13 +163,13 @@ function ProductsListPage() {
           id: 'purchasePrice',
           label: 'Cena zakupu',
           sortable: true,
-          render: (row) => row.purchasePrice ? `$${row.purchasePrice.toFixed(2)}` : '-',
+          render: (row) => row.purchasePrice ? `${row.purchasePrice.toFixed(2)} zł` : '-',
         },
         {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
           sortable: true,
-          render: (row) => row.sellingPrice ? `$${row.sellingPrice.toFixed(2)}` : '-',
+          render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
         },
       ],
       [PRODUCT_TYPES.SOLUTION]: [
@@ -162,7 +178,7 @@ function ProductsListPage() {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
           sortable: true,
-          render: (row) => row.sellingPrice ? `$${row.sellingPrice.toFixed(2)}` : '-',
+          render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
         },
       ],
       [PRODUCT_TYPES.OTHER]: [
@@ -172,6 +188,7 @@ function ProductsListPage() {
     };
 
     return [
+      ...locationColumn,
       ...baseColumns,
       ...(typeSpecificColumns[currentType] || []),
       {

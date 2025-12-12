@@ -136,7 +136,7 @@ function ProfilePage() {
         </Grid>
 
         {/* Assigned Locations */}
-        {user.locations && user.locations.length > 0 && (
+        {user.userLocations && user.userLocations.length > 0 && (
           <>
             <Divider sx={{ my: 3 }} />
             <Box>
@@ -144,10 +144,10 @@ function ProfilePage() {
                 Przypisane lokalizacje
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {user.locations.map((location) => (
+                {user.userLocations.map((userLocation) => (
                   <Chip
-                    key={location.id}
-                    label={location.name}
+                    key={userLocation.location.id}
+                    label={userLocation.location.name}
                     variant="outlined"
                   />
                 ))}

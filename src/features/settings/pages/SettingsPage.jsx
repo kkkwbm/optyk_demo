@@ -154,7 +154,6 @@ function SettingsPage() {
           { label: 'Pulpit', to: '/' },
           { label: 'Ustawienia' },
         ]}
-        icon={<Settings size={24} />}
       />
 
       <Grid container spacing={3}>

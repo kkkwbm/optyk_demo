@@ -35,7 +35,8 @@ export const inventoryService = {
    * @returns {Promise} Response with updated inventory
    */
   adjustStock: (data) => {
-    return api.post('/inventory/adjust', data);
+    const endpoint = data.type === 'ADD' ? '/inventory/add-stock' : '/inventory/remove-stock';
+    return api.post(endpoint, data);
   },
 
   /**

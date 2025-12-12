@@ -10,6 +10,8 @@ import {
   Tabs,
   Tab,
   TextField,
+  Paper,
+  Typography,
 } from '@mui/material';
 import { Plus, MoreVertical, Edit } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -17,6 +19,7 @@ import PageHeader from '../../../shared/components/PageHeader';
 import DataTable from '../../../shared/components/DataTable';
 import StatusBadge from '../../../shared/components/StatusBadge';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
+import { useDebounce } from '../../../hooks/useDebounce';
 import {
   fetchProducts,
   deleteProduct,
@@ -35,8 +38,9 @@ import {
   clearInventory,
 } from '../../inventory/inventorySlice';
 import { selectCurrentLocation } from '../../locations/locationsSlice';
+import { selectUser } from '../../auth/authSlice';
 import EditProductModal from '../components/EditProductModal';
-import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS, PRODUCT_STATUS } from '../../../constants';
+import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS, PRODUCT_STATUS, PERMISSIONS, USER_ROLES } from '../../../constants';
 
 function InventoryDashboardPage() {
   const dispatch = useDispatch();
@@ -45,6 +49,7 @@ function InventoryDashboardPage() {
   // Global State
   const currentLocation = useSelector(selectCurrentLocation);
   const currentType = useSelector(selectCurrentType);
+  const currentUser = useSelector(selectUser);
 
   // Products State (Global view)
   const products = useSelector(selectProducts);
@@ -63,9 +68,10 @@ function InventoryDashboardPage() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // Derived State
-  const isLocationView = !!currentLocation;
+  const isLocationView = !!currentLocation && currentLocation.id !== 'ALL_STORES';
   const loading = inventoryLoading;
   const pagination = inventoryPagination;
 
@@ -79,7 +85,8 @@ function InventoryDashboardPage() {
         inventoryQuantity: item.quantity,
         inventoryId: item.id,
         // Ensure we have necessary fields
-        id: item.product?.id || item.productId,
+        id: item.id, // Use inventory ID as the primary ID for React keys (fixes duplicate key issue)
+        productId: item.product?.id || item.productId, // Keep product ID separately
         type: item.product?.type || item.productType, // Add type field for consistency
         location: item.location, // Add location for display
       }));
@@ -87,11 +94,15 @@ function InventoryDashboardPage() {
 
   useEffect(() => {
     const params = {
-      page: pagination.page,
+      page: 0,
       size: pagination.size,
-      search: searchTerm || undefined,
-      type: currentType, // Pass type to API
+      productType: currentType,
     };
+
+    // Only add search if it has a value
+    if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
+      params.search = debouncedSearchTerm.trim();
+    }
 
     // Handle "All Stores" special case
     if (currentLocation?.id === 'ALL_STORES') {
@@ -100,19 +111,55 @@ function InventoryDashboardPage() {
         params: {
           ...params,
           locationType: 'STORE',
-          productType: currentType,
         }
       }));
     } else {
       dispatch(fetchInventory({
         locationId: currentLocation?.id || null,
-        params: {
-          ...params,
-          productType: currentType,
-        }
+        params
       }));
     }
-  }, [dispatch, currentType, pagination.page, pagination.size, currentLocation, isLocationView, searchTerm]);
+  }, [dispatch, currentType, pagination.size, currentLocation, isLocationView, debouncedSearchTerm]);
+
+  const hasPermission = (permission) => {
+    return PERMISSIONS[permission]?.includes(currentUser?.role);
+  };
+
+  // Check if user can view warehouse/inventory:
+  // 1. ADMIN/OWNER can view all inventory
+  // 2. EMPLOYEE can view inventory if they have WAREHOUSE tab access for the current location
+  const canViewWarehouse = useMemo(() => {
+    // ADMIN and OWNER have full access
+    if (currentUser?.role === USER_ROLES.ADMIN || currentUser?.role === USER_ROLES.OWNER) {
+      return true;
+    }
+
+    // EMPLOYEE: check permissions based on current location
+    if (currentUser?.userLocations && currentUser.userLocations.length > 0) {
+      // If "All Stores" is selected, check if user has WAREHOUSE access in at least one location
+      if (!currentLocation || currentLocation.id === 'ALL_STORES') {
+        return currentUser.userLocations.some(
+          (userLocation) =>
+            // Empty/null allowedTabs means full access to all tabs
+            !userLocation.allowedTabs ||
+            userLocation.allowedTabs.length === 0 ||
+            userLocation.allowedTabs.includes('WAREHOUSE')
+        );
+      }
+
+      // If specific location is selected, check if user has WAREHOUSE access for THAT location
+      return currentUser.userLocations.some(
+        (userLocation) =>
+          userLocation.location.id === currentLocation.id &&
+          // Empty/null allowedTabs means full access to all tabs
+          (!userLocation.allowedTabs ||
+            userLocation.allowedTabs.length === 0 ||
+            userLocation.allowedTabs.includes('WAREHOUSE'))
+      );
+    }
+
+    return false;
+  }, [currentUser, currentLocation]);
 
   const handleTabChange = (event, newType) => {
     dispatch(setCurrentType(newType));
@@ -144,24 +191,48 @@ function InventoryDashboardPage() {
   const handleConfirmAction = async () => {
     const { product, action } = confirmDialog;
     try {
+      // Debug: log the product object to see its structure
+      console.log('Product object:', product);
+      console.log('Product type:', product.productType);
+      console.log('Product ID field:', product.id);
+      console.log('Product productId field:', product.productId);
+
+      // Determine the product type
+      // For inventory items: use productType field
+      // For nested product objects: use the product field's type or current tab type as fallback
+      let actualProductType = product.productType || product.product?.productType || currentType;
+
+      // Handle backend's OTHER_PRODUCT vs frontend's OTHER mapping
+      if (actualProductType === 'OTHER_PRODUCT') {
+        actualProductType = 'OTHER';
+      }
+
+      // Get the correct product ID (inventory items have productId, products have id)
+      const productId = product.productId || product.id;
+
+      console.log('Using product type:', actualProductType);
+      console.log('Using product ID:', productId);
+
       if (action === 'delete') {
-        await dispatch(deleteProduct({ type: currentType, id: product.id })).unwrap();
+        await dispatch(deleteProduct({ type: actualProductType, id: productId })).unwrap();
         toast.success('Produkt został usunięty');
       } else if (action === 'restore') {
-        await dispatch(restoreProduct({ type: currentType, id: product.id })).unwrap();
+        await dispatch(restoreProduct({ type: actualProductType, id: productId })).unwrap();
         toast.success('Produkt został przywrócony');
       }
 
       // Refresh data
-      // Refresh data
+      const refreshParams = {
+        page: 0,
+        size: pagination.size,
+        productType: currentType,
+      };
+      if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
+        refreshParams.search = debouncedSearchTerm.trim();
+      }
       dispatch(fetchInventory({
         locationId: currentLocation?.id || null,
-        params: {
-          page: pagination.page,
-          size: pagination.size,
-          productType: currentType,
-          search: searchTerm || undefined
-        }
+        params: refreshParams
       }));
     } catch (error) {
       toast.error(error || `Nie udało się ${action} produktu`);
@@ -170,38 +241,55 @@ function InventoryDashboardPage() {
   };
 
   const handlePageChange = (newPage) => {
-    // Dispatch handled by useEffect dependency on pagination.page? 
-    // No, useEffect depends on pagination.page which comes from store.
-    // We need to dispatch an action to update the page in the store OR directly fetch.
-    // The previous implementation dispatched fetchProducts which updated the store.
-    // We should stick to that pattern.
-
     const params = {
       page: newPage,
       size: pagination.size,
-      search: searchTerm || undefined,
       productType: currentType,
     };
 
-    dispatch(fetchInventory({ locationId: currentLocation?.id || null, params }));
+    if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
+      params.search = debouncedSearchTerm.trim();
+    }
+
+    if (currentLocation?.id === 'ALL_STORES') {
+      dispatch(fetchInventory({
+        locationId: null,
+        params: {
+          ...params,
+          locationType: 'STORE',
+        }
+      }));
+    } else {
+      dispatch(fetchInventory({ locationId: currentLocation?.id || null, params }));
+    }
   };
 
   const handleRowsPerPageChange = (newSize) => {
     const params = {
       page: 0,
       size: newSize,
-      search: searchTerm || undefined,
       productType: currentType,
     };
 
-    dispatch(fetchInventory({ locationId: currentLocation?.id || null, params }));
+    if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
+      params.search = debouncedSearchTerm.trim();
+    }
+
+    if (currentLocation?.id === 'ALL_STORES') {
+      dispatch(fetchInventory({
+        locationId: null,
+        params: {
+          ...params,
+          locationType: 'STORE',
+        }
+      }));
+    } else {
+      dispatch(fetchInventory({ locationId: currentLocation?.id || null, params }));
+    }
   };
 
   const handleSearch = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    // Debouncing should be handled here or in useEffect, but for now we keep it simple
-    // The useEffect will trigger fetch when searchTerm changes
+    setSearchTerm(e.target.value);
   };
 
   const handleViewProduct = (product) => {
@@ -217,15 +305,17 @@ function InventoryDashboardPage() {
     setEditModalOpen(false);
     setEditingProduct(null);
     // Refresh list
-    // Refresh list
+    const refreshParams = {
+      page: 0,
+      size: pagination.size,
+      productType: currentType,
+    };
+    if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
+      refreshParams.search = debouncedSearchTerm.trim();
+    }
     dispatch(fetchInventory({
       locationId: currentLocation?.id || null,
-      params: {
-        page: pagination.page,
-        size: pagination.size,
-        productType: currentType,
-        search: searchTerm || undefined
-      }
+      params: refreshParams
     }));
   };
 
@@ -256,7 +346,19 @@ function InventoryDashboardPage() {
       [PRODUCT_TYPES.CONTACT_LENS]: [
         { id: 'model', label: 'Model', sortable: true },
         { id: 'power', label: 'Moc', sortable: true },
-        { id: 'lensType', label: 'Typ', sortable: true },
+        {
+          id: 'lensType',
+          label: 'Typ',
+          sortable: true,
+          render: (row) => {
+            const lensTypeLabels = {
+              'DAILY': 'Jednorazowe',
+              'MONTHLY': 'Miesięczne',
+              'YEARLY': 'Roczne',
+            };
+            return lensTypeLabels[row.lensType] || row.lensType || '-';
+          },
+        },
         {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
@@ -327,6 +429,21 @@ function InventoryDashboardPage() {
     return `Zarządzaj produktami w: ${currentLocation.name}`;
   };
 
+  if (!canViewWarehouse) {
+    return (
+      <Container maxWidth="xl">
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="h6" color="error">
+            Dostęp odmówiony
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Nie masz uprawnień do przeglądania magazynu.
+          </Typography>
+        </Paper>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="xl">
       <PageHeader
@@ -340,6 +457,7 @@ function InventoryDashboardPage() {
             label: 'Dodaj produkt',
             icon: <Plus size={20} />,
             onClick: () => navigate('/inventory/create'),
+            disabled: !isLocationView,
           },
         ]}
       />
@@ -419,16 +537,10 @@ function InventoryDashboardPage() {
         title={confirmDialog.action === 'delete' ? 'Usuń produkt' : 'Przywróć produkt'}
         message={
           confirmDialog.action === 'delete'
-            ? (
-              <>
-                Czy na pewno chcesz usunąć ten produkt?
-                <br />
-                <strong>UWAGA: Produkt zostanie usunięty ze WSZYSTKICH lokalizacji.</strong>
-              </>
-            )
+            ? 'Czy na pewno chcesz usunąć ten produkt?'
             : `Czy na pewno chcesz przywrócić ten produkt?`
         }
-        confirmText={confirmDialog.action === 'delete' ? 'Usuń wszędzie' : 'Przywróć'}
+        confirmText={confirmDialog.action === 'delete' ? 'Usuń' : 'Przywróć'}
         confirmColor={confirmDialog.action === 'delete' ? 'error' : 'primary'}
       />
 

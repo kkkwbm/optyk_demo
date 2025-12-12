@@ -5,7 +5,7 @@ const uiSlice = createSlice({
   initialState: {
     sidebarOpen: true,
     notifications: [],
-    theme: 'light',
+    theme: localStorage.getItem('theme') || 'light',
   },
   reducers: {
     toggleSidebar: (state) => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -26,6 +26,7 @@ import {
   selectSalesPagination,
 } from '../salesSlice';
 import { fetchActiveLocations, selectActiveLocations, selectCurrentLocation } from '../../locations/locationsSlice';
+import { selectUser } from '../../auth/authSlice';
 import { usePagination } from '../../../hooks/usePagination';
 import {
   SALE_STATUS,
@@ -33,6 +34,8 @@ import {
   DATE_FORMATS,
   LOCATION_TYPES,
   ENTITY_TYPES,
+  PERMISSIONS,
+  USER_ROLES,
 } from '../../../constants';
 
 function SalesListPage() {
@@ -44,12 +47,14 @@ function SalesListPage() {
   const paginationData = useSelector(selectSalesPagination);
   const locations = useSelector(selectActiveLocations);
   const currentLocation = useSelector(selectCurrentLocation);
+  const currentUser = useSelector(selectUser);
 
   const [statusFilters, setStatusFilters] = useState([]); // Array of selected statuses
   const [productTypeFilters, setProductTypeFilters] = useState([]); // Array of selected product types
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [confirmDialog, setConfirmDialog] = useState({ open: false, sale: null });
+  const [sort, setSort] = useState({ sortBy: 'date', sortDirection: 'desc' });
 
   const pagination = usePagination({
     total: paginationData?.totalElements || 0,
@@ -66,9 +71,17 @@ function SalesListPage() {
       ? undefined
       : currentLocation.id;
 
+    // Map frontend sort field to backend sort field
+    const getSortField = () => {
+      if (sort.sortBy === 'date') return 'saleDate';
+      if (sort.sortBy === 'total') return 'totalAmount';
+      return 'saleDate';
+    };
+
     const params = {
       page: pagination.page,
       size: pagination.size,
+      sort: `${getSortField()},${sort.sortDirection}`,
       locationId,
       statuses: statusFilters.length > 0 ? statusFilters.join(',') : undefined,
       productTypes: productTypeFilters.length > 0 ? productTypeFilters.join(',') : undefined,
@@ -76,7 +89,47 @@ function SalesListPage() {
       endDate: endDate || undefined,
     };
     dispatch(fetchSales(params));
-  }, [dispatch, pagination.page, pagination.size, currentLocation, statusFilters, productTypeFilters, startDate, endDate]);
+  }, [dispatch, pagination.page, pagination.size, currentLocation, statusFilters, productTypeFilters, startDate, endDate, sort]);
+
+  const hasPermission = (permission) => {
+    return PERMISSIONS[permission]?.includes(currentUser?.role);
+  };
+
+  // Check if user can view sales:
+  // 1. ADMIN/OWNER can view all sales
+  // 2. EMPLOYEE can view sales if they have SALES tab access for the current location
+  const canViewSales = useMemo(() => {
+    // ADMIN and OWNER have full access
+    if (currentUser?.role === USER_ROLES.ADMIN || currentUser?.role === USER_ROLES.OWNER) {
+      return true;
+    }
+
+    // EMPLOYEE: check permissions based on current location
+    if (currentUser?.userLocations && currentUser.userLocations.length > 0) {
+      // If "All Stores" is selected, check if user has SALES access in at least one location
+      if (!currentLocation || currentLocation.id === 'ALL_STORES') {
+        return currentUser.userLocations.some(
+          (userLocation) =>
+            // Empty/null allowedTabs means full access to all tabs
+            !userLocation.allowedTabs ||
+            userLocation.allowedTabs.length === 0 ||
+            userLocation.allowedTabs.includes('SALES')
+        );
+      }
+
+      // If specific location is selected, check if user has SALES access for THAT location
+      return currentUser.userLocations.some(
+        (userLocation) =>
+          userLocation.location.id === currentLocation.id &&
+          // Empty/null allowedTabs means full access to all tabs
+          (!userLocation.allowedTabs ||
+           userLocation.allowedTabs.length === 0 ||
+           userLocation.allowedTabs.includes('SALES'))
+      );
+    }
+
+    return false;
+  }, [currentUser, currentLocation]);
 
   const handleOpenConfirm = (sale) => {
     setConfirmDialog({ open: true, sale });
@@ -92,14 +145,21 @@ function SalesListPage() {
       await dispatch(cancelSale({ id: sale.id })).unwrap();
       toast.success('Sprzedaż została usunięta');
 
-      // Refetch with current filters including location
+      // Refetch with current filters including location and sort
       const locationId = (currentLocation?.id === 'ALL_STORES' || !currentLocation)
         ? undefined
         : currentLocation.id;
 
+      const getSortField = () => {
+        if (sort.sortBy === 'date') return 'saleDate';
+        if (sort.sortBy === 'total') return 'totalAmount';
+        return 'saleDate';
+      };
+
       dispatch(fetchSales({
         page: pagination.page,
         size: pagination.size,
+        sort: `${getSortField()},${sort.sortDirection}`,
         locationId,
         statuses: statusFilters.length > 0 ? statusFilters.join(',') : undefined,
         productTypes: productTypeFilters.length > 0 ? productTypeFilters.join(',') : undefined,
@@ -110,6 +170,10 @@ function SalesListPage() {
       toast.error(error || 'Nie udało się usunąć sprzedaży');
     }
     handleCloseConfirm();
+  };
+
+  const handleSortChange = (columnId, direction) => {
+    setSort({ sortBy: columnId, sortDirection: direction });
   };
 
   const handleClearFilters = () => {
@@ -165,7 +229,7 @@ function SalesListPage() {
     {
       id: 'saleNumber',
       label: 'Numer sprzedaży #',
-      sortable: true,
+      sortable: false,
       render: (row) => `#${row.saleNumber || row.id.slice(0, 8)}`,
     },
     {
@@ -177,7 +241,7 @@ function SalesListPage() {
     {
       id: 'location',
       label: 'Lokalizacja',
-      sortable: true,
+      sortable: false,
       render: (row) => row.location?.name || '-',
     },
     {
@@ -198,14 +262,14 @@ function SalesListPage() {
       sortable: true,
       render: (row) => (
         <Box sx={{ fontWeight: 600 }}>
-          ${(row.totalAmount || 0).toFixed(2)}
+          {(row.totalAmount || 0).toFixed(2)} zł
         </Box>
       ),
     },
     {
       id: 'status',
       label: 'Status',
-      sortable: true,
+      sortable: false,
       render: (row) => (
         <Chip
           label={SALE_STATUS_LABELS[row.status]}
@@ -249,6 +313,21 @@ function SalesListPage() {
       ),
     },
   ];
+
+  if (!canViewSales) {
+    return (
+      <Container maxWidth="xl">
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="h6" color="error">
+            Dostęp odmówiony
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Nie masz uprawnień do przeglądania sprzedaży.
+          </Typography>
+        </Paper>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="xl">
@@ -361,6 +440,8 @@ function SalesListPage() {
           }}
           onPageChange={pagination.handlePageChange}
           onRowsPerPageChange={pagination.handleRowsPerPageChange}
+          sort={sort}
+          onSortChange={handleSortChange}
           onRowClick={(row) => navigate(`/sales/${row.id}`)}
           emptyMessage="Nie znaleziono sprzedaży. Spróbuj dostosować filtry."
         />

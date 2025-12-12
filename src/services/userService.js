@@ -61,6 +61,15 @@ export const userService = {
   },
 
   /**
+   * Delete user (soft delete)
+   * @param {string} id - User ID
+   * @returns {Promise} Response with success message
+   */
+  deleteUser: (id) => {
+    return api.delete(`/users/${id}`);
+  },
+
+  /**
    * Reset user password (ADMIN only)
    * @param {string} id - User ID
    * @param {Object} data - New password data

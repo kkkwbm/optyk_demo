@@ -108,17 +108,19 @@ export const transferService = {
   /**
    * Get transfers by location (legacy - sent from or received at)
    * @param {string} locationId - Location ID
-   * @param {Object} params - Query parameters (type: 'sent'|'received')
+   * @param {Object} params - Query parameters (type: 'sent'|'received', plus all filter params)
    * @returns {Promise} Response with transfers list
    */
   getTransfersByLocation: (locationId, params = {}) => {
-    const type = params.type || 'all';
-    if (type === 'sent') {
-      return api.get(`/transfers/from-location/${locationId}`);
-    } else if (type === 'received') {
-      return api.get(`/transfers/to-location/${locationId}`);
+    const { type, ...restParams } = params;
+    const typeValue = type || 'all';
+
+    if (typeValue === 'sent') {
+      return api.get(`/transfers/from-location/${locationId}`, { params: restParams });
+    } else if (typeValue === 'received') {
+      return api.get(`/transfers/to-location/${locationId}`, { params: restParams });
     }
-    return api.get(`/transfers`, { params: { locationId } });
+    return api.get(`/transfers`, { params: { locationId, ...restParams } });
   },
 
   /**

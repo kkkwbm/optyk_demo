@@ -89,12 +89,13 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Don't try to refresh if the failed request was already a refresh request
-    // This prevents infinite loops and duplicate refresh attempts
+    // Don't try to refresh if the failed request was already a refresh request or a login request
+    // This prevents infinite loops and duplicate refresh attempts, and prevents refresh errors from overwriting login errors
     const isRefreshRequest = originalRequest.url?.includes('/auth/refresh');
+    const isLoginRequest = originalRequest.url?.includes('/auth/login');
 
-    // If error is 401 and we haven't retried yet and it's not a refresh request
-    if (error.response?.status === 401 && !originalRequest._retry && !isRefreshRequest) {
+    // If error is 401 and we haven't retried yet and it's not a refresh/login request
+    if (error.response?.status === 401 && !originalRequest._retry && !isRefreshRequest && !isLoginRequest) {
       originalRequest._retry = true;
 
       try {

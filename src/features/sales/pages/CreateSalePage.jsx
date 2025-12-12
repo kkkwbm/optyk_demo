@@ -22,6 +22,8 @@ import {
   CardContent,
   Alert,
   Chip,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { ArrowLeft, Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -34,6 +36,8 @@ import { fetchInventory, selectInventoryItems, fetchInventoryByProductAndLocatio
 import {
   VALIDATION,
   LOCATION_TYPES,
+  PRODUCT_TYPES,
+  PRODUCT_TYPE_LABELS,
 } from '../../../constants';
 
 function CreateSalePage() {
@@ -48,6 +52,7 @@ function CreateSalePage() {
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
   const [availableStock, setAvailableStock] = useState(null);
+  const [productType, setProductType] = useState(PRODUCT_TYPES.FRAME);
 
   const { control, handleSubmit } = useForm({
     defaultValues: {
@@ -191,13 +196,31 @@ function CreateSalePage() {
 
   // Build product options from inventory items (only products with stock at current location)
   const productOptions = inventoryItems
-    .filter(item => item.product && (item.availableQuantity > 0 || item.quantity > 0))
+    .filter(item => {
+      // Debug: Log what we're filtering
+      if (item.product) {
+        console.log('Item productType:', item.productType, 'Selected productType:', productType, 'Match:', item.productType === productType);
+      }
+      return item.product && (item.availableQuantity > 0 || item.quantity > 0);
+    })
+    .filter((item) => item.productType === productType)
     .map((item) => ({
       id: item.product.id,
       label: `${item.product.brand?.name || ''} ${item.product.model || item.product.name || ''}`.trim() + ` (${item.availableQuantity || 0} szt.)`,
       product: item.product,
       availableQuantity: item.availableQuantity || 0,
     }));
+
+  console.log('Total inventory items:', inventoryItems.length);
+  console.log('Filtered product options:', productOptions.length);
+
+  const handleProductTypeChange = (event, newType) => {
+    setProductType(newType);
+    setSelectedProduct(null);
+    setQuantity('');
+    setPrice('');
+    setAvailableStock(null);
+  };
 
   return (
     <Container maxWidth="xl">
@@ -263,6 +286,23 @@ function CreateSalePage() {
                   Proszę wybrać prawidłową lokalizację (nie magazyn) z selektora po lewej stronie, aby dodać produkty do sprzedaży.
                 </Alert>
               )}
+
+              {/* Product Type Selector */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
+                  Wybierz typ produktu
+                </Typography>
+                <Tabs
+                  value={productType}
+                  onChange={handleProductTypeChange}
+                  sx={{ borderBottom: 1, borderColor: 'divider' }}
+                >
+                  <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.FRAME]} value={PRODUCT_TYPES.FRAME} />
+                  <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.CONTACT_LENS]} value={PRODUCT_TYPES.CONTACT_LENS} />
+                  <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SOLUTION]} value={PRODUCT_TYPES.SOLUTION} />
+                  <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.OTHER]} value={PRODUCT_TYPES.OTHER} />
+                </Tabs>
+              </Box>
 
               <Box>
                 <Box sx={{ mb: 2 }}>
@@ -392,9 +432,9 @@ function CreateSalePage() {
                               sx={{ width: 80 }}
                             />
                           </TableCell>
-                          <TableCell align="right">${item.unitPrice.toFixed(2)}</TableCell>
+                          <TableCell align="right">{item.unitPrice.toFixed(2)} zł</TableCell>
                           <TableCell align="right">
-                            <strong>${item.subtotal.toFixed(2)}</strong>
+                            <strong>{item.subtotal.toFixed(2)} zł</strong>
                           </TableCell>
                           <TableCell align="right">
                             <IconButton
@@ -468,7 +508,7 @@ function CreateSalePage() {
                       Suma:
                     </Typography>
                     <Typography variant="h4" color="primary" sx={{ fontWeight: 700 }}>
-                      ${calculateTotal().toFixed(2)}
+                      {calculateTotal().toFixed(2)} zł
                     </Typography>
                   </Box>
                 </Box>

@@ -20,6 +20,8 @@ import {
   Alert,
   Divider,
   Stack,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
@@ -29,7 +31,7 @@ import FormField from '../../../shared/components/FormField';
 import { createTransfer } from '../transfersSlice';
 import { fetchActiveLocations, selectActiveLocations } from '../../locations/locationsSlice';
 import { fetchInventory, selectInventoryItems, clearInventory } from '../../inventory/inventorySlice';
-import { VALIDATION } from '../../../constants';
+import { VALIDATION, PRODUCT_TYPES, PRODUCT_TYPE_LABELS } from '../../../constants';
 
 function CreateTransferPage() {
   const dispatch = useDispatch();
@@ -44,6 +46,7 @@ function CreateTransferPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantity, setQuantity] = useState('');
   const [availableStock, setAvailableStock] = useState(null);
+  const [productType, setProductType] = useState(PRODUCT_TYPES.FRAME);
 
   const { control, handleSubmit, watch } = useForm({
     defaultValues: {
@@ -179,14 +182,23 @@ function CreateTransferPage() {
     }
   };
 
-  // Map inventory items to options
-  const productOptions = inventoryItems.map((item) => ({
-    id: item.product.id,
-    label: `${item.product.brand?.name || ''} ${item.product.model || item.product.name || ''}`,
-    product: item.product,
-    quantity: item.quantity,
-    brand: item.product.brand?.name
-  }));
+  // Map inventory items to options and filter by product type
+  const productOptions = inventoryItems
+    .filter((item) => item.productType === productType)
+    .map((item) => ({
+      id: item.product.id,
+      label: `${item.product.brand?.name || ''} ${item.product.model || item.product.name || ''}`,
+      product: item.product,
+      quantity: item.quantity,
+      brand: item.product.brand?.name
+    }));
+
+  const handleProductTypeChange = (event, newType) => {
+    setProductType(newType);
+    setSelectedProduct(null);
+    setQuantity('');
+    setAvailableStock(null);
+  };
 
   const locationOptions = locations.map((location) => ({
     id: location.id,
@@ -218,7 +230,7 @@ function CreateTransferPage() {
         ]}
       />
 
-      <Paper sx={{ p: 3, mx: 'auto', maxWidth: '100%' }}>
+      <Paper sx={{ p: 3, mx: 'auto' }}>
         <form onSubmit={handleSubmit(onSubmit)}>
           <Stack spacing={3}>
 
@@ -344,6 +356,24 @@ function CreateTransferPage() {
               <Typography variant="h4" sx={{ fontWeight: 600, mb: 2 }}>
                 Wybór produktów
               </Typography>
+
+              {/* Product Type Selector */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
+                  Wybierz typ produktu
+                </Typography>
+                <Tabs
+                  value={productType}
+                  onChange={handleProductTypeChange}
+                  sx={{ borderBottom: 1, borderColor: 'divider' }}
+                >
+                  <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.FRAME]} value={PRODUCT_TYPES.FRAME} />
+                  <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.CONTACT_LENS]} value={PRODUCT_TYPES.CONTACT_LENS} />
+                  <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SOLUTION]} value={PRODUCT_TYPES.SOLUTION} />
+                  <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.OTHER]} value={PRODUCT_TYPES.OTHER} />
+                </Tabs>
+              </Box>
+
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <Autocomplete
@@ -541,54 +571,61 @@ function CreateTransferPage() {
               <Typography variant="h4" sx={{ fontWeight: 600, mb: 2 }}>
                 Szczegóły
               </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <FormField
-                    name="reason"
-                    control={control}
-                    label="Powód transferu (opcjonalnie)"
-                    type="text"
-                    rules={{
-                      maxLength: {
-                        value: VALIDATION.DESCRIPTION_MAX_LENGTH,
-                        message: `Powód nie może przekraczać ${VALIDATION.DESCRIPTION_MAX_LENGTH} znaków`,
-                      },
-                    }}
-                    sx={{
-                      '& .MuiInputBase-root': {
-                        fontSize: '1rem',
-                        minHeight: '50px'
-                      },
-                      '& .MuiInputLabel-root': {
-                        fontSize: '1rem'
-                      }
-                    }}
-                  />
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <Box sx={{ width: '200%' }}>
+                    <FormField
+                      name="reason"
+                      control={control}
+                      label="Powód transferu (opcjonalnie)"
+                      type="text"
+                      multiline
+                      rows={4}
+                      fullWidth
+                      rules={{
+                        maxLength: {
+                          value: VALIDATION.DESCRIPTION_MAX_LENGTH,
+                          message: `Powód nie może przekraczać ${VALIDATION.DESCRIPTION_MAX_LENGTH} znaków`,
+                        },
+                      }}
+                      sx={{
+                        '& .MuiInputBase-root': {
+                          fontSize: '1rem'
+                        },
+                        '& .MuiInputLabel-root': {
+                          fontSize: '1rem'
+                        }
+                      }}
+                    />
+                  </Box>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
-                  <FormField
-                    name="notes"
-                    control={control}
-                    label="Dodatkowe uwagi (opcjonalnie)"
-                    type="text"
-                    multiline
-                    rows={3}
-                    rules={{
-                      maxLength: {
-                        value: VALIDATION.NOTES_MAX_LENGTH,
-                        message: `Notatki nie mogą przekraczać ${VALIDATION.NOTES_MAX_LENGTH} znaków`,
-                      },
-                    }}
-                    sx={{
-                      '& .MuiInputBase-root': {
-                        fontSize: '1rem'
-                      },
-                      '& .MuiInputLabel-root': {
-                        fontSize: '1rem'
-                      }
-                    }}
-                  />
+                <Grid item xs={12}>
+                  <Box sx={{ width: '200%', position: 'relative', left: '200px' }}>
+                    <FormField
+                      name="notes"
+                      control={control}
+                      label="Dodatkowe uwagi (opcjonalnie)"
+                      type="text"
+                      multiline
+                      rows={4}
+                      fullWidth
+                      rules={{
+                        maxLength: {
+                          value: VALIDATION.NOTES_MAX_LENGTH,
+                          message: `Notatki nie mogą przekraczać ${VALIDATION.NOTES_MAX_LENGTH} znaków`,
+                        },
+                      }}
+                      sx={{
+                        '& .MuiInputBase-root': {
+                          fontSize: '1rem'
+                        },
+                        '& .MuiInputLabel-root': {
+                          fontSize: '1rem'
+                        }
+                      }}
+                    />
+                  </Box>
                 </Grid>
               </Grid>
             </Box>

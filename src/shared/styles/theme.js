@@ -201,7 +201,6 @@ const components = {
     styleOverrides: {
       head: {
         fontWeight: 600,
-        backgroundColor: '#f5f5f5',
       },
     },
   },

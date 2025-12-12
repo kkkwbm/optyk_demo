@@ -24,7 +24,8 @@ import { LOCATION_TABS, LOCATION_TAB_LABELS, LOCATION_TAB_DESCRIPTIONS } from '.
  * @param {string} props.locationName - Name of the location (for display purposes)
  */
 const PermissionsSelector = ({ selectedTabs = [], onChange, disabled = false, locationName }) => {
-  const allTabs = Object.values(LOCATION_TABS);
+  // Exclude STATISTICS from assignable tabs - statistics access is role-based (ADMIN/OWNER only), not location-based
+  const allTabs = Object.values(LOCATION_TABS).filter(tab => tab !== LOCATION_TABS.STATISTICS);
   const allSelected = selectedTabs.length === 0 || selectedTabs.length === allTabs.length;
 
   const handleToggleAll = (event) => {

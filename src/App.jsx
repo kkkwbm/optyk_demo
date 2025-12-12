@@ -9,13 +9,14 @@ import store from './app/store';
 import { createAppTheme } from './shared/styles/theme';
 import ErrorBoundary from './shared/components/ErrorBoundary';
 import { createAriaLiveAnnouncer } from './utils/accessibility';
-import { selectTheme } from './app/uiSlice';
-import { initializeAuth } from './features/auth/authSlice';
+import { selectTheme, setTheme } from './app/uiSlice';
+import { initializeAuth, selectUser } from './features/auth/authSlice';
 import { initializeCurrentLocation } from './features/locations/locationsSlice';
 
 function ThemedApp() {
   const dispatch = useDispatch();
   const themeMode = useSelector(selectTheme);
+  const user = useSelector(selectUser);
   const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
 
   useEffect(() => {
@@ -33,34 +34,18 @@ function ThemedApp() {
     });
   }, [dispatch]);
 
+  // Apply user's theme preference from database after authentication
+  useEffect(() => {
+    if (user?.themePreference && user.themePreference !== themeMode) {
+      dispatch(setTheme(user.themePreference));
+    }
+  }, [user, dispatch, themeMode]);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <RouterProvider router={router} />
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: themeMode === 'dark' ? '#2e2e2e' : '#363636',
-            color: '#fff',
-          },
-          success: {
-            duration: 3000,
-            iconTheme: {
-              primary: '#4caf50',
-              secondary: '#fff',
-            },
-          },
-          error: {
-            duration: 5000,
-            iconTheme: {
-              primary: '#f44336',
-              secondary: '#fff',
-            },
-          },
-        }}
-      />
+      <Toaster position="top-right" />
     </ThemeProvider>
   );
 }

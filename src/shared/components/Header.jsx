@@ -96,6 +96,8 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
   };
 
   const isWarehouse = currentLocation?.type === LOCATION_TYPES.WAREHOUSE;
+  const isAllWarehouses = currentLocation?.id === 'ALL_WAREHOUSES';
+  const shouldDisableSales = isWarehouse || isAllWarehouses;
 
   // Left-aligned navigation items
   const leftNavigationItems = [
@@ -106,18 +108,18 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
       permission: null,
     },
     {
-      text: 'Sprzedaż',
-      icon: <ShoppingCart size={18} />,
-      path: '/sales',
-      permission: 'RECORD_SALE',
-      disabled: isWarehouse,
-      disabledReason: 'Sprzedaż nie jest dostępna w magazynie',
-    },
-    {
       text: 'Transfery',
       icon: <ArrowLeftRight size={18} />,
       path: '/transfers',
       permission: 'TRANSFER_PRODUCTS',
+    },
+    {
+      text: 'Sprzedaż',
+      icon: <ShoppingCart size={18} />,
+      path: '/sales',
+      permission: 'RECORD_SALE',
+      disabled: shouldDisableSales,
+      disabledReason: 'Sprzedaż nie jest dostępna w magazynie',
     },
     {
       text: 'Statystyki',
@@ -206,12 +208,9 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
         ml: {
           md: sidebarOpen ? `${drawerWidth}px` : 0,
         },
-        transition: (theme) =>
-          theme.transitions.create(['width', 'margin'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
         zIndex: (theme) => theme.zIndex.drawer + 1,
+        isolation: 'isolate',
+        transform: 'translateZ(0)',
       }}
     >
       <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>

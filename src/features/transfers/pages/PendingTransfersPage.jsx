@@ -85,10 +85,10 @@ const PendingTransfersPage = () => {
       if (response.data.success) {
         setConfirmDialog({ open: true, transfer: response.data.data });
       } else {
-        toast.error('Failed to load transfer details');
+        toast.error('Nie udało się załadować szczegółów transferu');
       }
     } catch (error) {
-      toast.error('Failed to load transfer details');
+      toast.error('Nie udało się załadować szczegółów transferu');
     }
   };
 
@@ -103,9 +103,9 @@ const PendingTransfersPage = () => {
 
       // Check if partial acceptance created a return transfer
       if (result.returnTransferId) {
-        toast.success('Transfer partially confirmed - a return transfer has been created');
+        toast.success('Transfer częściowo potwierdzony - utworzono zwrotny transfer');
       } else {
-        toast.success('Transfer confirmed successfully');
+        toast.success('Transfer potwierdzony pomyślnie');
       }
 
       setConfirmDialog({ open: false, transfer: null });
@@ -126,29 +126,29 @@ const PendingTransfersPage = () => {
     setActionLoading(true);
     try {
       await dispatch(rejectTransfer({ id: rejectDialog.transfer.id, rejectionReason: data.rejectionReason })).unwrap();
-      toast.success('Transfer rejected');
+      toast.success('Transfer odrzucony');
       setRejectDialog({ open: false, transfer: null });
       // Refresh lists
       dispatch(fetchIncomingTransfers({ locationId: currentLocationId, status: 'PENDING' }));
     } catch (error) {
-      toast.error(error || 'Failed to reject transfer');
+      toast.error(error || 'Nie udało się odrzucić transferu');
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleCancelTransfer = async (transferId) => {
-    if (!window.confirm('Are you sure you want to cancel this transfer?')) {
+    if (!window.confirm('Czy na pewno chcesz anulować ten transfer?')) {
       return;
     }
 
     try {
       await dispatch(cancelTransfer({ id: transferId })).unwrap();
-      toast.success('Transfer cancelled');
+      toast.success('Transfer anulowany');
       // Refresh list
       dispatch(fetchOutgoingTransfers({ locationId: currentLocationId, status: 'PENDING' }));
     } catch (error) {
-      toast.error(error || 'Failed to cancel transfer');
+      toast.error(error || 'Nie udało się anulować transferu');
     }
   };
 
@@ -162,8 +162,8 @@ const PendingTransfersPage = () => {
   return (
     <Box>
       <PageHeader
-        title="Pending Transfers"
-        subtitle="Manage incoming and outgoing transfers"
+        title="Oczekujące transfery"
+        subtitle="Zarządzaj transferami przychodzącymi i wychodzącymi"
       />
 
       {error && (
@@ -178,7 +178,7 @@ const PendingTransfersPage = () => {
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <ArrowRight size={18} />
-                Incoming ({incomingPending.length})
+                Przychodzące ({incomingPending.length})
               </Box>
             }
           />
@@ -186,7 +186,7 @@ const PendingTransfersPage = () => {
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <ArrowLeft size={18} />
-                Outgoing ({outgoingPending.length})
+                Wychodzące ({outgoingPending.length})
               </Box>
             }
           />
@@ -198,21 +198,21 @@ const PendingTransfersPage = () => {
             {incomingPending.length === 0 ? (
               <EmptyState
                 icon={<Package size={48} />}
-                title="No Pending Incoming Transfers"
-                description="You have no transfers awaiting confirmation"
+                title="Brak oczekujących transferów przychodzących"
+                description="Nie masz transferów oczekujących na potwierdzenie"
               />
             ) : (
               <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 600 }}>From Location</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Items</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Reason</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Initiated By</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Z lokalizacji</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Produkty</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Powód</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Zainicjował</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Data</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600 }}>Actions</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>Akcje</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -221,7 +221,7 @@ const PendingTransfersPage = () => {
                         <TableCell>{transfer.fromLocation?.name || 'N/A'}</TableCell>
                         <TableCell>
                           <Chip
-                            label={`${transfer.transferItems?.length || 0} items`}
+                            label={`${transfer.transferItems?.length || 0} produktów`}
                             size="small"
                             variant="outlined"
                           />
@@ -243,7 +243,7 @@ const PendingTransfersPage = () => {
                               variant="outlined"
                               onClick={() => handleViewDetails(transfer.id)}
                             >
-                              View
+                              Podgląd
                             </Button>
                             <Button
                               size="small"
@@ -251,7 +251,7 @@ const PendingTransfersPage = () => {
                               color="success"
                               onClick={() => handleConfirmClick(transfer)}
                             >
-                              Confirm
+                              Potwierdź
                             </Button>
                             <Button
                               size="small"
@@ -259,7 +259,7 @@ const PendingTransfersPage = () => {
                               color="error"
                               onClick={() => handleRejectClick(transfer)}
                             >
-                              Reject
+                              Odrzuć
                             </Button>
                           </Box>
                         </TableCell>
@@ -278,20 +278,20 @@ const PendingTransfersPage = () => {
             {outgoingPending.length === 0 ? (
               <EmptyState
                 icon={<Package size={48} />}
-                title="No Pending Outgoing Transfers"
-                description="You have no outgoing transfers awaiting confirmation"
+                title="Brak oczekujących transferów wychodzących"
+                description="Nie masz wychodzących transferów oczekujących na potwierdzenie"
               />
             ) : (
               <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 600 }}>To Location</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Items</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Reason</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Do lokalizacji</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Produkty</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Powód</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Data</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600 }}>Actions</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>Akcje</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -300,7 +300,7 @@ const PendingTransfersPage = () => {
                         <TableCell>{transfer.toLocation?.name || 'N/A'}</TableCell>
                         <TableCell>
                           <Chip
-                            label={`${transfer.transferItems?.length || 0} items`}
+                            label={`${transfer.transferItems?.length || 0} produktów`}
                             size="small"
                             variant="outlined"
                           />
@@ -321,7 +321,7 @@ const PendingTransfersPage = () => {
                               variant="outlined"
                               onClick={() => handleViewDetails(transfer.id)}
                             >
-                              View
+                              Podgląd
                             </Button>
                             <Button
                               size="small"
@@ -329,7 +329,7 @@ const PendingTransfersPage = () => {
                               color="error"
                               onClick={() => handleCancelTransfer(transfer.id)}
                             >
-                              Cancel
+                              Anuluj
                             </Button>
                           </Box>
                         </TableCell>

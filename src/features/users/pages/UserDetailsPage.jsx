@@ -61,6 +61,7 @@ function UserDetailsPage() {
   const [userLocations, setUserLocations] = useState([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
   const [selectedPermissions, setSelectedPermissions] = useState([]);
+  const [deleteDialog, setDeleteDialog] = useState(false);
 
   useEffect(() => {
     dispatch(fetchActiveLocations());
@@ -215,6 +216,24 @@ function UserDetailsPage() {
     }
   };
 
+  const handleOpenDeleteDialog = () => {
+    setDeleteDialog(true);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialog(false);
+  };
+
+  const handleDelete = async () => {
+    try {
+      await userService.deleteUser(id);
+      toast.success('Użytkownik został usunięty');
+      navigate('/users');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Nie udało się usunąć użytkownika');
+    }
+  };
+
   if (loading || !user) {
     return (
       <Container maxWidth="lg">
@@ -269,6 +288,16 @@ function UserDetailsPage() {
               onClick={handleResetPassword}
             >
               Resetuj hasło
+            </Button>
+          )}
+          {canManageUsers && (
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<Trash2 size={16} />}
+              onClick={handleOpenDeleteDialog}
+            >
+              Usuń
             </Button>
           )}
         </Box>
@@ -559,6 +588,31 @@ function UserDetailsPage() {
           <Button onClick={handleClosePermissionsDialog}>Anuluj</Button>
           <Button onClick={handleSavePermissions} variant="contained">
             Zapisz
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <Dialog
+        open={deleteDialog}
+        onClose={handleCloseDeleteDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Usuń użytkownika</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">
+            Czy na pewno chcesz usunąć tego użytkownika?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Użytkownik {getUserName()} ({user.email}) zostanie oznaczony jako nieaktywny.
+            Historia operacji zostanie zachowana.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteDialog}>Anuluj</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">
+            Usuń
           </Button>
         </DialogActions>
       </Dialog>

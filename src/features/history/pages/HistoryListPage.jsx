@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Container,
@@ -12,6 +12,10 @@ import {
   Typography,
   IconButton,
   Menu,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { RotateCcw, MoreVertical, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -58,6 +62,7 @@ function HistoryListPage() {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, item: null, action: null });
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedRow, setSelectedRow] = useState(null);
+  const [descriptionDialog, setDescriptionDialog] = useState({ open: false, description: '' });
 
   const pagination = usePagination({
     total: paginationData?.totalElements || 0,
@@ -85,7 +90,41 @@ function HistoryListPage() {
     return PERMISSIONS[permission]?.includes(currentUser?.role);
   };
 
-  const canViewHistory = hasPermission('VIEW_HISTORY_ALL');
+  // Check if user can view history:
+  // 1. ADMIN/OWNER can view all history
+  // 2. EMPLOYEE can view history if they have HISTORY tab access for the current location
+  const canViewHistory = useMemo(() => {
+    // ADMIN and OWNER have full access
+    if (hasPermission('VIEW_HISTORY_ALL')) {
+      return true;
+    }
+
+    // EMPLOYEE: check permissions based on current location
+    if (currentUser?.userLocations && currentUser.userLocations.length > 0) {
+      // If "All Stores" is selected, check if user has HISTORY access in at least one location
+      if (!currentLocation || currentLocation.id === 'ALL_STORES') {
+        return currentUser.userLocations.some(
+          (userLocation) =>
+            // Empty/null allowedTabs means full access to all tabs
+            !userLocation.allowedTabs ||
+            userLocation.allowedTabs.length === 0 ||
+            userLocation.allowedTabs.includes('HISTORY')
+        );
+      }
+
+      // If specific location is selected, check if user has HISTORY access for THAT location
+      return currentUser.userLocations.some(
+        (userLocation) =>
+          userLocation.location.id === currentLocation.id &&
+          // Empty/null allowedTabs means full access to all tabs
+          (!userLocation.allowedTabs ||
+           userLocation.allowedTabs.length === 0 ||
+           userLocation.allowedTabs.includes('HISTORY'))
+      );
+    }
+
+    return false;
+  }, [currentUser, currentLocation]);
 
   const handleOpenConfirm = (item, action) => {
     setConfirmDialog({ open: true, item, action });
@@ -93,6 +132,14 @@ function HistoryListPage() {
 
   const handleCloseConfirm = () => {
     setConfirmDialog({ open: false, item: null, action: null });
+  };
+
+  const handleOpenDescription = (description) => {
+    setDescriptionDialog({ open: true, description });
+  };
+
+  const handleCloseDescription = () => {
+    setDescriptionDialog({ open: false, description: '' });
   };
 
   const handleConfirmAction = async () => {
@@ -273,7 +320,18 @@ function HistoryListPage() {
       label: 'Opis',
       sortable: false,
       render: (row) => (
-        <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <Typography
+          variant="body2"
+          onClick={() => row.reason && handleOpenDescription(row.reason)}
+          sx={{
+            maxWidth: 300,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            cursor: row.reason ? 'pointer' : 'default',
+            '&:hover': row.reason ? { textDecoration: 'underline', color: 'primary.main' } : {}
+          }}
+        >
           {row.reason || '-'}
         </Typography>
       ),
@@ -443,6 +501,26 @@ function HistoryListPage() {
         }
         confirmColor={confirmDialog.action === 'deleteAll' || confirmDialog.action === 'delete' ? 'error' : 'warning'}
       />
+
+      {/* Description Dialog */}
+      <Dialog
+        open={descriptionDialog.open}
+        onClose={handleCloseDescription}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Pełny opis operacji</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {descriptionDialog.description}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDescription} variant="contained">
+            Zamknij
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Actions Menu */}
       <Menu

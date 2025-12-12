@@ -16,6 +16,7 @@ import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import StatusBadge from '../../../shared/components/StatusBadge';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
+import EditProductModal from '../../inventory/components/EditProductModal';
 import {
   fetchProductById,
   deleteProduct,
@@ -36,6 +37,7 @@ function ProductDetailsPage() {
   const currentType = useSelector(selectCurrentType);
 
   const [confirmDialog, setConfirmDialog] = useState({ open: false, action: null });
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -54,19 +56,30 @@ function ProductDetailsPage() {
   const handleConfirmAction = async () => {
     const { action } = confirmDialog;
     try {
+      // Use the product's actual type from the product data, not currentType from Redux
+      // Handle backend's OTHER_PRODUCT vs frontend's OTHER mapping
+      const actualProductType = product.productType === 'OTHER_PRODUCT' ? 'OTHER' : product.productType;
+
       if (action === 'delete') {
-        await dispatch(deleteProduct({ type: currentType, id: product.id })).unwrap();
+        await dispatch(deleteProduct({ type: actualProductType, id: product.id })).unwrap();
         toast.success('Produkt został usunięty');
         navigate('/inventory');
       } else if (action === 'restore') {
-        await dispatch(restoreProduct({ type: currentType, id: product.id })).unwrap();
+        await dispatch(restoreProduct({ type: actualProductType, id: product.id })).unwrap();
         toast.success('Produkt został przywrócony');
-        dispatch(fetchProductById({ type: currentType, id }));
+        dispatch(fetchProductById({ type: actualProductType, id }));
       }
     } catch (error) {
       toast.error(error || `Nie udało się ${action} produktu`);
     }
     handleCloseConfirm();
+  };
+
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    // Refresh product data after edit
+    const actualProductType = product.productType === 'OTHER_PRODUCT' ? 'OTHER' : product.productType;
+    dispatch(fetchProductById({ type: actualProductType, id }));
   };
 
   if (loading || !product) {
@@ -83,6 +96,15 @@ function ProductDetailsPage() {
     if (product.model) return `${product.brand?.name || ''} ${product.model}`;
     if (product.name) return product.name;
     return 'Szczegóły produktu';
+  };
+
+  const getLensTypeLabel = (lensType) => {
+    const lensTypeLabels = {
+      'DAILY': 'Jednorazowe',
+      'MONTHLY': 'Miesięczne',
+      'YEARLY': 'Roczne',
+    };
+    return lensTypeLabels[lensType] || lensType;
   };
 
   const renderProductDetails = () => {
@@ -147,7 +169,7 @@ function ProductDetailsPage() {
               Typ szkła
             </Typography>
             <Typography variant="body1" sx={{ mb: 2 }}>
-              {product.lensType}
+              {getLensTypeLabel(product.lensType)}
             </Typography>
           </Grid>
         )}
@@ -179,7 +201,7 @@ function ProductDetailsPage() {
             Cena zakupu
           </Typography>
           <Typography variant="body1" sx={{ mb: 2 }}>
-            ${product.purchasePrice?.toFixed(2) || '0.00'}
+            {product.purchasePrice?.toFixed(2) || '0.00'} zł
           </Typography>
         </Grid>
 
@@ -188,7 +210,7 @@ function ProductDetailsPage() {
             Cena sprzedaży
           </Typography>
           <Typography variant="body1" sx={{ mb: 2 }}>
-            ${product.sellingPrice?.toFixed(2) || '0.00'}
+            {product.sellingPrice?.toFixed(2) || '0.00'} zł
           </Typography>
         </Grid>
 
@@ -240,7 +262,7 @@ function ProductDetailsPage() {
           <Button
             variant="outlined"
             startIcon={<Edit size={16} />}
-            onClick={() => navigate(`/products/${id}/edit`)}
+            onClick={() => setEditModalOpen(true)}
             disabled={product.status === PRODUCT_STATUS.DELETED}
           >
             Edytuj
@@ -285,6 +307,13 @@ function ProductDetailsPage() {
         }
         confirmText={confirmDialog.action === 'delete' ? 'Usuń' : 'Przywróć'}
         confirmColor={confirmDialog.action === 'delete' ? 'error' : 'primary'}
+      />
+
+      {/* Edit Product Modal */}
+      <EditProductModal
+        open={editModalOpen}
+        onClose={handleCloseEditModal}
+        product={product ? { ...product, type: currentType } : null}
       />
     </Container>
   );

@@ -45,10 +45,7 @@ function AppLayout() {
           width: {
             md: sidebarOpen ? `calc(100% - ${DRAWER_WIDTH}px)` : '100%',
           },
-          transition: theme.transitions.create(['width', 'margin'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
+          overflowX: 'clip',
         }}
       >
         <Outlet />

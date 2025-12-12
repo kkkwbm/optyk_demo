@@ -38,6 +38,7 @@ function Sidebar({ drawerWidth, open, onClose, variant }) {
 
   const handleLocationClick = (location) => {
     dispatch(setCurrentLocation(location));
+
     if (variant === 'temporary') {
       onClose();
     }
@@ -167,6 +168,45 @@ function Sidebar({ drawerWidth, open, onClose, variant }) {
             <Typography variant="overline" sx={{ px: 2, mt: 2, mb: 1, display: 'block', color: 'text.secondary' }}>
               Magazyny
             </Typography>
+
+            {/* All Warehouses Option */}
+            <ListItem disablePadding sx={{ mb: 0.5 }}>
+              <ListItemButton
+                onClick={() => handleLocationClick({ id: 'ALL_WAREHOUSES', type: 'ALL_WAREHOUSES', name: 'Wszystkie magazyny' })}
+                selected={currentLocation?.id === 'ALL_WAREHOUSES'}
+                sx={{
+                  borderRadius: 2,
+                  '&.Mui-selected': {
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: 'primary.dark',
+                    },
+                    '& .MuiListItemIcon-root': {
+                      color: 'white',
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: 40,
+                    color: currentLocation?.id === 'ALL_WAREHOUSES' ? 'white' : 'text.secondary',
+                  }}
+                >
+                  <Building2 size={20} />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Wszystkie magazyny"
+                  primaryTypographyProps={{
+                    fontSize: '0.95rem',
+                    fontWeight: currentLocation?.id === 'ALL_WAREHOUSES' ? 600 : 400,
+                  }}
+                />
+              </ListItemButton>
+            </ListItem>
+
+            {/* Individual Warehouses */}
             {sortedLocations.warehouses.map(renderLocationItem)}
           </>
         )}
@@ -227,7 +267,6 @@ function Sidebar({ drawerWidth, open, onClose, variant }) {
         '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
-          borderRight: '1px solid rgba(0, 0, 0, 0.12)',
         },
       }}
       ModalProps={{

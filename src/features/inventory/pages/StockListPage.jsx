@@ -81,7 +81,11 @@ function StockListPage() {
   const handleConfirmDelete = async () => {
     const { product } = confirmDialog;
     try {
-      await dispatch(deleteProduct({ type: product.type, id: product.id })).unwrap();
+      // Use productType field and handle backend's OTHER_PRODUCT vs frontend's OTHER mapping
+      const productType = product.productType || product.type;
+      const actualProductType = productType === 'OTHER_PRODUCT' ? 'OTHER' : productType;
+
+      await dispatch(deleteProduct({ type: actualProductType, id: product.id })).unwrap();
       toast.success('Produkt został usunięty');
       // Refresh inventory list
       const params = {

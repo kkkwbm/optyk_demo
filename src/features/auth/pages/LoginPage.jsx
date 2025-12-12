@@ -38,6 +38,7 @@ function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
   } = useForm({
     resolver: yupResolver(loginSchema),
     defaultValues: {
@@ -66,7 +67,14 @@ function LoginPage() {
     } catch (err) {
       // Error is already in Redux state, will be displayed
       console.error('Login failed:', err);
+      toast.error('Nie udało się zalogować, sprawdź poprawność loginu i hasła');
     }
+  };
+
+  // Quick login functions for development
+  const handleQuickLogin = (email, password) => {
+    setValue('email', email);
+    setValue('password', password);
   };
 
   return (
@@ -108,7 +116,7 @@ function LoginPage() {
           {/* Error Alert */}
           {error && (
             <Alert severity="error" sx={{ mb: 3 }} onClose={() => dispatch(clearError())}>
-              {typeof error === 'string' ? error : 'Nieprawidłowy email lub hasło'}
+              Nie udało się zalogować, sprawdź poprawność loginu i hasła
             </Alert>
           )}
 
@@ -148,6 +156,41 @@ function LoginPage() {
               {loading ? 'Logowanie...' : 'Zaloguj się'}
             </Button>
           </form>
+
+          {/* Development Quick Login Buttons - Only in development mode */}
+          {import.meta.env.MODE === 'development' && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, textAlign: 'center' }}>
+                Quick Login (Development):
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => handleQuickLogin('admin@optyk.com', 'Admin123!')}
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  Admin
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => handleQuickLogin('employee@optyk.com', 'Employee123!')}
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  Employee
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => handleQuickLogin('maintenance@optyk.com', 'Maintenance123!')}
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  Maintenance
+                </Button>
+              </Box>
+            </Box>
+          )}
 
           {/* Additional Info */}
           <Box sx={{ mt: 3, textAlign: 'center' }}>
