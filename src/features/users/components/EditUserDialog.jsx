@@ -51,7 +51,6 @@ function EditUserDialog({ open, onClose, userId, onSuccess }) {
             });
           }
         } catch (error) {
-          console.error('Failed to load user:', error);
           toast.error('Nie udało się załadować danych użytkownika');
         } finally {
           setLoading(false);

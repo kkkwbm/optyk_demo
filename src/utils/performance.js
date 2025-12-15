@@ -53,7 +53,6 @@ export const measurePerformance = async (name, func) => {
   const duration = endTime - startTime;
 
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[Performance] ${name}: ${duration.toFixed(2)}ms`);
   }
 
   return { result, duration };
@@ -90,7 +89,6 @@ export const storage = {
       localStorage.setItem(key, serialized);
       return true;
     } catch (error) {
-      console.error('Storage error:', error);
       return false;
     }
   },
@@ -100,7 +98,6 @@ export const storage = {
       const item = localStorage.getItem(key);
       return item ? JSON.parse(item) : defaultValue;
     } catch (error) {
-      console.error('Storage error:', error);
       return defaultValue;
     }
   },
@@ -110,7 +107,6 @@ export const storage = {
       localStorage.removeItem(key);
       return true;
     } catch (error) {
-      console.error('Storage error:', error);
       return false;
     }
   },
@@ -120,7 +116,6 @@ export const storage = {
       localStorage.clear();
       return true;
     } catch (error) {
-      console.error('Storage error:', error);
       return false;
     }
   },
@@ -144,7 +139,6 @@ export const sessionStorage = {
       window.sessionStorage.setItem(key, serialized);
       return true;
     } catch (error) {
-      console.error('Session storage error:', error);
       return false;
     }
   },
@@ -154,7 +148,6 @@ export const sessionStorage = {
       const item = window.sessionStorage.getItem(key);
       return item ? JSON.parse(item) : defaultValue;
     } catch (error) {
-      console.error('Session storage error:', error);
       return defaultValue;
     }
   },
@@ -164,7 +157,6 @@ export const sessionStorage = {
       window.sessionStorage.removeItem(key);
       return true;
     } catch (error) {
-      console.error('Session storage error:', error);
       return false;
     }
   },
@@ -174,7 +166,6 @@ export const sessionStorage = {
       window.sessionStorage.clear();
       return true;
     } catch (error) {
-      console.error('Session storage error:', error);
       return false;
     }
   },

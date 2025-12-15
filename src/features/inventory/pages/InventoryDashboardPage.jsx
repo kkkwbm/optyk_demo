@@ -203,14 +203,8 @@ function InventoryDashboardPage() {
   };
 
   const handleConfirmAction = async () => {
-    const { product, action } = confirmDialog;
+    const { product, action} = confirmDialog;
     try {
-      // Debug: log the product object to see its structure
-      console.log('Product object:', product);
-      console.log('Product type:', product.productType);
-      console.log('Product ID field:', product.id);
-      console.log('Product productId field:', product.productId);
-
       // Determine the product type
       // For inventory items: use productType field
       // For nested product objects: use the product field's type or current tab type as fallback
@@ -223,9 +217,6 @@ function InventoryDashboardPage() {
 
       // Get the correct product ID (inventory items have productId, products have id)
       const productId = product.productId || product.id;
-
-      console.log('Using product type:', actualProductType);
-      console.log('Using product ID:', productId);
 
       if (action === 'delete') {
         await dispatch(deleteProduct({ type: actualProductType, id: productId })).unwrap();

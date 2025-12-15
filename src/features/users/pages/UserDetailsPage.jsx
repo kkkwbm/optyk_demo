@@ -83,7 +83,7 @@ function UserDetailsPage() {
         setUserLocations(response.data.data || []);
       }
     } catch (error) {
-      console.error('Failed to load user locations:', error);
+      // Error handled silently
     } finally {
       setLoadingLocations(false);
     }

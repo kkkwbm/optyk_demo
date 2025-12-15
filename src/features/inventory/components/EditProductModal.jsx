@@ -117,7 +117,6 @@ function EditProductModal({ open, onClose, product }) {
       toast.success('Produkt został zaktualizowany');
       onClose();
     } catch (error) {
-      console.error(error);
       toast.error(error.response?.data?.error || 'Nie udało się zaktualizować produktu');
     }
   };

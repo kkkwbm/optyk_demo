@@ -72,7 +72,6 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
       toast.success('Wylogowano pomyślnie');
       navigate('/login');
     } catch (error) {
-      console.error('Logout error:', error);
       navigate('/login');
     }
   };

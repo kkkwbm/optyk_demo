@@ -19,8 +19,7 @@ export const login = createAsyncThunk(
         try {
           await api.get('/auth/csrf');
         } catch (csrfError) {
-          // If CSRF fetch fails, log but don't fail the login
-          console.warn('Failed to fetch CSRF token:', csrfError);
+          // If CSRF fetch fails, don't fail the login
         }
 
         return { user, accessToken };
@@ -42,7 +41,6 @@ export const logout = createAsyncThunk(
       await api.post('/auth/logout');
     } catch (error) {
       // Even if logout fails on server, we'll clear local state
-      console.error('Logout error:', error);
     } finally {
       // Clear access token from memory
       tokenManager.clearAccessToken();
@@ -122,7 +120,7 @@ export const initializeAuth = createAsyncThunk(
         try {
           await api.get('/auth/csrf');
         } catch (csrfError) {
-          console.warn('Failed to fetch CSRF token:', csrfError);
+          // CSRF token fetch failed
         }
 
         return {

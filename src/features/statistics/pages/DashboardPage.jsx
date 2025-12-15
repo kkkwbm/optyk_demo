@@ -82,7 +82,6 @@ function DashboardPage() {
                 totalProducts: statsResponse?.totalProductsInStock || 0,
               };
             } catch (error) {
-              console.error(`Failed to fetch stats for location ${location.id}:`, error);
               return {
                 id: location.id,
                 name: location.name,
@@ -97,7 +96,7 @@ function DashboardPage() {
 
         setStoreComparison(comparisonData.sort((a, b) => b.totalSales - a.totalSales));
       } catch (error) {
-        console.error('Failed to fetch store comparison:', error);
+        // Error handled silently
       }
     };
 

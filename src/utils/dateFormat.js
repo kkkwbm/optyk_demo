@@ -14,7 +14,6 @@ export const formatDate = (date, formatStr) => {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     return dateFnsFormat(dateObj, formatStr, { locale: pl });
   } catch (error) {
-    console.error('Error formatting date:', error);
     return '';
   }
 };

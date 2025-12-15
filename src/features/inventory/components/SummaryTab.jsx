@@ -435,13 +435,13 @@ function SummaryTab() {
 
       {/* Empty state for contact lenses */}
       {(!summary.contactLensesByBrand || summary.contactLensesByBrand.length === 0) &&
-       (!summary.contactLensesByType || summary.contactLensesByType.length === 0) && (
-        <Paper sx={{ p: 4, textAlign: 'center', backgroundColor: 'background.default' }}>
-          <Typography variant="body1" color="text.secondary">
-            Brak soczewek kontaktowych w magazynie
-          </Typography>
-        </Paper>
-      )}
+        (!summary.contactLensesByType || summary.contactLensesByType.length === 0) && (
+          <Paper sx={{ p: 4, textAlign: 'center', backgroundColor: 'background.default' }}>
+            <Typography variant="body1" color="text.secondary">
+              Brak soczewek kontaktowych w magazynie
+            </Typography>
+          </Paper>
+        )}
     </Box>
   );
 }

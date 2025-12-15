@@ -234,7 +234,6 @@ const locationsSlice = createSlice({
         try {
           state.currentLocation = JSON.parse(savedLocation);
         } catch (error) {
-          console.error('Failed to parse saved location:', error);
           localStorage.removeItem('currentLocation');
         }
       }

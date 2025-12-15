@@ -18,7 +18,6 @@ class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
 
     // Check if this is a chunk loading error (happens after deployment)
     const isChunkLoadError =
@@ -31,7 +30,6 @@ class ErrorBoundary extends Component {
       const hasReloadedForChunkError = sessionStorage.getItem('chunk-error-reload');
 
       if (!hasReloadedForChunkError) {
-        console.log('Chunk loading error detected. Reloading page to fetch updated files...');
         sessionStorage.setItem('chunk-error-reload', 'true');
         window.location.reload();
         return; // Don't set state, page will reload

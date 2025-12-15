@@ -197,10 +197,6 @@ function CreateSalePage() {
   // Build product options from inventory items (only products with stock at current location)
   const productOptions = inventoryItems
     .filter(item => {
-      // Debug: Log what we're filtering
-      if (item.product) {
-        console.log('Item productType:', item.productType, 'Selected productType:', productType, 'Match:', item.productType === productType);
-      }
       return item.product && (item.availableQuantity > 0 || item.quantity > 0);
     })
     .filter((item) => item.productType === productType)
@@ -210,9 +206,6 @@ function CreateSalePage() {
       product: item.product,
       availableQuantity: item.availableQuantity || 0,
     }));
-
-  console.log('Total inventory items:', inventoryItems.length);
-  console.log('Filtered product options:', productOptions.length);
 
   const handleProductTypeChange = (event, newType) => {
     setProductType(newType);

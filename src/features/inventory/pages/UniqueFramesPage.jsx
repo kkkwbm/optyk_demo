@@ -36,7 +36,7 @@ function UniqueFramesPage() {
                 const response = await api.get('/inventory/unique-frames', { params });
                 setFrames(response.data.data);
             } catch (error) {
-                console.error('Failed to fetch unique frames:', error);
+                // Error handled silently
             } finally {
                 setLoading(false);
             }

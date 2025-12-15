@@ -30,7 +30,6 @@ function ThemedApp() {
     // Only try once - don't retry on failure to avoid infinite loops
     dispatch(initializeAuth()).catch(() => {
       // Silently fail - user will be redirected to login if needed
-      console.log('Session restoration failed - user needs to login');
     });
   }, [dispatch]);
 

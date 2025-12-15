@@ -304,7 +304,6 @@ function HistoryListPage() {
           if (isNaN(date.getTime())) return '-';
           return format(date, DATE_FORMATS.DISPLAY_WITH_TIME, { locale: pl });
         } catch (error) {
-          console.error('Error formatting date:', row.operationTimestamp, error);
           return '-';
         }
       },

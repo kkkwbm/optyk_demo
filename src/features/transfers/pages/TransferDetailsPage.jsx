@@ -115,7 +115,6 @@ function TransferDetailsPage() {
       });
       setAvailableProducts(response.data.content || []);
     } catch (error) {
-      console.error('Failed to fetch products:', error);
       toast.error('Nie udało się pobrać listy produktów');
     }
   };
@@ -128,15 +127,11 @@ function TransferDetailsPage() {
         status: 'ACTIVE'
       });
 
-      console.log('Locations response:', response);
-
       // Handle different response structures
       const locations = response.data?.content || response.data?.data || response.data || [];
-      console.log('Extracted locations:', locations);
 
       setAvailableLocations(locations);
     } catch (error) {
-      console.error('Failed to fetch locations:', error);
       toast.error('Nie udało się pobrać listy lokalizacji');
     }
   };
@@ -232,7 +227,6 @@ function TransferDetailsPage() {
       setIsEditing(false);
       toast.success('Transfer zaktualizowany pomyślnie');
     } catch (error) {
-      console.error('Failed to update transfer:', error);
       toast.error(error.response?.data?.error || 'Nie udało się zaktualizować transferu');
     }
   };

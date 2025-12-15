@@ -17,8 +17,9 @@ import {
   Paper,
   Alert,
   Chip,
+  IconButton,
 } from '@mui/material';
-import { CheckCircle, AlertTriangle, Package } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Package, Plus, Minus } from 'lucide-react';
 
 /**
  * Dialog for confirming a pending transfer with partial acceptance support
@@ -157,7 +158,7 @@ const ConfirmTransferDialog = ({ open, onClose, onConfirm, transfer, loading }) 
                     <TableCell>Produkt</TableCell>
                     <TableCell>Marka</TableCell>
                     <TableCell align="center">Wysłano</TableCell>
-                    <TableCell align="center">Przyjmuję</TableCell>
+                    <TableCell align="center" sx={{ minWidth: 140 }}>Przyjmuję</TableCell>
                     <TableCell align="center">Do zwrotu</TableCell>
                   </TableRow>
                 </TableHead>
@@ -177,20 +178,73 @@ const ConfirmTransferDialog = ({ open, onClose, onConfirm, transfer, loading }) 
                         <TableCell align="center">
                           <Chip label={item.quantity} size="small" />
                         </TableCell>
+
+                        {/* Custom Quantity Control */}
                         <TableCell align="center">
-                          <TextField
-                            type="number"
-                            size="small"
-                            value={accepted}
-                            onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                            inputProps={{
-                              min: 0,
-                              max: item.quantity,
-                              style: { textAlign: 'center', width: 60 },
-                            }}
-                            sx={{ width: 80 }}
-                          />
+                          <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 0.5
+                          }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleQuantityChange(item.id, accepted - 1)}
+                              disabled={accepted <= 0}
+                              sx={{
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                borderRadius: 1,
+                                p: 0.5,
+                                '&:hover': { bgcolor: 'action.hover' }
+                              }}
+                            >
+                              <Minus size={14} />
+                            </IconButton>
+
+                            <TextField
+                              type="number"
+                              size="small"
+                              value={accepted}
+                              onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                              inputProps={{
+                                min: 0,
+                                max: item.quantity,
+                                style: {
+                                  textAlign: 'center',
+                                  padding: '4px 0',
+                                }
+                              }}
+                              sx={{
+                                width: 50,
+                                '& .MuiOutlinedInput-notchedOutline': { border: 'none' }, // Remove default border
+                                '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                                  '-webkit-appearance': 'none', // Hide native chrome/safari spinners
+                                  margin: 0,
+                                },
+                                '& input[type=number]': {
+                                  '-moz-appearance': 'textfield', // Hide native firefox spinners
+                                },
+                              }}
+                            />
+
+                            <IconButton
+                              size="small"
+                              onClick={() => handleQuantityChange(item.id, accepted + 1)}
+                              disabled={accepted >= item.quantity}
+                              sx={{
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                borderRadius: 1,
+                                p: 0.5,
+                                '&:hover': { bgcolor: 'action.hover' }
+                              }}
+                            >
+                              <Plus size={14} />
+                            </IconButton>
+                          </Box>
                         </TableCell>
+
                         <TableCell align="center">
                           {rejected > 0 ? (
                             <Chip label={rejected} size="small" color="warning" />

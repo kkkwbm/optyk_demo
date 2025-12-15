@@ -66,7 +66,6 @@ function LoginPage() {
       navigate('/');
     } catch (err) {
       // Error is already in Redux state, will be displayed
-      console.error('Login failed:', err);
       toast.error('Nie udało się zalogować, sprawdź poprawność loginu i hasła');
     }
   };

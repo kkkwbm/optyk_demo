@@ -80,7 +80,6 @@ function SettingsPage() {
       toast.success(`Zmieniono motyw na ${newTheme === 'light' ? 'jasny' : 'ciemny'}`);
     } catch (error) {
       toast.error('Nie udało się zaktualizować preferencji motywu');
-      console.error('Theme update error:', error);
     }
   };
 

@@ -85,7 +85,6 @@ api.interceptors.response.use(
 
     // Don't retry on rate limit errors - just fail
     if (error.response?.status === 429) {
-      if (!isSilent) console.warn('Rate limit exceeded');
       return Promise.reject(error);
     }
 
@@ -122,7 +121,6 @@ api.interceptors.response.use(
       } catch (refreshError) {
         // Don't redirect if rate limited
         if (refreshError.response?.status === 429) {
-          if (!isSilent) console.warn('Rate limit on refresh - please wait');
           return Promise.reject(refreshError);
         }
 

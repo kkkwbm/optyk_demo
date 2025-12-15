@@ -37,7 +37,7 @@ function AgingInventoryPage() {
                 const response = await api.get('/inventory/aging', { params });
                 setItems(response.data.data);
             } catch (error) {
-                console.error('Failed to fetch aging inventory:', error);
+                // Error handled silently
             } finally {
                 setLoading(false);
             }

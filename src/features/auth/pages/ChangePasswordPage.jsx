@@ -64,7 +64,7 @@ function ChangePasswordPage() {
         navigate('/profile');
       }, 1500);
     } catch (err) {
-      console.error('Password change failed:', err);
+      // Error handled by toast notification
     }
   };
 

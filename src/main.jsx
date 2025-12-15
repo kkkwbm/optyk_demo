@@ -14,7 +14,6 @@ window.addEventListener('error', (event) => {
     const hasReloadedForChunkError = sessionStorage.getItem('chunk-error-reload');
 
     if (!hasReloadedForChunkError) {
-      console.log('Chunk loading error detected at router level. Reloading page to fetch updated files...');
       sessionStorage.setItem('chunk-error-reload', 'true');
       window.location.reload();
       event.preventDefault();
@@ -37,11 +36,10 @@ window.addEventListener('unhandledrejection', (event) => {
     const hasReloadedForChunkError = sessionStorage.getItem('chunk-error-reload');
 
     if (!hasReloadedForChunkError) {
-      console.log('Chunk loading error detected (promise rejection). Reloading page to fetch updated files...');
       sessionStorage.setItem('chunk-error-reload', 'true');
       window.location.reload();
       event.preventDefault();
-    } else {
+    } else{
       // If reload didn't fix it, clear flag and let error display
       sessionStorage.removeItem('chunk-error-reload');
     }

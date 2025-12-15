@@ -83,8 +83,6 @@ function TransfersListPage() {
   // Fetch all pending transfers independently (not affected by history filters)
   useEffect(() => {
     const fetchPendingTransfers = async () => {
-      console.log('🔄 Fetching pending transfers...');
-      console.log('   Current location:', currentLocation);
       setPendingLoading(true);
       try {
         // Use transferService directly to avoid Redux state conflicts
@@ -94,38 +92,25 @@ function TransfersListPage() {
           size: 100,
         };
 
-        console.log('   Fetching with params:', params);
         const response = await transferService.getTransfers(params);
-        console.log('   API response:', response);
 
         if (response.data.success) {
           const result = response.data.data;
-          console.log('   API result:', result);
           const pendingData = result.content || result || [];
-          console.log('   Pending data extracted:', pendingData);
 
           // If currentLocation is set AND is not "ALL_STORES", filter to show only transfers related to this location
           if (currentLocation && currentLocation.id !== 'ALL_STORES') {
-            console.log('   Filtering for specific location:', currentLocation.id);
             const filtered = pendingData.filter(
-              (t) => {
-                const matches = t.fromLocation?.id === currentLocation.id || t.toLocation?.id === currentLocation.id;
-                console.log(`     Transfer ${t.id}: from=${t.fromLocation?.id}, to=${t.toLocation?.id}, matches=${matches}`);
-                return matches;
-              }
+              (t) => t.fromLocation?.id === currentLocation.id || t.toLocation?.id === currentLocation.id
             );
-            console.log('   Filtered result:', filtered);
             setAllPendingTransfers(filtered);
           } else {
-            console.log('   No location filter (viewing all stores), using all:', pendingData);
             setAllPendingTransfers(pendingData);
           }
         } else {
-          console.error('❌ API returned error:', response.data.error);
           setAllPendingTransfers([]);
         }
       } catch (error) {
-        console.error('❌ Failed to fetch pending transfers:', error);
         setAllPendingTransfers([]);
       } finally {
         setPendingLoading(false);
@@ -271,7 +256,6 @@ function TransfersListPage() {
       }
     } catch (error) {
       toast.error('Wystąpił błąd podczas pobierania szczegółów transferu');
-      console.error('Error fetching transfer details:', error);
     }
   };
 
@@ -525,19 +509,9 @@ function TransfersListPage() {
 
   // Get pending transfers - just use the fetched pending transfers
   const pendingTransfers = useMemo(() => {
-    console.log('🧮 Computing pendingTransfers');
-    console.log('   allPendingTransfers:', allPendingTransfers);
-    console.log('   TRANSFER_STATUS.PENDING:', TRANSFER_STATUS.PENDING);
-
-    const result = allPendingTransfers.filter(
-      (transfer) => {
-        const matches = transfer.status === TRANSFER_STATUS.PENDING;
-        console.log(`   Transfer ${transfer.id} status=${transfer.status}, matches=${matches}`);
-        return matches;
-      }
+    return allPendingTransfers.filter(
+      (transfer) => transfer.status === TRANSFER_STATUS.PENDING
     );
-    console.log('   Final result:', result);
-    return result;
   }, [allPendingTransfers]);
 
   // Filter out PENDING from history unless user specifically filtered by that status

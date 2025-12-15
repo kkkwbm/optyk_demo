@@ -26,7 +26,6 @@ class ErrorLoggingService {
 
     // Always log to console in development
     if (this.isDevelopment) {
-      console.error('Error logged:', errorData);
     }
 
     // In production, send to backend API for logging
@@ -71,7 +70,6 @@ class ErrorLoggingService {
         timeout: 5000, // 5 second timeout
       }).catch(() => {
         // Silently fail - we don't want logging errors to cause more errors
-        console.warn('Failed to send error to backend');
       });
     } catch {
       // Silently fail - no need to use the error variable
@@ -91,7 +89,6 @@ class ErrorLoggingService {
     };
 
     if (this.isDevelopment) {
-      console.warn('Warning logged:', warningData);
     }
 
     if (this.isProduction) {
@@ -112,7 +109,6 @@ class ErrorLoggingService {
     };
 
     if (this.isDevelopment) {
-      console.info('Info logged:', infoData);
     }
 
     // Only send important info to backend in production

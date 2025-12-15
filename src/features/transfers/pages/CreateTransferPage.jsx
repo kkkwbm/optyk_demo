@@ -22,8 +22,10 @@ import {
   Stack,
   Tabs,
   Tab,
+  InputBase,
+  FormHelperText,
 } from '@mui/material';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Minus } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
@@ -44,7 +46,7 @@ function CreateTransferPage() {
   const [selectedToLocation, setSelectedToLocation] = useState(null);
   const [transferItems, setTransferItems] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [quantity, setQuantity] = useState('');
+  const [quantity, setQuantity] = useState('1');
   const [availableStock, setAvailableStock] = useState(null);
   const [productType, setProductType] = useState(PRODUCT_TYPES.FRAME);
 
@@ -67,7 +69,6 @@ function CreateTransferPage() {
     };
   }, [dispatch]);
 
-  // Fetch inventory when source location changes
   useEffect(() => {
     if (selectedFromLocation) {
       dispatch(fetchInventory({ locationId: selectedFromLocation.id, params: { size: 1000 } }));
@@ -76,30 +77,94 @@ function CreateTransferPage() {
     }
   }, [dispatch, selectedFromLocation]);
 
-  // Update available stock when product is selected
   useEffect(() => {
     if (selectedProduct) {
       const item = inventoryItems.find(i => i.product.id === selectedProduct.id);
       if (item) {
-        setAvailableStock(item.quantity);
+        setAvailableStock(item.availableQuantity);
+        setQuantity('1');
       } else {
         setAvailableStock(0);
+        setQuantity('0');
       }
     } else {
       setAvailableStock(null);
+      setQuantity('1');
     }
   }, [selectedProduct, inventoryItems]);
+
+  // --- Helpers do formatowania nazw ---
+
+  const getLensTypeLabel = (type) => {
+    switch (type) {
+      case 'DAILY': return 'jednorazowe';
+      case 'MONTHLY': return 'miesięczne';
+      case 'YEARLY': return 'roczne';
+      case 'BIWEEKLY': return 'dwutygodniowe';
+      default: return type || '';
+    }
+  };
+
+  /**
+   * Generuje główną nazwę produktu (Model + Szczegóły)
+   * Używane w dropdownie (linia 1) oraz w tabeli.
+   */
+  const getProductMainLabel = (product, type) => {
+    const model = product.model || product.name || '';
+
+    if (type === PRODUCT_TYPES.CONTACT_LENS) {
+      const typeLabel = getLensTypeLabel(product.lensType);
+      return `${model} (${typeLabel})`;
+    }
+
+    if (type === PRODUCT_TYPES.SOLUTION) {
+      // NAPRAWIONE: Dodanie pojemności do głównej nazwy
+      const capacity = product.capacity ? `${product.capacity}ml` : '';
+      return `${model} ${capacity}`;
+    }
+
+    // Dla oprawek i innych
+    return model;
+  };
+
+  /**
+   * Generuje pełną etykietę do wyszukiwania (Label w Autocomplete)
+   * Musi zawierać wszystko (Marka + Model + Szczegóły)
+   */
+  const getSearchLabel = (item) => {
+    const brand = item.product.brand?.name || '';
+    const mainPart = getProductMainLabel(item.product, item.productType);
+    return `${brand} ${mainPart}`;
+  };
+
+  /**
+   * Generuje nazwę do wyświetlenia w tabeli (z prefiksem kategorii)
+   */
+  const getTableDisplayName = (product, type) => {
+    // For solutions, just show capacity
+    if (type === PRODUCT_TYPES.SOLUTION) {
+      const capacity = product.capacity ? `${product.capacity}ml` : product.model || product.name || '';
+      return `Płyn ${capacity}`;
+    }
+
+    const mainLabel = getProductMainLabel(product, type);
+    if (type === PRODUCT_TYPES.FRAME) return `Oprawki ${mainLabel}`;
+    if (type === PRODUCT_TYPES.CONTACT_LENS) return `Soczewki ${mainLabel}`;
+
+    return mainLabel;
+  };
 
   const handleAddItem = () => {
     if (!selectedProduct) {
       toast.error('Proszę wybrać produkt');
       return;
     }
-    if (!quantity || parseInt(quantity, 10) <= 0) {
+    const qtyParsed = parseInt(quantity, 10);
+    if (!quantity || qtyParsed <= 0) {
       toast.error('Proszę wpisać prawidłową ilość');
       return;
     }
-    if (availableStock !== null && parseInt(quantity, 10) > availableStock) {
+    if (availableStock !== null && qtyParsed > availableStock) {
       toast.error(`Dostępne tylko ${availableStock} jednostek w lokalizacji źródłowej`);
       return;
     }
@@ -110,17 +175,21 @@ function CreateTransferPage() {
       return;
     }
 
+    const inventoryItem = inventoryItems.find(i => i.product.id === selectedProduct.id);
+    const type = inventoryItem ? inventoryItem.productType : productType;
+
     setTransferItems([
       ...transferItems,
       {
         product: selectedProduct,
-        quantity: parseInt(quantity, 10),
+        quantity: qtyParsed,
         availableStock,
+        productType: type,
       },
     ]);
 
     setSelectedProduct(null);
-    setQuantity('');
+    setQuantity('1');
     setAvailableStock(null);
   };
 
@@ -130,13 +199,15 @@ function CreateTransferPage() {
 
   const handleQuantityChange = (productId, newQuantity) => {
     const qty = parseInt(newQuantity, 10);
+    if (newQuantity === '' || isNaN(qty)) return;
+
     if (qty > 0) {
       setTransferItems(
         transferItems.map((item) => {
           if (item.product.id === productId) {
             if (qty > item.availableStock) {
               toast.error(`Dostępne tylko ${item.availableStock} jednostek`);
-              return item;
+              return { ...item, quantity: item.availableStock };
             }
             return { ...item, quantity: qty };
           }
@@ -146,18 +217,29 @@ function CreateTransferPage() {
     }
   };
 
+  const incrementMainQuantity = () => {
+    const current = parseInt(quantity || '0', 10);
+    if (availableStock !== null && current >= availableStock) return;
+    setQuantity((current + 1).toString());
+  };
+
+  const decrementMainQuantity = () => {
+    const current = parseInt(quantity || '0', 10);
+    if (current > 1) {
+      setQuantity((current - 1).toString());
+    }
+  };
+
   const onSubmit = async (data) => {
     try {
       if (!selectedFromLocation || !selectedToLocation) {
         toast.error('Proszę wybrać lokalizację źródłową i docelową');
         return;
       }
-
       if (selectedFromLocation.id === selectedToLocation.id) {
         toast.error('Lokalizacja źródłowa i docelowa muszą być różne');
         return;
       }
-
       if (transferItems.length === 0) {
         toast.error('Proszę dodać co najmniej jeden produkt');
         return;
@@ -182,21 +264,22 @@ function CreateTransferPage() {
     }
   };
 
-  // Map inventory items to options and filter by product type
+  // Mapowanie produktów do opcji
   const productOptions = inventoryItems
     .filter((item) => item.productType === productType)
     .map((item) => ({
       id: item.product.id,
-      label: `${item.product.brand?.name || ''} ${item.product.model || item.product.name || ''}`,
+      label: getSearchLabel(item), // Pełna nazwa do wyszukiwania
       product: item.product,
-      quantity: item.quantity,
+      productType: item.productType,
+      quantity: item.availableQuantity,
       brand: item.product.brand?.name
     }));
 
   const handleProductTypeChange = (event, newType) => {
     setProductType(newType);
     setSelectedProduct(null);
-    setQuantity('');
+    setQuantity('1');
     setAvailableStock(null);
   };
 
@@ -274,18 +357,8 @@ function CreateTransferPage() {
                             helperText={error?.message}
                             fullWidth
                             sx={{
-                              '& .MuiInputBase-root': {
-                                fontSize: '1rem',
-                                minHeight: '50px',
-                                padding: '8px 12px',
-                                width: '100%'
-                              },
-                              '& .MuiInputLabel-root': {
-                                fontSize: '1rem',
-                              },
-                              '& .MuiInputBase-input': {
-                                minWidth: '200px'
-                              }
+                              '& .MuiInputBase-root': { fontSize: '1rem', minHeight: '50px', p: '8px 12px' },
+                              '& .MuiInputLabel-root': { fontSize: '1rem' },
                             }}
                           />
                         )}
@@ -327,18 +400,8 @@ function CreateTransferPage() {
                             helperText={error?.message || (!selectedFromLocation ? 'Najpierw wybierz lokalizację źródłową' : '')}
                             fullWidth
                             sx={{
-                              '& .MuiInputBase-root': {
-                                fontSize: '1rem',
-                                minHeight: '50px',
-                                padding: '8px 12px',
-                                width: '100%'
-                              },
-                              '& .MuiInputLabel-root': {
-                                fontSize: '1rem',
-                              },
-                              '& .MuiInputBase-input': {
-                                minWidth: '200px'
-                              }
+                              '& .MuiInputBase-root': { fontSize: '1rem', minHeight: '50px', p: '8px 12px' },
+                              '& .MuiInputLabel-root': { fontSize: '1rem' },
                             }}
                           />
                         )}
@@ -351,13 +414,12 @@ function CreateTransferPage() {
 
             <Divider />
 
-            {/* SECTION 2: Product Selector (Always Visible) */}
+            {/* SECTION 2: Product Selector */}
             <Box>
               <Typography variant="h4" sx={{ fontWeight: 600, mb: 2 }}>
                 Wybór produktów
               </Typography>
 
-              {/* Product Type Selector */}
               <Box sx={{ mb: 3 }}>
                 <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
                   Wybierz typ produktu
@@ -374,7 +436,7 @@ function CreateTransferPage() {
                 </Tabs>
               </Box>
 
-              <Grid container spacing={2}>
+              <Grid container spacing={2} alignItems="flex-start">
                 <Grid item xs={12}>
                   <Autocomplete
                     options={productOptions}
@@ -385,7 +447,7 @@ function CreateTransferPage() {
                     }
                     onChange={(_, newValue) => {
                       setSelectedProduct(newValue?.product || null);
-                      setQuantity('');
+                      setQuantity('1');
                     }}
                     getOptionLabel={(option) => option.label || ''}
                     disabled={!selectedFromLocation}
@@ -404,31 +466,35 @@ function CreateTransferPage() {
                         placeholder={!selectedFromLocation ? "Najpierw wybierz lokalizację źródłową..." : "Wpisz nazwę, model lub markę..."}
                         fullWidth
                         sx={{
-                          '& .MuiInputBase-root': {
-                            fontSize: '1rem',
-                            minHeight: '50px',
-                            padding: '8px 12px',
-                            width: '100%'
-                          },
-                          '& .MuiInputLabel-root': {
-                            fontSize: '1rem',
-                          }
+                          '& .MuiInputBase-root': { fontSize: '1rem', minHeight: '50px', p: '8px 12px' },
+                          '& .MuiInputLabel-root': { fontSize: '1rem' },
                         }}
                       />
                     )}
                     renderOption={(props, option) => {
                       const { key, ...otherProps } = props;
+
+                      // For solutions, show capacity first, then brand
+                      const isSolution = option.productType === PRODUCT_TYPES.SOLUTION;
+                      const primaryText = isSolution
+                        ? (option.product.capacity ? `${option.product.capacity}ml` : option.product.model || option.product.name || '')
+                        : getProductMainLabel(option.product, option.productType);
+
                       return (
                         <li key={key} {...otherProps} style={{ display: 'block', padding: '12px 16px' }}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                             <Box>
+                              {/* GŁÓWNA NAZWA (Pojemność dla płynów, Model dla innych) */}
                               <Typography variant="body1" fontWeight="600" sx={{ fontSize: '1.1rem' }}>
-                                {option.label}
+                                {primaryText}
                               </Typography>
+
+                              {/* MARKA */}
                               <Typography variant="body2" color="text.secondary">
                                 {option.brand}
                               </Typography>
                             </Box>
+
                             <Typography variant="body2" sx={{
                               bgcolor: option.quantity > 0 ? 'success.lighter' : 'error.lighter',
                               color: option.quantity > 0 ? 'success.dark' : 'error.dark',
@@ -447,33 +513,62 @@ function CreateTransferPage() {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    label="Ilość"
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    fullWidth
-                    disabled={!selectedProduct}
-                    inputProps={{ min: 1 }}
-                    helperText={
-                      availableStock !== null
-                        ? `Dostępne w ${selectedFromLocation.name}: ${availableStock}`
-                        : undefined
-                    }
-                    sx={{
-                      '& .MuiInputBase-root': {
-                        fontSize: '1rem',
-                        minHeight: '50px'
-                      },
-                      '& .MuiInputLabel-root': {
-                        fontSize: '1rem'
+                {/* --- SELEKTOR ILOŚCI (60% SZEROKOŚCI) --- */}
+                <Grid item xs={4} md={2}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Box sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      border: '1px solid',
+                      borderColor: 'rgba(0, 0, 0, 0.23)',
+                      borderRadius: 1,
+                      maxWidth: '150px',
+                      height: '50px',
+                      '&:hover': {
+                        borderColor: 'text.primary'
                       }
-                    }}
-                  />
+                    }}>
+                      <IconButton
+                        onClick={decrementMainQuantity}
+                        disabled={!selectedProduct || parseInt(quantity, 10) <= 1}
+                        sx={{ height: '100%', borderRadius: 0 }}
+                      >
+                        <Minus size={20} />
+                      </IconButton>
+
+                      <InputBase
+                        value={quantity}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d+$/.test(val)) {
+                            setQuantity(val);
+                          }
+                        }}
+                        fullWidth
+                        disabled={!selectedProduct}
+                        sx={{
+                          '& input': { textAlign: 'center', fontSize: '1rem' }
+                        }}
+                      />
+
+                      <IconButton
+                        onClick={incrementMainQuantity}
+                        disabled={!selectedProduct || (availableStock !== null && parseInt(quantity, 10) >= availableStock)}
+                        sx={{ height: '100%', borderRadius: 0 }}
+                      >
+                        <Plus size={20} />
+                      </IconButton>
+                    </Box>
+                    <FormHelperText sx={{ ml: 0.5, whiteSpace: 'nowrap' }}>
+                      {availableStock !== null && selectedProduct
+                        ? `Dostępne: ${availableStock}`
+                        : ' '}
+                    </FormHelperText>
+                  </Box>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                {/* --- PRZYCISK DODAJ --- */}
+                <Grid item xs={4} md={2}>
                   <Button
                     variant="contained"
                     startIcon={<Plus size={20} />}
@@ -486,7 +581,7 @@ function CreateTransferPage() {
                       fontWeight: 600
                     }}
                   >
-                    Dodaj do listy
+                    Dodaj
                   </Button>
                 </Grid>
 
@@ -497,76 +592,101 @@ function CreateTransferPage() {
                     </Alert>
                   </Grid>
                 )}
+              </Grid>
 
-                {transferItems.length > 0 && (
-                  <Grid item xs={12}>
-                    <Typography variant="h6" sx={{ mb: 2, mt: 2 }}>
-                      Produkty transferu ({transferItems.length})
-                    </Typography>
-                    <TableContainer>
-                      <Table>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Produkt</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Marka</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600 }}>Dostępne</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600 }}>Ilość</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600 }}>Akcje</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {transferItems.map((item) => (
-                            <TableRow key={item.product.id}>
-                              <TableCell>
-                                {item.product.model || item.product.name || '-'}
-                              </TableCell>
-                              <TableCell>{item.product.brand?.name || '-'}</TableCell>
-                              <TableCell align="right">{item.availableStock}</TableCell>
-                              <TableCell align="right">
-                                <TextField
-                                  type="number"
-                                  value={item.quantity}
-                                  onChange={(e) =>
-                                    handleQuantityChange(item.product.id, e.target.value)
-                                  }
-                                  size="small"
-                                  inputProps={{ min: 1, max: item.availableStock }}
-                                  sx={{ width: 100 }}
-                                />
-                              </TableCell>
-                              <TableCell align="right">
+              {/* TABELA PRODUKTÓW (WYJĘTA Z GRID, ABY BYŁA PONIŻEJ) */}
+              {transferItems.length > 0 && (
+                <Box sx={{ mt: 4 }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Produkty transferu ({transferItems.length})
+                  </Typography>
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 600 }}>Produkt</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>Dostępne</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600 }}>Ilość</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>Akcje</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {transferItems.map((item) => (
+                          <TableRow key={item.product.id}>
+                            <TableCell>
+                              <Box>
+                                <Typography variant="body1" fontWeight="500">
+                                  {getTableDisplayName(item.product, item.productType)}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Marka: {item.product.brand?.name || '-'}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell align="right">{item.availableStock}</TableCell>
+                            <TableCell align="center">
+                              <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: '1px solid #e0e0e0',
+                                borderRadius: 1,
+                                width: 'fit-content',
+                                mx: 'auto'
+                              }}>
                                 <IconButton
                                   size="small"
-                                  color="error"
-                                  onClick={() => handleRemoveItem(item.product.id)}
+                                  onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
+                                  disabled={item.quantity <= 1}
                                 >
-                                  <Trash2 size={16} />
+                                  <Minus size={16} />
                                 </IconButton>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                          <TableRow>
-                            <TableCell colSpan={3} align="right">
-                              <strong>Razem produktów:</strong>
+
+                                <Box sx={{ width: 40, textAlign: 'center', fontSize: '0.9rem', fontWeight: 500 }}>
+                                  {item.quantity}
+                                </Box>
+
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
+                                  disabled={item.quantity >= item.availableStock}
+                                >
+                                  <Plus size={16} />
+                                </IconButton>
+                              </Box>
                             </TableCell>
                             <TableCell align="right">
-                              <strong>
-                                {transferItems.reduce((sum, item) => sum + item.quantity, 0)}
-                              </strong>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleRemoveItem(item.product.id)}
+                              >
+                                <Trash2 size={16} />
+                              </IconButton>
                             </TableCell>
-                            <TableCell />
                           </TableRow>
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Grid>
-                )}
-              </Grid>
+                        ))}
+                        <TableRow>
+                          <TableCell colSpan={2} align="right">
+                            <strong>Razem produktów:</strong>
+                          </TableCell>
+                          <TableCell align="center">
+                            <strong>
+                              {transferItems.reduce((sum, item) => sum + item.quantity, 0)}
+                            </strong>
+                          </TableCell>
+                          <TableCell />
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              )}
             </Box>
 
             <Divider />
 
-            {/* SECTION 3: Transfer Details (Moved Down) */}
+            {/* SECTION 3: Transfer Details */}
             <Box>
               <Typography variant="h4" sx={{ fontWeight: 600, mb: 2 }}>
                 Szczegóły
@@ -589,12 +709,8 @@ function CreateTransferPage() {
                         },
                       }}
                       sx={{
-                        '& .MuiInputBase-root': {
-                          fontSize: '1rem'
-                        },
-                        '& .MuiInputLabel-root': {
-                          fontSize: '1rem'
-                        }
+                        '& .MuiInputBase-root': { fontSize: '1rem' },
+                        '& .MuiInputLabel-root': { fontSize: '1rem' }
                       }}
                     />
                   </Box>
@@ -617,12 +733,8 @@ function CreateTransferPage() {
                         },
                       }}
                       sx={{
-                        '& .MuiInputBase-root': {
-                          fontSize: '1rem'
-                        },
-                        '& .MuiInputLabel-root': {
-                          fontSize: '1rem'
-                        }
+                        '& .MuiInputBase-root': { fontSize: '1rem' },
+                        '& .MuiInputLabel-root': { fontSize: '1rem' }
                       }}
                     />
                   </Box>
@@ -636,28 +748,16 @@ function CreateTransferPage() {
                 variant="outlined"
                 onClick={() => navigate('/transfers')}
                 size="large"
-                sx={{
-                  px: 5,
-                  py: 1.5,
-                  fontSize: '1.1rem',
-                  fontWeight: 600
-                }}
+                sx={{ px: 5, py: 1.5, fontSize: '1.1rem', fontWeight: 600 }}
               >
                 Anuluj
               </Button>
               <Button
                 type="submit"
                 variant="contained"
-                disabled={
-                  transferItems.length === 0 || !fromLocationId || !toLocationId
-                }
+                disabled={transferItems.length === 0 || !fromLocationId || !toLocationId}
                 size="large"
-                sx={{
-                  px: 5,
-                  py: 1.5,
-                  fontSize: '1.1rem',
-                  fontWeight: 600
-                }}
+                sx={{ px: 5, py: 1.5, fontSize: '1.1rem', fontWeight: 600 }}
               >
                 Utwórz transfer
               </Button>
