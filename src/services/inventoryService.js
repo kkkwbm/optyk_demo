@@ -132,6 +132,15 @@ export const inventoryService = {
       responseType: 'blob'
     });
   },
+
+  /**
+   * Get inventory summary statistics
+   * @param {Object} params - Query parameters (locationId, locationType)
+   * @returns {Promise} Response with summary statistics
+   */
+  getInventorySummary: (params = {}) => {
+    return api.get('/inventory/summary', { params });
+  },
 };
 
 export default inventoryService;

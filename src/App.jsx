@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { Provider, useSelector, useDispatch } from 'react-redux';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, ToastBar, toast } from 'react-hot-toast';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import router from './app/router';
@@ -45,7 +45,37 @@ function ThemedApp() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <RouterProvider router={router} />
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+      >
+        {(t) => (
+          <ToastBar toast={t}>
+            {({ icon, message }) => (
+              <>
+                {icon}
+                {message}
+                {t.type !== 'loading' && (
+                  <button
+                    onClick={() => toast.dismiss(t.id)}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      marginLeft: '8px',
+                      padding: '0 4px',
+                      fontSize: '16px',
+                      color: '#666',
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </>
+            )}
+          </ToastBar>
+        )}
+      </Toaster>
     </ThemeProvider>
   );
 }

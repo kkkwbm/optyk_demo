@@ -5,6 +5,7 @@ import inventoryService from '../../services/inventoryService';
 const initialState = {
   items: [],
   stats: null,
+  summary: null,
   loading: false,
   error: null,
   pagination: {
@@ -158,6 +159,21 @@ export const batchAdjustStock = createAsyncThunk(
   }
 );
 
+export const fetchInventorySummary = createAsyncThunk(
+  'inventory/fetchInventorySummary',
+  async (params = {}, { rejectWithValue }) => {
+    try {
+      const response = await inventoryService.getInventorySummary(params);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać podsumowania magazynu');
+    }
+  }
+);
+
 // Slice
 const inventorySlice = createSlice({
   name: 'inventory',
@@ -279,6 +295,19 @@ const inventorySlice = createSlice({
       .addCase(batchAdjustStock.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      // Fetch Inventory Summary
+      .addCase(fetchInventorySummary.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchInventorySummary.fulfilled, (state, action) => {
+        state.loading = false;
+        state.summary = action.payload;
+      })
+      .addCase(fetchInventorySummary.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });
@@ -289,6 +318,7 @@ export const { clearError, setFilters, clearFilters, clearInventory } = inventor
 // Selectors
 export const selectInventoryItems = (state) => state.inventory.items;
 export const selectInventoryStats = (state) => state.inventory.stats;
+export const selectInventorySummary = (state) => state.inventory.summary;
 export const selectInventoryLoading = (state) => state.inventory.loading;
 export const selectInventoryError = (state) => state.inventory.error;
 export const selectInventoryPagination = (state) => state.inventory.pagination;

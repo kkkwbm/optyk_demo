@@ -40,6 +40,7 @@ import {
 import { selectCurrentLocation } from '../../locations/locationsSlice';
 import { selectUser } from '../../auth/authSlice';
 import EditProductModal from '../components/EditProductModal';
+import SummaryTab from '../components/SummaryTab';
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS, PRODUCT_STATUS, PERMISSIONS, USER_ROLES } from '../../../constants';
 
 function InventoryDashboardPage() {
@@ -93,6 +94,11 @@ function InventoryDashboardPage() {
   }, [inventoryItems, currentType]);
 
   useEffect(() => {
+    // Skip fetching inventory for Summary tab
+    if (currentType === 'SUMMARY') {
+      return;
+    }
+
     const params = {
       page: 0,
       size: pagination.size,
@@ -496,31 +502,39 @@ function InventoryDashboardPage() {
           <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.CONTACT_LENS]} value={PRODUCT_TYPES.CONTACT_LENS} />
           <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SOLUTION]} value={PRODUCT_TYPES.SOLUTION} />
           <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.OTHER]} value={PRODUCT_TYPES.OTHER} />
+          <Tab label="Podsumowanie" value="SUMMARY" />
         </Tabs>
       </Box>
 
-      {/* Search */}
-      <Box sx={{ mb: 2 }}>
-        <TextField
-          placeholder={`Szukaj ${PRODUCT_TYPE_LABELS[currentType].toLowerCase()}...`}
-          value={searchTerm}
-          onChange={handleSearch}
-          size="small"
-          sx={{ width: 300 }}
-        />
-      </Box>
+      {/* Conditional rendering based on tab */}
+      {currentType === 'SUMMARY' ? (
+        <SummaryTab />
+      ) : (
+        <>
+          {/* Search */}
+          <Box sx={{ mb: 2 }}>
+            <TextField
+              placeholder={`Szukaj ${PRODUCT_TYPE_LABELS[currentType].toLowerCase()}...`}
+              value={searchTerm}
+              onChange={handleSearch}
+              size="small"
+              sx={{ width: 300 }}
+            />
+          </Box>
 
-      {/* Data Table */}
-      <DataTable
-        columns={getColumns()}
-        data={tableData}
-        pagination={pagination}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handleRowsPerPageChange}
-        loading={loading}
-        emptyMessage={`Nie znaleziono ${PRODUCT_TYPE_LABELS[currentType].toLowerCase()}${currentLocation ? ` w lokalizacji ${currentLocation.name}` : ''}`}
-        onRowClick={handleViewProduct}
-      />
+          {/* Data Table */}
+          <DataTable
+            columns={getColumns()}
+            data={tableData}
+            pagination={pagination}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            loading={loading}
+            emptyMessage={`Nie znaleziono ${PRODUCT_TYPE_LABELS[currentType].toLowerCase()}${currentLocation ? ` w lokalizacji ${currentLocation.name}` : ''}`}
+            onRowClick={handleViewProduct}
+          />
+        </>
+      )}
 
       {/* Actions Menu */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
