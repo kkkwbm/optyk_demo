@@ -361,9 +361,9 @@ function SummaryTab() {
           <Grid container spacing={1.5}>
             {(showAllLensesType ? summary.contactLensesByType : summary.contactLensesByType.slice(0, INITIAL_DISPLAY_LIMIT)).map((type, index) => {
               const lensTypeLabels = {
-                'DAILY': 'Jednorazowe',
+                'DAILY': 'Jednodniowe',
+                'BI_WEEKLY': 'Dwutygodniowe',
                 'MONTHLY': 'Miesięczne',
-                'YEARLY': 'Roczne',
               };
               return (
                 <Grid item xs={6} sm={4} md={3} lg={2} key={index} sx={{ display: 'flex' }}>

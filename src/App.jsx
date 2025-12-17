@@ -10,8 +10,9 @@ import { createAppTheme } from './shared/styles/theme';
 import ErrorBoundary from './shared/components/ErrorBoundary';
 import { createAriaLiveAnnouncer } from './utils/accessibility';
 import { selectTheme, setTheme } from './app/uiSlice';
-import { initializeAuth, selectUser } from './features/auth/authSlice';
+import { initializeAuth, selectUser, logout } from './features/auth/authSlice';
 import { initializeCurrentLocation } from './features/locations/locationsSlice';
+import { tokenManager } from './config/api';
 
 function ThemedApp() {
   const dispatch = useDispatch();
@@ -25,6 +26,11 @@ function ThemedApp() {
 
     // Initialize current location
     dispatch(initializeCurrentLocation());
+
+    // Register active logout handler
+    tokenManager.setupTokenExpirationHandlers(() => {
+      dispatch(logout());
+    });
 
     // Initialize authentication (try to restore session)
     // Only try once - don't retry on failure to avoid infinite loops

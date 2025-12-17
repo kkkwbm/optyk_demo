@@ -10,6 +10,7 @@ import FrameForm from '../components/FrameForm';
 import ContactLensForm from '../components/ContactLensForm';
 import SolutionForm from '../components/SolutionForm';
 import OtherProductForm from '../components/OtherProductForm';
+import SunglassesForm from '../components/SunglassesForm';
 import { createProduct } from '../productsSlice';
 import { fetchActiveBrands, selectActiveBrands } from '../../brands/brandsSlice';
 import { selectCurrentLocation, selectActiveLocations } from '../../locations/locationsSlice';
@@ -120,6 +121,8 @@ function CreateProductPage() {
         return <SolutionForm {...formProps} />;
       case PRODUCT_TYPES.OTHER:
         return <OtherProductForm {...formProps} />;
+      case PRODUCT_TYPES.SUNGLASSES:
+        return <SunglassesForm {...formProps} />;
       default:
         return <FrameForm {...formProps} />;
     }
@@ -156,6 +159,7 @@ function CreateProductPage() {
               <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.CONTACT_LENS]} value={PRODUCT_TYPES.CONTACT_LENS} />
               <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SOLUTION]} value={PRODUCT_TYPES.SOLUTION} />
               <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.OTHER]} value={PRODUCT_TYPES.OTHER} />
+              <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SUNGLASSES]} value={PRODUCT_TYPES.SUNGLASSES} />
             </Tabs>
           </Box>
 

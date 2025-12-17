@@ -166,6 +166,7 @@ export const pl = {
       CONTACT_LENS: 'Szkła kontaktowe',
       SOLUTION: 'Płyny',
       OTHER: 'Inne',
+      SUNGLASSES: 'Okulary przeciwsłoneczne',
     },
     // Frame specific
     frameType: 'Typ oprawki',
@@ -189,10 +190,9 @@ export const pl = {
     cylinder: 'Cylinder',
     axis: 'Oś',
     lensTypes: {
-      DAILY: 'Jednorazowe',
-      WEEKLY: 'Tygodniowe',
+      DAILY: 'Jednodniowe',
+      BI_WEEKLY: 'Dwutygodniowe',
       MONTHLY: 'Miesięczne',
-      YEARLY: 'Roczne',
     },
     // Solution specific
     solutionType: 'Typ płynu',
@@ -324,6 +324,7 @@ export const pl = {
       CONTACT_LENS: 'Szkła kontaktowe',
       SOLUTION: 'Płyn',
       OTHER: 'Inne',
+      SUNGLASSES: 'Okulary przeciwsłoneczne',
       USER: 'Użytkownik',
       LOCATION: 'Lokalizacja',
     },

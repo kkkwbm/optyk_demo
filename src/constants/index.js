@@ -36,6 +36,7 @@ export const PRODUCT_TYPES = {
   CONTACT_LENS: 'CONTACT_LENS',
   SOLUTION: 'SOLUTION',
   OTHER: 'OTHER',
+  SUNGLASSES: 'SUNGLASSES',
 };
 
 export const PRODUCT_TYPE_LABELS = {
@@ -43,6 +44,7 @@ export const PRODUCT_TYPE_LABELS = {
   [PRODUCT_TYPES.CONTACT_LENS]: 'Soczewki kontaktowe',
   [PRODUCT_TYPES.SOLUTION]: 'Płyny',
   [PRODUCT_TYPES.OTHER]: 'Inne produkty',
+  [PRODUCT_TYPES.SUNGLASSES]: 'Okulary przeciwsłoneczne',
   'OTHER_PRODUCT': 'Inne produkty', // Backend returns OTHER_PRODUCT
 };
 
@@ -51,6 +53,7 @@ export const PRODUCT_TYPE_SINGULAR = {
   [PRODUCT_TYPES.CONTACT_LENS]: 'Soczewka kontaktowa',
   [PRODUCT_TYPES.SOLUTION]: 'Płyn',
   [PRODUCT_TYPES.OTHER]: 'Inny produkt',
+  [PRODUCT_TYPES.SUNGLASSES]: 'Okulary przeciwsłoneczne',
 };
 
 // Product Status
@@ -172,6 +175,7 @@ export const ENTITY_TYPES = {
   SOLUTION: 'SOLUTION',
   OTHER: 'OTHER',
   OTHER_PRODUCT: 'OTHER_PRODUCT',
+  SUNGLASSES: 'SUNGLASSES',
   USER: 'USER',
   LOCATION: 'LOCATION',
   BRAND: 'BRAND',
@@ -186,6 +190,7 @@ export const ENTITY_TYPE_LABELS = {
   [ENTITY_TYPES.SOLUTION]: 'Płyn',
   [ENTITY_TYPES.OTHER]: 'Inny produkt',
   [ENTITY_TYPES.OTHER_PRODUCT]: 'Inny produkt',
+  [ENTITY_TYPES.SUNGLASSES]: 'Okulary przeciwsłoneczne',
   [ENTITY_TYPES.USER]: 'Użytkownik',
   [ENTITY_TYPES.LOCATION]: 'Lokalizacja',
   [ENTITY_TYPES.BRAND]: 'Marka',
@@ -318,6 +323,7 @@ export const CHART_COLORS = {
   CONTACT_LENS: '#9c27b0',
   SOLUTION: '#ff9800',
   OTHER: '#607d8b',
+  SUNGLASSES: '#00bcd4',
 };
 
 // File Export Formats

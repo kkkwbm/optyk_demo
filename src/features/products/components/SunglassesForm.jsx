@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Grid } from '@mui/material';
 import FormField from '../../../shared/components/FormField';
 
-const ContactLensForm = memo(function ContactLensForm({ control, brands = [] }) {
+const SunglassesForm = memo(function SunglassesForm({ control, brands = [] }) {
   const brandOptions = brands.map((brand) => ({ value: brand.id, label: brand.name }));
 
   return (
@@ -20,24 +20,13 @@ const ContactLensForm = memo(function ContactLensForm({ control, brands = [] }) 
       <Grid size={{ xs: 12, md: 6 }}>
         <FormField name="model" control={control} label="Model" type="text" required />
       </Grid>
-      <Grid size={{ xs: 12, md: 6 }}>
-        <FormField
-          name="lensType"
-          control={control}
-          label="Typ soczewki"
-          type="select"
-          options={[
-            { value: 'DAILY', label: 'Jednodniowe' },
-            { value: 'BI_WEEKLY', label: 'Dwutygodniowe' },
-            { value: 'MONTHLY', label: 'Miesięczne' },
-          ]}
-          required
-        />
+      <Grid size={{ xs: 12, md: 3 }}>
+        <FormField name="color" control={control} label="Kolor" type="text" required />
       </Grid>
-      <Grid size={{ xs: 12, md: 6 }}>
-        <FormField name="power" control={control} label="Moc" type="text" />
+      <Grid size={{ xs: 12, md: 3 }}>
+        <FormField name="size" control={control} label="Rozmiar" type="text" />
       </Grid>
-      <Grid size={{ xs: 12, md: 6 }}>
+      <Grid size={{ xs: 12, md: 3 }}>
         <FormField
           name="sellingPrice"
           control={control}
@@ -49,7 +38,7 @@ const ContactLensForm = memo(function ContactLensForm({ control, brands = [] }) 
           }}
         />
       </Grid>
-      <Grid size={{ xs: 12, md: 6 }}>
+      <Grid size={{ xs: 12, md: 3 }}>
         <FormField
           name="quantity"
           control={control}
@@ -75,4 +64,4 @@ const ContactLensForm = memo(function ContactLensForm({ control, brands = [] }) 
   );
 });
 
-export default ContactLensForm;
+export default SunglassesForm;

@@ -54,6 +54,22 @@ export const fetchInventoryItem = createAsyncThunk(
   }
 );
 
+export const fetchInventoryStock = createAsyncThunk(
+  'inventory/fetchInventoryStock',
+  async (params, { rejectWithValue }) => {
+    try {
+      const { locationId, ...restParams } = params;
+      const response = await inventoryService.getInventory(locationId, restParams);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać zapasów magazynowych');
+    }
+  }
+);
+
 export const adjustStock = createAsyncThunk(
   'inventory/adjustStock',
   async (data, { rejectWithValue }) => {
@@ -214,6 +230,29 @@ const inventorySlice = createSlice({
         }
       })
       .addCase(fetchInventory.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Fetch Inventory Stock (with pagination and search)
+      .addCase(fetchInventoryStock.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchInventoryStock.fulfilled, (state, action) => {
+        state.loading = false;
+        // Replace items instead of appending to prevent duplication when switching locations
+        state.items = action.payload.content || action.payload;
+
+        if (action.payload.page !== undefined) {
+          state.pagination = {
+            page: action.payload.page,
+            size: action.payload.size,
+            totalElements: action.payload.totalElements,
+            totalPages: action.payload.totalPages,
+          };
+        }
+      })
+      .addCase(fetchInventoryStock.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

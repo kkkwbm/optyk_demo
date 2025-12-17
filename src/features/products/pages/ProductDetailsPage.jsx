@@ -107,9 +107,9 @@ function ProductDetailsPage() {
 
   const getLensTypeLabel = (lensType) => {
     const lensTypeLabels = {
-      'DAILY': 'Jednorazowe',
+      'DAILY': 'Jednodniowe',
+      'BI_WEEKLY': 'Dwutygodniowe',
       'MONTHLY': 'Miesięczne',
-      'YEARLY': 'Roczne',
     };
     return lensTypeLabels[lensType] || lensType;
   };
@@ -205,15 +205,6 @@ function ProductDetailsPage() {
 
         <Grid item xs={12} md={6}>
           <Typography variant="body2" color="text.secondary">
-            Cena zakupu
-          </Typography>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            {product.purchasePrice?.toFixed(2) || '0.00'} zł
-          </Typography>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography variant="body2" color="text.secondary">
             Cena sprzedaży
           </Typography>
           <Typography variant="body1" sx={{ mb: 2 }}>
@@ -221,25 +212,14 @@ function ProductDetailsPage() {
           </Typography>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12}>
           <Typography variant="body2" color="text.secondary">
-            Status
+            Opis / Notatka
           </Typography>
-          <Box sx={{ mb: 2 }}>
-            <StatusBadge status={product.status} type="product" />
-          </Box>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            {product.description || '-'}
+          </Typography>
         </Grid>
-
-        {product.description && (
-          <Grid item xs={12}>
-            <Typography variant="body2" color="text.secondary">
-              Opis
-            </Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              {product.description}
-            </Typography>
-          </Grid>
-        )}
       </Grid>
     );
   };

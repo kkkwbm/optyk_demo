@@ -7,19 +7,90 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080
  * This prevents XSS attacks from stealing the token
  * Token is lost on page reload, but refresh token in httpOnly cookie allows re-authentication
  */
-let inMemoryAccessToken = null;
+import { jwtDecode } from 'jwt-decode';
 
 /**
- * Access token management
+ * In-memory storage for access token
  */
+let inMemoryAccessToken = null;
+let expirationTimer = null;
+let logoutCallback = null;
+
 export const tokenManager = {
   getAccessToken: () => inMemoryAccessToken,
+
   setAccessToken: (token) => {
     inMemoryAccessToken = token;
+    tokenManager.setTokenExpirationTimer(token);
   },
+
   clearAccessToken: () => {
     inMemoryAccessToken = null;
+    if (expirationTimer) {
+      clearTimeout(expirationTimer);
+      expirationTimer = null;
+    }
   },
+
+  /**
+   * Registers a callback function to be called when the token expires
+   * This handles the circular dependency issue by allowing App.jsx or main.jsx 
+   * to inject the Redux dispatch(logout()) action.
+   */
+  setupTokenExpirationHandlers: (callback) => {
+    logoutCallback = callback;
+  },
+
+  /**
+   * Sets a timer to automatically log out when the token expires
+   */
+  setTokenExpirationTimer: (token) => {
+    if (!token) return;
+
+    try {
+      // Clear existing timer
+      if (expirationTimer) {
+        clearTimeout(expirationTimer);
+        expirationTimer = null;
+      }
+
+      const decoded = jwtDecode(token);
+
+      if (!decoded.exp) return;
+
+      // Calculate time until expiration (in ms)
+      // exp is in seconds, so multiply by 1000
+      const currentTime = Date.now();
+      const expirationTime = decoded.exp * 1000;
+      const timeUntilExpiration = expirationTime - currentTime;
+
+      // If token is already expired or expires very soon, logout immediately
+      // Adding a small buffer (e.g., 1000ms) to ensure server also considers it expired
+      if (timeUntilExpiration <= 0) {
+        // Run immediately
+        if (typeof logoutCallback === 'function') {
+          logoutCallback();
+        }
+        return;
+      }
+
+      // Set timeout
+      // Cap at 24 hours (just in case of extremely long tokens) to avoid integer overflow issues
+      const maxTimeout = 24 * 60 * 60 * 1000;
+      const timeoutDuration = Math.min(timeUntilExpiration, maxTimeout);
+
+      expirationTimer = setTimeout(() => {
+        if (typeof logoutCallback === 'function') {
+          logoutCallback();
+        }
+      }, timeoutDuration);
+
+      console.log(`Token expiration timer set for ${timeoutDuration}ms`);
+
+    } catch (error) {
+      console.error('Error decoding token for expiration timer:', error);
+    }
+  }
 };
 
 /**

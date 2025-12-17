@@ -97,10 +97,9 @@ function CreateTransferPage() {
 
   const getLensTypeLabel = (type) => {
     switch (type) {
-      case 'DAILY': return 'jednorazowe';
+      case 'DAILY': return 'jednodniowe';
+      case 'BI_WEEKLY': return 'dwutygodniowe';
       case 'MONTHLY': return 'miesięczne';
-      case 'YEARLY': return 'roczne';
-      case 'BIWEEKLY': return 'dwutygodniowe';
       default: return type || '';
     }
   };
@@ -433,6 +432,7 @@ function CreateTransferPage() {
                   <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.CONTACT_LENS]} value={PRODUCT_TYPES.CONTACT_LENS} />
                   <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SOLUTION]} value={PRODUCT_TYPES.SOLUTION} />
                   <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.OTHER]} value={PRODUCT_TYPES.OTHER} />
+                  <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SUNGLASSES]} value={PRODUCT_TYPES.SUNGLASSES} />
                 </Tabs>
               </Box>
 

@@ -2,11 +2,12 @@ import api from '../config/api';
 
 /**
  * Product Service
- * Handles all product-related API calls for 4 product types:
+ * Handles all product-related API calls for 5 product types:
  * - FRAME
  * - CONTACT_LENS
  * - SOLUTION
  * - OTHER
+ * - SUNGLASSES
  */
 
 // Product type endpoints mapping
@@ -15,6 +16,7 @@ const PRODUCT_ENDPOINTS = {
   CONTACT_LENS: '/contact-lenses',
   SOLUTION: '/solutions',
   OTHER: '/other-products',
+  SUNGLASSES: '/sunglasses',
 };
 
 export const productService = {

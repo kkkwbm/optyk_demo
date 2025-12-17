@@ -65,9 +65,14 @@ function HistoryListPage() {
   const [descriptionDialog, setDescriptionDialog] = useState({ open: false, description: '' });
 
   const pagination = usePagination({
-    total: paginationData?.totalElements || 0,
     defaultSize: 20,
   });
+
+  useEffect(() => {
+    if (paginationData) {
+      pagination.updatePagination(paginationData);
+    }
+  }, [paginationData]);
 
   useEffect(() => {
     dispatch(fetchActiveLocations());
@@ -79,7 +84,7 @@ function HistoryListPage() {
       size: pagination.size,
       operationTypes: operationFilters.length > 0 ? operationFilters.join(',') : undefined,
       entityTypes: entityFilters.length > 0 ? entityFilters.join(',') : undefined,
-      locationId: currentLocation?.id || undefined,
+      locationId: currentLocation?.id && currentLocation.id !== 'ALL_STORES' ? currentLocation.id : undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
     };
@@ -149,7 +154,10 @@ function HistoryListPage() {
         await dispatch(deleteHistory(item.id)).unwrap();
         toast.success('Wpis historii został usunięty');
       } else if (action === 'deleteAll') {
-        const locationId = currentLocation?.id || undefined;
+        // Don't send locationId if it's ALL_STORES (backend expects UUID or null)
+        const locationId = currentLocation?.id && currentLocation.id !== 'ALL_STORES'
+          ? currentLocation.id
+          : undefined;
         const result = await dispatch(deleteAllHistory(locationId)).unwrap();
         toast.success(result.message || 'Cała historia została usunięta');
         dispatch(fetchHistory({ page: 0, size: pagination.size, locationId }));
@@ -461,11 +469,11 @@ function HistoryListPage() {
           loading={loading}
           pagination={{
             page: pagination.page,
-            total: paginationData?.totalElements || 0,
+            totalElements: pagination.totalElements,
             size: pagination.size,
           }}
-          onPageChange={pagination.handlePageChange}
-          onRowsPerPageChange={pagination.handleRowsPerPageChange}
+          onPageChange={pagination.setPage}
+          onRowsPerPageChange={pagination.setSize}
           emptyMessage="Nie znaleziono rekordów historii. Spróbuj dostosować filtry."
         />
       </Paper>

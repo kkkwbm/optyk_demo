@@ -129,6 +129,7 @@ function CreateSalePage() {
 
     const newItem = {
       product: selectedProduct,
+      productType: productType, // Store product type for cart display
       quantity: parseInt(quantity, 10),
       unitPrice: parseFloat(price),
       subtotal: parseInt(quantity, 10) * parseFloat(price),
@@ -194,6 +195,38 @@ function CreateSalePage() {
   };
 
 
+  // Helper function to build product label based on product type
+  const buildProductLabel = (item) => {
+    const product = item.product;
+    const brand = product.brand?.name || '';
+    const stock = ` (${item.availableQuantity || 0} szt.)`;
+
+    switch (item.productType) {
+      case PRODUCT_TYPES.FRAME:
+        // Frame: Brand, Model, Size, Color
+        return `${brand} ${product.model || ''} - ${product.size || ''} - ${product.color || ''}`.trim() + stock;
+
+      case PRODUCT_TYPES.CONTACT_LENS:
+        // Contact Lens: Brand, Model, Type, Power
+        const lensTypeLabels = {
+          DAILY: 'Jednodniowe',
+          BI_WEEKLY: 'Dwutygodniowe',
+          MONTHLY: 'Miesięczne',
+        };
+        const lensType = lensTypeLabels[product.lensType] || product.lensType || '';
+        return `${brand} ${product.model || ''} - ${lensType} - ${product.power || ''}`.trim() + stock;
+
+      case PRODUCT_TYPES.SOLUTION:
+        // Solution: Brand, Volume
+        return `${brand} - ${product.volume || ''}`.trim() + stock;
+
+      case PRODUCT_TYPES.OTHER:
+      default:
+        // Other: Brand, Model/Name
+        return `${brand} ${product.model || product.name || ''}`.trim() + stock;
+    }
+  };
+
   // Build product options from inventory items (only products with stock at current location)
   const productOptions = inventoryItems
     .filter(item => {
@@ -202,7 +235,7 @@ function CreateSalePage() {
     .filter((item) => item.productType === productType)
     .map((item) => ({
       id: item.product.id,
-      label: `${item.product.brand?.name || ''} ${item.product.model || item.product.name || ''}`.trim() + ` (${item.availableQuantity || 0} szt.)`,
+      label: buildProductLabel(item),
       product: item.product,
       availableQuantity: item.availableQuantity || 0,
     }));
@@ -213,6 +246,45 @@ function CreateSalePage() {
     setQuantity('');
     setPrice('');
     setAvailableStock(null);
+  };
+
+  // Helper function to format product display in cart
+  const formatProductForCart = (product, productType) => {
+    const brand = product.brand?.name || '';
+    const model = product.model || product.name || '';
+
+    switch (productType) {
+      case PRODUCT_TYPES.FRAME:
+        return {
+          main: `${brand} ${model}`,
+          details: `Rozmiar: ${product.size || '-'}, Kolor: ${product.color || '-'}`,
+        };
+
+      case PRODUCT_TYPES.CONTACT_LENS:
+        const lensTypeLabels = {
+          DAILY: 'Jednodniowe',
+          BI_WEEKLY: 'Dwutygodniowe',
+          MONTHLY: 'Miesięczne',
+        };
+        const lensType = lensTypeLabels[product.lensType] || product.lensType || '-';
+        return {
+          main: `${brand} ${model}`,
+          details: `Typ: ${lensType}, Moc: ${product.power || '-'}`,
+        };
+
+      case PRODUCT_TYPES.SOLUTION:
+        return {
+          main: brand,
+          details: `Pojemność: ${product.volume || '-'}`,
+        };
+
+      case PRODUCT_TYPES.OTHER:
+      default:
+        return {
+          main: `${brand} ${model}`,
+          details: product.notes || '-',
+        };
+    }
   };
 
   return (
@@ -294,6 +366,7 @@ function CreateSalePage() {
                   <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.CONTACT_LENS]} value={PRODUCT_TYPES.CONTACT_LENS} />
                   <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SOLUTION]} value={PRODUCT_TYPES.SOLUTION} />
                   <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.OTHER]} value={PRODUCT_TYPES.OTHER} />
+                  <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SUNGLASSES]} value={PRODUCT_TYPES.SUNGLASSES} />
                 </Tabs>
               </Box>
 
@@ -399,7 +472,7 @@ function CreateSalePage() {
                     <TableHead>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 600 }}>Produkt</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Marka</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Szczegóły</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 600 }}>Ilość</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 600 }}>Cena</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 600 }}>Suma</TableCell>
@@ -407,13 +480,21 @@ function CreateSalePage() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {cart.map((item) => (
-                        <TableRow key={item.product.id}>
-                          <TableCell>
-                            {item.product.model || item.product.name || '-'}
-                          </TableCell>
-                          <TableCell>{item.product.brand?.name || '-'}</TableCell>
-                          <TableCell align="right">
+                      {cart.map((item) => {
+                        const formattedProduct = formatProductForCart(item.product, item.productType);
+                        return (
+                          <TableRow key={item.product.id}>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {formattedProduct.main}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" color="text.secondary">
+                                {formattedProduct.details}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
                             <TextField
                               type="number"
                               value={item.quantity}
@@ -439,7 +520,8 @@ function CreateSalePage() {
                             </IconButton>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>

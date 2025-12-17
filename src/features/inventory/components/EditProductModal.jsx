@@ -89,7 +89,7 @@ function EditProductModal({ open, onClose, product }) {
             productId: product.id,
             locationId: locationId,
             quantity: Math.abs(quantityDiff),
-            reason: 'Manual adjustment during edit',
+            reason: 'Ręczna korekta podczas edycji',
             type: quantityDiff > 0 ? 'ADD' : 'REMOVE'
           });
         }

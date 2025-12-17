@@ -373,9 +373,9 @@ function InventoryDashboardPage() {
           sortable: true,
           render: (row) => {
             const lensTypeLabels = {
-              'DAILY': 'Jednorazowe',
+              'DAILY': 'Jednodniowe',
+              'BI_WEEKLY': 'Dwutygodniowe',
               'MONTHLY': 'Miesięczne',
-              'YEARLY': 'Roczne',
             };
             return lensTypeLabels[row.lensType] || row.lensType || '-';
           },
@@ -399,6 +399,17 @@ function InventoryDashboardPage() {
       [PRODUCT_TYPES.OTHER]: [
         { id: 'name', label: 'Nazwa', sortable: true },
         { id: 'description', label: 'Opis', sortable: false },
+      ],
+      [PRODUCT_TYPES.SUNGLASSES]: [
+        { id: 'model', label: 'Model', sortable: true },
+        { id: 'color', label: 'Kolor', sortable: true },
+        { id: 'size', label: 'Rozmiar', sortable: true },
+        {
+          id: 'sellingPrice',
+          label: 'Cena sprzedaży',
+          sortable: true,
+          render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
+        },
       ],
     };
 
@@ -490,6 +501,7 @@ function InventoryDashboardPage() {
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={currentType} onChange={handleTabChange}>
           <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.FRAME]} value={PRODUCT_TYPES.FRAME} />
+          <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SUNGLASSES]} value={PRODUCT_TYPES.SUNGLASSES} />
           <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.CONTACT_LENS]} value={PRODUCT_TYPES.CONTACT_LENS} />
           <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SOLUTION]} value={PRODUCT_TYPES.SOLUTION} />
           <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.OTHER]} value={PRODUCT_TYPES.OTHER} />
