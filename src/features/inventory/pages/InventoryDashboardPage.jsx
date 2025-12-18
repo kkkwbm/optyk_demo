@@ -78,20 +78,18 @@ function InventoryDashboardPage() {
 
   // Normalize data for the table
   const tableData = useMemo(() => {
-    // Always map inventory items to product structure, preserving inventory details
-    return inventoryItems
-      .filter(item => item.productType === currentType) // Filter by productType first
-      .map(item => ({
-        ...item.product, // Spread the full product object
-        inventoryQuantity: item.quantity,
-        inventoryId: item.id,
-        // Ensure we have necessary fields
-        id: item.product?.id || item.productId, // Use product ID as the primary ID for editing
-        productId: item.product?.id || item.productId, // Keep product ID separately for backwards compatibility
-        type: item.product?.type || item.productType, // Add type field for consistency
-        location: item.location, // Add location for display
-      }));
-  }, [inventoryItems, currentType]);
+    // Backend already filters by productType, so just map the data
+    return inventoryItems.map(item => ({
+      ...item.product, // Spread the full product object
+      inventoryQuantity: item.quantity,
+      inventoryId: item.id,
+      // Ensure we have necessary fields
+      id: item.product?.id || item.productId, // Use product ID as the primary ID for editing
+      productId: item.product?.id || item.productId, // Keep product ID separately for backwards compatibility
+      type: item.product?.type || item.productType, // Add type field for consistency
+      location: item.location, // Add location for display
+    }));
+  }, [inventoryItems]);
 
   useEffect(() => {
     // Skip fetching inventory for Summary tab
