@@ -237,6 +237,21 @@ export const deleteAllHistory = createAsyncThunk(
   }
 );
 
+export const deleteManyHistory = createAsyncThunk(
+  'history/deleteManyHistory',
+  async (ids, { rejectWithValue }) => {
+    try {
+      const response = await historyService.deleteManyHistory(ids);
+      if (response.data.success) {
+        return { ids, message: response.data.message };
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się usunąć wybranych wpisów historii');
+    }
+  }
+);
+
 // Slice
 const historySlice = createSlice({
   name: 'history',
@@ -466,6 +481,22 @@ const historySlice = createSlice({
         };
       })
       .addCase(deleteAllHistory.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Delete Many History
+      .addCase(deleteManyHistory.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteManyHistory.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = state.items.filter(item => !action.payload.ids.includes(item.id));
+        if (state.pagination.totalElements > 0) {
+          state.pagination.totalElements -= action.payload.ids.length;
+        }
+      })
+      .addCase(deleteManyHistory.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

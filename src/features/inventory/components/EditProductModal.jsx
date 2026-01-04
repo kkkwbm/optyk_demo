@@ -25,6 +25,7 @@ import { updateProduct } from '../../products/productsSlice';
 import { fetchActiveBrands, selectActiveBrands } from '../../brands/brandsSlice';
 import inventoryService from '../../../services/inventoryService';
 import { selectCurrentLocation } from '../../locations/locationsSlice';
+import { cleanProductData } from '../../products/utils/productDataCleaner';
 
 const Transition = forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
@@ -71,7 +72,12 @@ function EditProductModal({ open, onClose, product }) {
 
   const onSubmit = async (data) => {
     try {
-      const cleanedData = { ...data };
+      // Use productType field and handle backend's OTHER_PRODUCT vs frontend's OTHER mapping
+      const productType = product.productType || product.type;
+      const actualProductType = productType === 'OTHER_PRODUCT' ? 'OTHER' : productType;
+
+      // Clean data based on product type (removes irrelevant fields)
+      let cleanedData = cleanProductData(data, actualProductType);
 
       // Ensure numeric fields are numbers
       if (cleanedData.purchasePrice) cleanedData.purchasePrice = parseFloat(cleanedData.purchasePrice);
@@ -103,10 +109,6 @@ function EditProductModal({ open, onClose, product }) {
       if (product.locationId && !cleanedData.locationId) {
         cleanedData.locationId = product.locationId;
       }
-
-      // Use productType field and handle backend's OTHER_PRODUCT vs frontend's OTHER mapping
-      const productType = product.productType || product.type;
-      const actualProductType = productType === 'OTHER_PRODUCT' ? 'OTHER' : productType;
 
       await dispatch(updateProduct({
         type: actualProductType,

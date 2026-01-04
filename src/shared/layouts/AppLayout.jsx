@@ -1,10 +1,10 @@
-import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Box, useMediaQuery, useTheme } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectSidebarOpen, toggleSidebar } from '../../app/uiSlice';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import MobileBottomNavigation from '../components/MobileBottomNavigation';
 
 const DRAWER_WIDTH = 240; // Narrower for locations-only sidebar
 
@@ -42,6 +42,7 @@ function AppLayout() {
           flexGrow: 1,
           p: 3,
           mt: 8, // Account for fixed header
+          pb: { xs: 10, md: 3 }, // Extra padding for mobile bottom nav
           width: {
             md: sidebarOpen ? `calc(100% - ${DRAWER_WIDTH}px)` : '100%',
           },
@@ -50,6 +51,9 @@ function AppLayout() {
       >
         <Outlet />
       </Box>
+
+      {/* Mobile Bottom Navigation */}
+      {isMobile && <MobileBottomNavigation />}
     </Box>
   );
 }

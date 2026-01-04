@@ -193,6 +193,44 @@ export const statisticsService = {
       params: { startDate, endDate, ...params }
     });
   },
+
+  /**
+   * Get product analytics (top sellers and slow movers)
+   * @param {Object} params - Query parameters (startDate, endDate, topCount)
+   * @returns {Promise} Response with product analytics
+   */
+  getProductAnalytics: (params = {}) => {
+    return api.get('/statistics/products', { params });
+  },
+
+  /**
+   * Get store comparison statistics
+   * @param {Object} params - Query parameters (startDate, endDate)
+   * @returns {Promise} Response with store comparison data
+   */
+  getStoreComparison: (params = {}) => {
+    return api.get('/statistics/stores/comparison', { params });
+  },
+
+  /**
+   * Get user sales statistics
+   * @param {Object} params - Query parameters (startDate, endDate)
+   * @returns {Promise} Response with user sales statistics
+   */
+  getUserSalesStatistics: (params = {}) => {
+    return api.get('/statistics/users/sales', { params });
+  },
+
+  /**
+   * Get product inventory by location (grouped by product type)
+   * @param {Array<string>} productTypes - Array of product types (FRAME, SUNGLASSES, CONTACT_LENS, SOLUTION, OTHER)
+   * @returns {Promise} Response with product inventory data by location
+   */
+  getProductInventoryByLocation: (productTypes = []) => {
+    return api.get('/statistics/products/inventory-by-location', {
+      params: { productTypes }
+    });
+  },
 };
 
 export default statisticsService;

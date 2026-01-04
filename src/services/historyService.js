@@ -175,6 +175,15 @@ export const historyService = {
     const params = locationId ? { locationId } : {};
     return api.delete('/history', { params });
   },
+
+  /**
+   * Delete multiple history records by IDs
+   * @param {string[]} ids - Array of history entry IDs to delete
+   * @returns {Promise} Response with deletion confirmation
+   */
+  deleteManyHistory: (ids) => {
+    return api.delete('/history/batch', { data: ids });
+  },
 };
 
 export default historyService;

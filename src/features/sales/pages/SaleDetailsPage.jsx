@@ -18,11 +18,12 @@ import {
   TableHead,
   TableRow,
 } from '@mui/material';
-import { ArrowLeft, XCircle } from 'lucide-react';
+import { ArrowLeft, XCircle, FileText } from 'lucide-react';
 import { formatDate } from '../../../utils/dateFormat';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
+import SalePdfModal from '../components/SalePdfModal';
 import {
   fetchSaleById,
   cancelSale,
@@ -44,6 +45,7 @@ function SaleDetailsPage() {
   const loading = useSelector(selectSalesLoading);
 
   const [confirmDialog, setConfirmDialog] = useState({ open: false });
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -121,22 +123,28 @@ function SaleDetailsPage() {
 
       <Paper sx={{ p: 3, mb: 3 }}>
         {/* Akcje */}
-        {sale.status === SALE_STATUS.COMPLETED && (
-          <>
-            <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<XCircle size={16} />}
-                onClick={handleOpenConfirm}
-              >
-                Anuluj sprzedaż
-              </Button>
-            </Box>
+        <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<FileText size={16} />}
+            onClick={() => setPdfModalOpen(true)}
+          >
+            Generuj PDF
+          </Button>
+          {sale.status === SALE_STATUS.COMPLETED && (
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<XCircle size={16} />}
+              onClick={handleOpenConfirm}
+            >
+              Anuluj sprzedaż
+            </Button>
+          )}
+        </Box>
 
-            <Divider sx={{ mb: 3 }} />
-          </>
-        )}
+        <Divider sx={{ mb: 3 }} />
 
         {/* Informacje sprzedaży */}
         <Typography variant="h6" sx={{ mb: 2 }}>
@@ -191,6 +199,17 @@ function SaleDetailsPage() {
             </Typography>
           </Grid>
 
+          {(sale.customerFirstName || sale.customerLastName) && (
+            <Grid item xs={12} md={6}>
+              <Typography variant="body2" color="text.secondary">
+                Klient
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                {[sale.customerFirstName, sale.customerLastName].filter(Boolean).join(' ')}
+              </Typography>
+            </Grid>
+          )}
+
           {sale.notes && (
             <Grid item xs={12}>
               <Typography variant="body2" color="text.secondary">
@@ -224,7 +243,14 @@ function SaleDetailsPage() {
               {sale.items?.map((item, index) => (
                 <TableRow key={index}>
                   <TableCell>
-                    {item.productModel || item.productName || '-'}
+                    <Box>
+                      {item.productModel || item.productName || '-'}
+                      {item.isCustomEyeglassLens && item.eyeglassLensNotes && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                          {item.eyeglassLensNotes}
+                        </Typography>
+                      )}
+                    </Box>
                   </TableCell>
                   <TableCell>{item.brand?.name || '-'}</TableCell>
                   <TableCell align="right">{item.quantity}</TableCell>
@@ -284,6 +310,13 @@ function SaleDetailsPage() {
         message={`Czy na pewno chcesz anulować sprzedaż ${getSaleNumber()}? Spowoduje to zwrot wszystkich produktów do magazynu.`}
         confirmText="Anuluj sprzedaż"
         confirmColor="error"
+      />
+
+      {/* Modal generowania PDF */}
+      <SalePdfModal
+        open={pdfModalOpen}
+        onClose={() => setPdfModalOpen(false)}
+        sale={sale}
       />
     </Container>
   );

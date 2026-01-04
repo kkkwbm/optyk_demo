@@ -25,6 +25,7 @@ import {
   selectProductsLoading,
   selectCurrentType,
 } from '../productsSlice';
+import { selectCurrentLocation } from '../../locations/locationsSlice';
 import { PRODUCT_STATUS, PRODUCT_TYPE_SINGULAR } from '../../../constants';
 
 function ProductDetailsPage() {
@@ -36,6 +37,8 @@ function ProductDetailsPage() {
   const product = useSelector(selectCurrentProduct);
   const loading = useSelector(selectProductsLoading);
   const currentType = useSelector(selectCurrentType);
+  const currentLocation = useSelector(selectCurrentLocation);
+  const error = useSelector((state) => state.products.error);
 
   const [confirmDialog, setConfirmDialog] = useState({ open: false, action: null });
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -68,7 +71,11 @@ function ProductDetailsPage() {
       const actualProductType = product.productType === 'OTHER_PRODUCT' ? 'OTHER' : product.productType;
 
       if (action === 'delete') {
-        await dispatch(deleteProduct({ type: actualProductType, id: product.id })).unwrap();
+        // Pass locationId for history tracking (exclude special aggregate IDs)
+        const locationId = currentLocation?.id && !['ALL_STORES', 'ALL_WAREHOUSES'].includes(currentLocation.id)
+          ? currentLocation.id
+          : null;
+        await dispatch(deleteProduct({ type: actualProductType, id: product.id, locationId })).unwrap();
         toast.success('Produkt został usunięty');
         navigate('/inventory');
       } else if (action === 'restore') {
@@ -89,12 +96,34 @@ function ProductDetailsPage() {
     dispatch(fetchProductById({ type: actualProductType, id }));
   };
 
-  if (loading || !product) {
+  if (loading) {
     return (
       <Container maxWidth="lg">
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
           <CircularProgress />
         </Box>
+      </Container>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <Container maxWidth="lg">
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="h6" color="error" sx={{ mb: 2 }}>
+            Produkt nie został znaleziony
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            {error || 'Ten produkt może być usunięty lub nie istnieje w systemie.'}
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<ArrowLeft size={20} />}
+            onClick={() => navigate('/inventory')}
+          >
+            Powrót do magazynu
+          </Button>
+        </Paper>
       </Container>
     );
   }

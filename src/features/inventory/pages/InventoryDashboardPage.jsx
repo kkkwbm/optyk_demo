@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -19,6 +19,7 @@ import PageHeader from '../../../shared/components/PageHeader';
 import DataTable from '../../../shared/components/DataTable';
 import StatusBadge from '../../../shared/components/StatusBadge';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
+import NotesDialog from '../../../shared/components/NotesDialog';
 import { useDebounce } from '../../../hooks/useDebounce';
 import {
   fetchProducts,
@@ -41,11 +42,12 @@ import { selectCurrentLocation } from '../../locations/locationsSlice';
 import { selectUser } from '../../auth/authSlice';
 import EditProductModal from '../components/EditProductModal';
 import SummaryTab from '../components/SummaryTab';
-import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS, PRODUCT_STATUS, PERMISSIONS, USER_ROLES } from '../../../constants';
+import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS, PRODUCT_STATUS, PERMISSIONS, USER_ROLES, LOCATION_TABS } from '../../../constants';
 
 function InventoryDashboardPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Global State
   const currentLocation = useSelector(selectCurrentLocation);
@@ -69,6 +71,7 @@ function InventoryDashboardPage() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [notesDialog, setNotesDialog] = useState({ open: false, title: '', content: '' });
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // Derived State
@@ -91,19 +94,18 @@ function InventoryDashboardPage() {
     }));
   }, [inventoryItems]);
 
-  useEffect(() => {
-    // Skip fetching inventory for Summary tab
+  // Helper function to refresh inventory data
+  const refreshInventory = (pageOverride = null, sizeOverride = null) => {
     if (currentType === 'SUMMARY') {
       return;
     }
 
     const params = {
-      page: 0,
-      size: pagination.size,
+      page: pageOverride !== null ? pageOverride : 0,
+      size: sizeOverride !== null ? sizeOverride : pagination.size,
       productType: currentType,
     };
 
-    // Only add search if it has a value
     if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
       params.search = debouncedSearchTerm.trim();
     }
@@ -131,7 +133,22 @@ function InventoryDashboardPage() {
         params
       }));
     }
-  }, [dispatch, currentType, pagination.size, currentLocation, isLocationView, debouncedSearchTerm]);
+  };
+
+  useEffect(() => {
+    refreshInventory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentType, pagination.size, currentLocation, isLocationView, debouncedSearchTerm]);
+
+  // Refresh data when navigating back with refresh state
+  useEffect(() => {
+    if (location.state?.refresh) {
+      refreshInventory();
+      // Clear the state to prevent refresh on subsequent renders
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   const hasPermission = (permission) => {
     return PERMISSIONS[permission]?.includes(currentUser?.role);
@@ -173,6 +190,74 @@ function InventoryDashboardPage() {
     return false;
   }, [currentUser, currentLocation]);
 
+  // Check if user can edit products in warehouse
+  const canEditProducts = useMemo(() => {
+    // ADMIN and OWNER have full access
+    if (currentUser?.role === USER_ROLES.ADMIN || currentUser?.role === USER_ROLES.OWNER) {
+      return true;
+    }
+
+    // EMPLOYEE: check permissions based on current location
+    if (currentUser?.userLocations && currentUser.userLocations.length > 0) {
+      // If "All Stores" or aggregate view is selected, check if user has WAREHOUSE_EDIT in at least one location
+      if (!currentLocation || currentLocation.id === 'ALL_STORES' || currentLocation.id === 'ALL_WAREHOUSES') {
+        return currentUser.userLocations.some(
+          (userLocation) =>
+            // Empty/null allowedTabs means full access (including edit)
+            !userLocation.allowedTabs ||
+            userLocation.allowedTabs.length === 0 ||
+            userLocation.allowedTabs.includes(LOCATION_TABS.WAREHOUSE_EDIT)
+        );
+      }
+
+      // If specific location is selected, check if user has WAREHOUSE_EDIT for THAT location
+      return currentUser.userLocations.some(
+        (userLocation) =>
+          userLocation.location.id === currentLocation.id &&
+          // Empty/null allowedTabs means full access (including edit)
+          (!userLocation.allowedTabs ||
+            userLocation.allowedTabs.length === 0 ||
+            userLocation.allowedTabs.includes(LOCATION_TABS.WAREHOUSE_EDIT))
+      );
+    }
+
+    return false;
+  }, [currentUser, currentLocation]);
+
+  // Check if user can delete products in warehouse
+  const canDeleteProducts = useMemo(() => {
+    // ADMIN and OWNER have full access
+    if (currentUser?.role === USER_ROLES.ADMIN || currentUser?.role === USER_ROLES.OWNER) {
+      return true;
+    }
+
+    // EMPLOYEE: check permissions based on current location
+    if (currentUser?.userLocations && currentUser.userLocations.length > 0) {
+      // If "All Stores" or aggregate view is selected, check if user has WAREHOUSE_DELETE in at least one location
+      if (!currentLocation || currentLocation.id === 'ALL_STORES' || currentLocation.id === 'ALL_WAREHOUSES') {
+        return currentUser.userLocations.some(
+          (userLocation) =>
+            // Empty/null allowedTabs means full access (including delete)
+            !userLocation.allowedTabs ||
+            userLocation.allowedTabs.length === 0 ||
+            userLocation.allowedTabs.includes(LOCATION_TABS.WAREHOUSE_DELETE)
+        );
+      }
+
+      // If specific location is selected, check if user has WAREHOUSE_DELETE for THAT location
+      return currentUser.userLocations.some(
+        (userLocation) =>
+          userLocation.location.id === currentLocation.id &&
+          // Empty/null allowedTabs means full access (including delete)
+          (!userLocation.allowedTabs ||
+            userLocation.allowedTabs.length === 0 ||
+            userLocation.allowedTabs.includes(LOCATION_TABS.WAREHOUSE_DELETE))
+      );
+    }
+
+    return false;
+  }, [currentUser, currentLocation]);
+
   const handleTabChange = (event, newType) => {
     dispatch(setCurrentType(newType));
     // Reset page when changing tabs
@@ -201,7 +286,7 @@ function InventoryDashboardPage() {
   };
 
   const handleConfirmAction = async () => {
-    const { product, action} = confirmDialog;
+    const { product, action } = confirmDialog;
     try {
       // Determine the product type
       // For inventory items: use productType field
@@ -217,26 +302,19 @@ function InventoryDashboardPage() {
       const productId = product.productId || product.id;
 
       if (action === 'delete') {
-        await dispatch(deleteProduct({ type: actualProductType, id: productId })).unwrap();
+        // Pass locationId for history tracking (exclude special aggregate IDs)
+        const locationId = currentLocation?.id && !['ALL_STORES', 'ALL_WAREHOUSES'].includes(currentLocation.id)
+          ? currentLocation.id
+          : null;
+        await dispatch(deleteProduct({ type: actualProductType, id: productId, locationId })).unwrap();
         toast.success('Produkt został usunięty');
       } else if (action === 'restore') {
         await dispatch(restoreProduct({ type: actualProductType, id: productId })).unwrap();
         toast.success('Produkt został przywrócony');
       }
 
-      // Refresh data
-      const refreshParams = {
-        page: 0,
-        size: pagination.size,
-        productType: currentType,
-      };
-      if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
-        refreshParams.search = debouncedSearchTerm.trim();
-      }
-      dispatch(fetchInventory({
-        locationId: currentLocation?.id || null,
-        params: refreshParams
-      }));
+      // Refresh inventory after delete/restore
+      refreshInventory();
     } catch (error) {
       toast.error(error || `Nie udało się ${action} produktu`);
     }
@@ -244,67 +322,11 @@ function InventoryDashboardPage() {
   };
 
   const handlePageChange = (newPage) => {
-    const params = {
-      page: newPage,
-      size: pagination.size,
-      productType: currentType,
-    };
-
-    if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
-      params.search = debouncedSearchTerm.trim();
-    }
-
-    if (currentLocation?.id === 'ALL_STORES') {
-      dispatch(fetchInventory({
-        locationId: null,
-        params: {
-          ...params,
-          locationType: 'STORE',
-        }
-      }));
-    } else if (currentLocation?.id === 'ALL_WAREHOUSES') {
-      dispatch(fetchInventory({
-        locationId: null,
-        params: {
-          ...params,
-          locationType: 'WAREHOUSE',
-        }
-      }));
-    } else {
-      dispatch(fetchInventory({ locationId: currentLocation?.id || null, params }));
-    }
+    refreshInventory(newPage);
   };
 
   const handleRowsPerPageChange = (newSize) => {
-    const params = {
-      page: 0,
-      size: newSize,
-      productType: currentType,
-    };
-
-    if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
-      params.search = debouncedSearchTerm.trim();
-    }
-
-    if (currentLocation?.id === 'ALL_STORES') {
-      dispatch(fetchInventory({
-        locationId: null,
-        params: {
-          ...params,
-          locationType: 'STORE',
-        }
-      }));
-    } else if (currentLocation?.id === 'ALL_WAREHOUSES') {
-      dispatch(fetchInventory({
-        locationId: null,
-        params: {
-          ...params,
-          locationType: 'WAREHOUSE',
-        }
-      }));
-    } else {
-      dispatch(fetchInventory({ locationId: currentLocation?.id || null, params }));
-    }
+    refreshInventory(0, newSize);
   };
 
   const handleSearch = (e) => {
@@ -323,19 +345,28 @@ function InventoryDashboardPage() {
   const handleCloseEditModal = () => {
     setEditModalOpen(false);
     setEditingProduct(null);
-    // Refresh list
-    const refreshParams = {
-      page: 0,
-      size: pagination.size,
-      productType: currentType,
-    };
-    if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
-      refreshParams.search = debouncedSearchTerm.trim();
-    }
-    dispatch(fetchInventory({
-      locationId: currentLocation?.id || null,
-      params: refreshParams
-    }));
+    // Refresh inventory after edit
+    refreshInventory();
+  };
+
+  const handleOpenNotesDialog = (product) => {
+    const notes = product?.notes || product?.description || '';
+    const productName = product?.model || product?.name || 'Produkt';
+    setNotesDialog({
+      open: true,
+      title: `Notatka - ${productName}`,
+      content: notes,
+    });
+  };
+
+  const handleCloseNotesDialog = () => {
+    setNotesDialog({ open: false, title: '', content: '' });
+  };
+
+  const truncateText = (text, maxLength = 50) => {
+    if (!text) return '-';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
   };
 
   // Define columns based on product type
@@ -361,6 +392,32 @@ function InventoryDashboardPage() {
           sortable: true,
           render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
         },
+        {
+          id: 'notes',
+          label: 'Notatka',
+          sortable: false,
+          render: (row) => {
+            const notes = row.notes || '';
+            const isLong = notes && notes.length > 50;
+            return (
+              <Box
+                sx={{
+                  cursor: isLong ? 'pointer' : 'default',
+                  color: isLong ? 'primary.main' : 'text.primary',
+                  '&:hover': isLong ? { textDecoration: 'underline' } : {},
+                }}
+                onClick={(e) => {
+                  if (isLong) {
+                    e.stopPropagation();
+                    handleOpenNotesDialog(row);
+                  }
+                }}
+              >
+                {truncateText(notes)}
+              </Box>
+            );
+          },
+        },
       ],
       [PRODUCT_TYPES.CONTACT_LENS]: [
         { id: 'model', label: 'Model', sortable: true },
@@ -384,14 +441,66 @@ function InventoryDashboardPage() {
           sortable: true,
           render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
         },
+        {
+          id: 'notes',
+          label: 'Notatka',
+          sortable: false,
+          render: (row) => {
+            const notes = row.notes || '';
+            const isLong = notes && notes.length > 50;
+            return (
+              <Box
+                sx={{
+                  cursor: isLong ? 'pointer' : 'default',
+                  color: isLong ? 'primary.main' : 'text.primary',
+                  '&:hover': isLong ? { textDecoration: 'underline' } : {},
+                }}
+                onClick={(e) => {
+                  if (isLong) {
+                    e.stopPropagation();
+                    handleOpenNotesDialog(row);
+                  }
+                }}
+              >
+                {truncateText(notes)}
+              </Box>
+            );
+          },
+        },
       ],
       [PRODUCT_TYPES.SOLUTION]: [
-        { id: 'volume', label: 'Pojemność', sortable: true },
+        { id: 'volume', label: 'Pojemność (ml)', sortable: true },
         {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
           sortable: true,
           render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
+        },
+        {
+          id: 'notes',
+          label: 'Notatka',
+          sortable: false,
+          render: (row) => {
+            const notes = row.notes || '';
+            const isLong = notes && notes.length > 50;
+            return (
+              <Box
+                sx={{
+                  cursor: isLong ? 'pointer' : 'default',
+                  color: isLong ? 'primary.main' : 'text.primary',
+                  '&:hover': isLong ? { textDecoration: 'underline' } : {},
+                }}
+                onClick={(e) => {
+                  if (isLong) {
+                    e.stopPropagation();
+                    handleOpenNotesDialog(row);
+                  }
+                }}
+              >
+                {truncateText(notes)}
+              </Box>
+            );
+          },
         },
       ],
       [PRODUCT_TYPES.OTHER]: [
@@ -407,6 +516,32 @@ function InventoryDashboardPage() {
           label: 'Cena sprzedaży',
           sortable: true,
           render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
+        },
+        {
+          id: 'notes',
+          label: 'Notatka',
+          sortable: false,
+          render: (row) => {
+            const notes = row.notes || '';
+            const isLong = notes && notes.length > 50;
+            return (
+              <Box
+                sx={{
+                  cursor: isLong ? 'pointer' : 'default',
+                  color: isLong ? 'primary.main' : 'text.primary',
+                  '&:hover': isLong ? { textDecoration: 'underline' } : {},
+                }}
+                onClick={(e) => {
+                  if (isLong) {
+                    e.stopPropagation();
+                    handleOpenNotesDialog(row);
+                  }
+                }}
+              >
+                {truncateText(notes)}
+              </Box>
+            );
+          },
         },
       ],
     };
@@ -488,9 +623,9 @@ function InventoryDashboardPage() {
           {
             label: 'Dodaj produkt',
             icon: <Plus size={20} />,
-            onClick: () => navigate('/inventory/create'),
-            disabled: !isLocationView,
-            disabledTooltip: 'Wybierz konkretną lokalizację, aby dodać produkt',
+            onClick: () => navigate(`/inventory/create?type=${currentType}`),
+            disabled: !isLocationView || currentType === 'SUMMARY',
+            disabledTooltip: currentType === 'SUMMARY' ? 'Wybierz typ produktu, aby dodać produkt' : 'Wybierz konkretną lokalizację, aby dodać produkt',
           },
         ]}
       />
@@ -539,27 +674,38 @@ function InventoryDashboardPage() {
 
       {/* Actions Menu */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-        {selectedProduct?.status !== PRODUCT_STATUS.DELETED ? [
-          <MenuItem
-            key="edit"
-            onClick={() => {
-              handleEditProduct(selectedProduct);
-              handleMenuClose();
-            }}
-          >
-            <Edit size={16} style={{ marginRight: 8 }} />
-            Edytuj
-          </MenuItem>,
-          <MenuItem
-            key="delete"
-            onClick={() => {
-              handleOpenConfirm(selectedProduct, 'delete');
-              handleMenuClose();
-            }}
-          >
-            Usuń
-          </MenuItem>
-        ] : (
+        {selectedProduct?.status !== PRODUCT_STATUS.DELETED ? (
+          <>
+            {canEditProducts && (
+              <MenuItem
+                key="edit"
+                onClick={() => {
+                  handleEditProduct(selectedProduct);
+                  handleMenuClose();
+                }}
+              >
+                <Edit size={16} style={{ marginRight: 8 }} />
+                Edytuj
+              </MenuItem>
+            )}
+            {canDeleteProducts && (
+              <MenuItem
+                key="delete"
+                onClick={() => {
+                  handleOpenConfirm(selectedProduct, 'delete');
+                  handleMenuClose();
+                }}
+              >
+                Usuń
+              </MenuItem>
+            )}
+            {!canEditProducts && !canDeleteProducts && (
+              <MenuItem disabled>
+                Brak uprawnień do akcji
+              </MenuItem>
+            )}
+          </>
+        ) : (
           <MenuItem
             onClick={() => {
               handleOpenConfirm(selectedProduct, 'restore');
@@ -591,6 +737,14 @@ function InventoryDashboardPage() {
         open={editModalOpen}
         onClose={handleCloseEditModal}
         product={editingProduct}
+      />
+
+      {/* Notes Dialog */}
+      <NotesDialog
+        open={notesDialog.open}
+        onClose={handleCloseNotesDialog}
+        title={notesDialog.title}
+        content={notesDialog.content}
       />
     </Container>
   );

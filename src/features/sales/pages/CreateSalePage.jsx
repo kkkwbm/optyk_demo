@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -24,27 +24,31 @@ import {
   Chip,
   Tabs,
   Tab,
+  CircularProgress,
+  MenuItem,
 } from '@mui/material';
-import { ArrowLeft, Plus, Trash2, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Trash2, ShoppingCart } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import FormField from '../../../shared/components/FormField';
 import { createSale } from '../salesSlice';
 import { selectCurrentLocation } from '../../locations/locationsSlice';
-import { fetchInventory, selectInventoryItems, fetchInventoryByProductAndLocation } from '../../inventory/inventorySlice';
+import { useInventorySearch, formatProductDetails } from '../../../hooks/useInventorySearch';
+import VirtualizedListbox from '../../../shared/components/VirtualizedListbox';
 import {
   VALIDATION,
   LOCATION_TYPES,
   PRODUCT_TYPES,
   PRODUCT_TYPE_LABELS,
+  EYEGLASS_LENS_TYPES,
+  EYEGLASS_LENS_TYPE_LABELS,
 } from '../../../constants';
 
 function CreateSalePage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const inventoryItems = useSelector(selectInventoryItems);
   const currentLocation = useSelector(selectCurrentLocation);
 
   const [cart, setCart] = useState([]);
@@ -54,24 +58,35 @@ function CreateSalePage() {
   const [availableStock, setAvailableStock] = useState(null);
   const [productType, setProductType] = useState(PRODUCT_TYPES.FRAME);
 
+  // State for eyeglass lens (custom product, not from inventory)
+  const [eyeglassLensType, setEyeglassLensType] = useState('');
+  const [eyeglassLensNotes, setEyeglassLensNotes] = useState('');
+  const [eyeglassLensPrice, setEyeglassLensPrice] = useState('');
+
   const { control, handleSubmit } = useForm({
     defaultValues: {
       notes: '',
+      customerFirstName: '',
+      customerLastName: '',
     },
   });
 
   // Check if current location is a warehouse
   const isWarehouseSelected = currentLocation && (currentLocation.type === LOCATION_TYPES.WAREHOUSE || currentLocation.type === 'WAREHOUSE');
 
-  // Fetch inventory for the current location
-  useEffect(() => {
-    if (currentLocation && !isWarehouseSelected) {
-      dispatch(fetchInventory({
-        locationId: currentLocation.id,
-        params: { page: 0, size: 1000 }
-      }));
-    }
-  }, [dispatch, currentLocation, isWarehouseSelected]);
+  // Use server-side search hook with debounce
+  const {
+    searchQuery,
+    setSearchQuery,
+    results: inventoryItems,
+    isLoading: isLoadingProducts,
+    isDebouncing,
+  } = useInventorySearch({
+    locationId: currentLocation?.id,
+    productType: productType,
+    debounceDelay: 300,
+    pageSize: 50,
+  });
 
   // Clear cart and reset form when location changes
   useEffect(() => {
@@ -82,26 +97,18 @@ function CreateSalePage() {
     setAvailableStock(null);
   }, [currentLocation]);
 
-  // Update available stock when product is selected
+  // Set default price when product is selected
   useEffect(() => {
     if (selectedProduct) {
-      // Find the inventory item for the selected product
-      const inventoryItem = inventoryItems.find(item => item.product?.id === selectedProduct.id);
-
-      if (inventoryItem) {
-        setAvailableStock(inventoryItem.availableQuantity || 0);
-      } else {
-        setAvailableStock(0);
-      }
-
       // Set default price from product
       if (selectedProduct.sellingPrice) {
         setPrice(selectedProduct.sellingPrice.toString());
       }
     } else {
+      // Reset available stock when product is deselected
       setAvailableStock(null);
     }
-  }, [selectedProduct, inventoryItems]);
+  }, [selectedProduct]);
 
   const handleAddToCart = () => {
     if (!selectedProduct) {
@@ -142,21 +149,41 @@ function CreateSalePage() {
     setAvailableStock(null);
   };
 
-  const handleRemoveFromCart = (productId) => {
-    setCart(cart.filter((item) => item.product.id !== productId));
+  // Handler for adding eyeglass lens (custom product, not from inventory)
+  const handleAddEyeglassLens = () => {
+    if (!eyeglassLensType) {
+      toast.error('Proszę wybrać typ soczewki');
+      return;
+    }
+    if (!eyeglassLensPrice || parseFloat(eyeglassLensPrice) <= 0) {
+      toast.error('Proszę wpisać prawidłową cenę');
+      return;
+    }
+
+    // Generate a unique ID for this custom product
+    const customId = `eyeglass-lens-${Date.now()}`;
+
+    const newItem = {
+      product: {
+        id: customId,
+        isCustomProduct: true, // Flag to identify custom products
+        lensType: eyeglassLensType,
+        notes: eyeglassLensNotes,
+      },
+      productType: PRODUCT_TYPES.EYEGLASS_LENS,
+      quantity: 1, // Always 1 for custom eyeglass lenses
+      unitPrice: parseFloat(eyeglassLensPrice),
+      subtotal: parseFloat(eyeglassLensPrice),
+    };
+
+    setCart([...cart, newItem]);
+    setEyeglassLensType('');
+    setEyeglassLensNotes('');
+    setEyeglassLensPrice('');
   };
 
-  const handleQuantityChange = (productId, newQuantity) => {
-    const qty = parseInt(newQuantity, 10);
-    if (qty > 0) {
-      setCart(
-        cart.map((item) =>
-          item.product.id === productId
-            ? { ...item, quantity: qty, subtotal: qty * item.unitPrice }
-            : item
-        )
-      );
-    }
+  const handleRemoveFromCart = (productId) => {
+    setCart(cart.filter((item) => item.product.id !== productId));
   };
 
   const calculateTotal = () => {
@@ -178,67 +205,94 @@ function CreateSalePage() {
       const saleData = {
         locationId: currentLocation.id,
         notes: data.notes || undefined,
-        items: cart.map((item) => ({
-          productId: item.product.id,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-        })),
-        totalAmount: calculateTotal(),
+        customerFirstName: data.customerFirstName || undefined,
+        customerLastName: data.customerLastName || undefined,
+        items: cart.map((item) => {
+          // Handle custom eyeglass lens items (not from inventory)
+          if (item.product.isCustomProduct && item.productType === PRODUCT_TYPES.EYEGLASS_LENS) {
+            return {
+              isCustomEyeglassLens: true,
+              eyeglassLensType: item.product.lensType,
+              eyeglassLensNotes: item.product.notes || null,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+            };
+          }
+          // Regular products from inventory
+          return {
+            productId: item.product.id,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+          };
+        }),
       };
 
-      await dispatch(createSale(saleData)).unwrap();
+      const result = await dispatch(createSale(saleData)).unwrap();
       toast.success('Sprzedaż została utworzona');
-      navigate('/sales');
+      navigate(`/sales/${result.id}`);
     } catch (error) {
       toast.error(error || 'Nie udało się utworzyć sprzedaży');
     }
   };
 
 
-  // Helper function to build product label based on product type
-  const buildProductLabel = (item) => {
-    const product = item.product;
+  // Helper function to build product name without stock info (for display in input field)
+  const buildProductName = useCallback((product, type) => {
     const brand = product.brand?.name || '';
-    const stock = ` (${item.availableQuantity || 0} szt.)`;
 
-    switch (item.productType) {
+    switch (type) {
       case PRODUCT_TYPES.FRAME:
-        // Frame: Brand, Model, Size, Color
-        return `${brand} ${product.model || ''} - ${product.size || ''} - ${product.color || ''}`.trim() + stock;
+        return `${brand} ${product.model || ''} - ${product.size || ''} - ${product.color || ''}`.trim();
 
-      case PRODUCT_TYPES.CONTACT_LENS:
-        // Contact Lens: Brand, Model, Type, Power
+      case PRODUCT_TYPES.CONTACT_LENS: {
         const lensTypeLabels = {
           DAILY: 'Jednodniowe',
           BI_WEEKLY: 'Dwutygodniowe',
           MONTHLY: 'Miesięczne',
         };
         const lensType = lensTypeLabels[product.lensType] || product.lensType || '';
-        return `${brand} ${product.model || ''} - ${lensType} - ${product.power || ''}`.trim() + stock;
+        return `${brand} ${product.model || ''} - ${lensType} - ${product.power || ''}`.trim();
+      }
+
+      case PRODUCT_TYPES.EYEGLASS_LENS: {
+        const lensType = EYEGLASS_LENS_TYPE_LABELS[product.lensType] || product.lensType || '';
+        return `${brand} ${product.model || ''} - ${lensType}`.trim();
+      }
 
       case PRODUCT_TYPES.SOLUTION:
-        // Solution: Brand, Volume
-        return `${brand} - ${product.volume || ''}`.trim() + stock;
+        return `${brand} - ${product.volume || ''} ml`.trim();
 
       case PRODUCT_TYPES.OTHER:
       default:
-        // Other: Brand, Model/Name
-        return `${brand} ${product.model || product.name || ''}`.trim() + stock;
+        return `${brand} ${product.model || product.name || ''}`.trim();
     }
-  };
+  }, []);
 
-  // Build product options from inventory items (only products with stock at current location)
-  const productOptions = inventoryItems
-    .filter(item => {
-      return item.product && (item.availableQuantity > 0 || item.quantity > 0);
-    })
-    .filter((item) => item.productType === productType)
-    .map((item) => ({
-      id: item.product.id,
-      label: buildProductLabel(item),
-      product: item.product,
-      availableQuantity: item.availableQuantity || 0,
-    }));
+  // Helper function to build product label with stock info (for dropdown options)
+  const buildProductLabel = useCallback((item) => {
+    const name = buildProductName(item.product, item.productType);
+    const stock = ` (${item.availableQuantity || 0} szt.)`;
+    return name + stock;
+  }, [buildProductName]);
+
+  // Build product options from inventory items (memoized for performance)
+  // Only show products with availableQuantity > 0 (products that can actually be sold)
+  const productOptions = useMemo(() => {
+    return inventoryItems
+      .filter(item => item.product && item.availableQuantity > 0)
+      .map((item) => {
+        const displayName = buildProductName(item.product, item.productType);
+        return {
+          id: item.product.id,
+          label: buildProductLabel(item),
+          displayName: displayName,
+          product: item.product,
+          productType: item.productType,
+          availableQuantity: item.availableQuantity,
+          brand: item.product.brand?.name || '',
+        };
+      });
+  }, [inventoryItems, buildProductLabel, buildProductName]);
 
   const handleProductTypeChange = (event, newType) => {
     setProductType(newType);
@@ -246,27 +300,67 @@ function CreateSalePage() {
     setQuantity('');
     setPrice('');
     setAvailableStock(null);
+    setSearchQuery('');
+    // Reset eyeglass lens state
+    setEyeglassLensType('');
+    setEyeglassLensNotes('');
+    setEyeglassLensPrice('');
+  };
+
+  // Helper function to get lens type label
+  const getLensTypeLabel = (type) => {
+    switch (type) {
+      case 'DAILY': return 'Jednodniowe';
+      case 'BI_WEEKLY': return 'Dwutygodniowe';
+      case 'MONTHLY': return 'Miesięczne';
+      default: return type || '';
+    }
+  };
+
+  // Helper function to format product details (similar to transfer page)
+  const formatProductDetails = (product, productType) => {
+    switch (productType) {
+      case PRODUCT_TYPES.FRAME:
+      case PRODUCT_TYPES.SUNGLASSES:
+        return `Rozmiar: ${product.size || '-'}, Kolor: ${product.color || '-'}`;
+
+      case PRODUCT_TYPES.CONTACT_LENS:
+        const lensType = getLensTypeLabel(product.lensType);
+        return `Typ: ${lensType || '-'}, Moc: ${product.power || '-'}`;
+
+      case PRODUCT_TYPES.SOLUTION:
+        return `Pojemność: ${product.volume || product.capacity || '-'} (ml)`;
+
+      case PRODUCT_TYPES.OTHER:
+      default:
+        return product.notes || '-';
+    }
   };
 
   // Helper function to format product display in cart
   const formatProductForCart = (product, productType) => {
+    // Handle custom eyeglass lens products (not from inventory)
+    if (product.isCustomProduct && productType === PRODUCT_TYPES.EYEGLASS_LENS) {
+      const lensTypeLabel = EYEGLASS_LENS_TYPE_LABELS[product.lensType] || product.lensType || '';
+      return {
+        main: `Soczewka okularowa - ${lensTypeLabel}`,
+        details: product.notes || 'Brak notatki',
+      };
+    }
+
     const brand = product.brand?.name || '';
     const model = product.model || product.name || '';
 
     switch (productType) {
       case PRODUCT_TYPES.FRAME:
+      case PRODUCT_TYPES.SUNGLASSES:
         return {
           main: `${brand} ${model}`,
           details: `Rozmiar: ${product.size || '-'}, Kolor: ${product.color || '-'}`,
         };
 
       case PRODUCT_TYPES.CONTACT_LENS:
-        const lensTypeLabels = {
-          DAILY: 'Jednodniowe',
-          BI_WEEKLY: 'Dwutygodniowe',
-          MONTHLY: 'Miesięczne',
-        };
-        const lensType = lensTypeLabels[product.lensType] || product.lensType || '-';
+        const lensType = getLensTypeLabel(product.lensType);
         return {
           main: `${brand} ${model}`,
           details: `Typ: ${lensType}, Moc: ${product.power || '-'}`,
@@ -352,6 +446,7 @@ function CreateSalePage() {
                 </Alert>
               )}
 
+
               {/* Product Type Selector */}
               <Box sx={{ mb: 3 }}>
                 <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
@@ -361,36 +456,91 @@ function CreateSalePage() {
                   value={productType}
                   onChange={handleProductTypeChange}
                   sx={{ borderBottom: 1, borderColor: 'divider' }}
+                  variant="scrollable"
+                  scrollButtons="auto"
                 >
                   <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.FRAME]} value={PRODUCT_TYPES.FRAME} />
                   <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SUNGLASSES]} value={PRODUCT_TYPES.SUNGLASSES} />
                   <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.CONTACT_LENS]} value={PRODUCT_TYPES.CONTACT_LENS} />
+                  <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.EYEGLASS_LENS]} value={PRODUCT_TYPES.EYEGLASS_LENS} />
                   <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SOLUTION]} value={PRODUCT_TYPES.SOLUTION} />
                   <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.OTHER]} value={PRODUCT_TYPES.OTHER} />
                 </Tabs>
               </Box>
 
+              {/* Form for regular products (from inventory) */}
+              {productType !== PRODUCT_TYPES.EYEGLASS_LENS && (
               <Box>
                 <Box sx={{ mb: 2 }}>
                   <Autocomplete
                     options={productOptions}
                     value={
                       selectedProduct
-                        ? productOptions.find((opt) => opt.id === selectedProduct.id)
+                        ? (productOptions.find((opt) => opt.id === selectedProduct.id) ?? null)
                         : null
                     }
+                    inputValue={searchQuery}
+                    onInputChange={(_, newInputValue, reason) => {
+                      if (reason === 'input') {
+                        setSearchQuery(newInputValue);
+                      } else if (reason === 'clear') {
+                        setSearchQuery('');
+                      }
+                    }}
                     onChange={(_, newValue) => {
                       setSelectedProduct(newValue?.product || null);
-                      setQuantity('');
+                      setQuantity('1');
                       setPrice(newValue?.product?.sellingPrice?.toString() || '');
+                      // Store availableQuantity directly from the selected option
+                      // to avoid race condition with inventory refresh
+                      setAvailableStock(newValue?.availableQuantity ?? null);
+                      // Set display name (without stock count) to keep it visible in input
+                      if (newValue?.displayName) {
+                        setSearchQuery(newValue.displayName);
+                      }
                     }}
                     getOptionLabel={(option) => option.label || ''}
+                    filterOptions={(x) => x}
+                    loading={isLoadingProducts || isDebouncing}
                     fullWidth
                     disabled={!currentLocation || isWarehouseSelected}
+                    noOptionsText={
+                      isLoadingProducts || isDebouncing
+                        ? 'Wyszukiwanie...'
+                        : searchQuery.length > 0
+                          ? 'Brak wyników'
+                          : 'Wpisz nazwę produktu...'
+                    }
+                    ListboxComponent={VirtualizedListbox}
+                    slotProps={{
+                      popper: {
+                        placement: 'bottom-start',
+                        modifiers: [
+                          {
+                            name: 'flip',
+                            enabled: false,
+                          },
+                        ],
+                      },
+                    }}
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        label="Wybierz produkt"
+                        label="Wyszukaj produkt"
+                        placeholder="Wpisz markę, model lub kolor..."
+                        slotProps={{
+                          input: {
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {(isLoadingProducts || isDebouncing) ? (
+                                  <CircularProgress color="inherit" size={20} />
+                                ) : null}
+                                {params.InputProps.endAdornment}
+                              </>
+                            ),
+                          },
+                        }}
                         sx={{
                           '& .MuiInputBase-root': {
                             fontSize: '1rem',
@@ -401,56 +551,301 @@ function CreateSalePage() {
                         }}
                       />
                     )}
+                    renderOption={(props, option) => {
+                      const { key, ...otherProps } = props;
+
+                      return (
+                        <li key={key} {...otherProps} style={{ display: 'block', padding: '12px 16px' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                            <Box sx={{ flex: 1 }}>
+                              {/* MARKA I MODEL */}
+                              <Typography variant="body1" fontWeight="600" sx={{ fontSize: '1.1rem' }}>
+                                {option.brand} {option.product.model || option.product.name || ''}
+                              </Typography>
+
+                              {/* SZCZEGÓŁY (KOLOR, ROZMIAR, ITP.) */}
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                {formatProductDetails(option.product, option.productType)}
+                              </Typography>
+                            </Box>
+
+                            <Typography variant="body2" sx={{
+                              bgcolor: option.availableQuantity > 0 ? 'success.lighter' : 'error.lighter',
+                              color: option.availableQuantity > 0 ? 'success.dark' : 'error.dark',
+                              px: 2,
+                              py: 0.75,
+                              borderRadius: 1,
+                              fontWeight: 600,
+                              fontSize: '1rem',
+                              ml: 2
+                            }}>
+                              {option.availableQuantity} szt.
+                            </Typography>
+                          </Box>
+                        </li>
+                      );
+                    }}
                   />
                 </Box>
 
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={4} md={3}>
-                    <TextField
-                      label="Ilość"
-                      type="number"
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                      fullWidth
-                      disabled={!currentLocation || isWarehouseSelected}
-                      inputProps={{ min: 1 }}
-                      helperText={
-                        availableStock !== null ? `Dostępne: ${availableStock}` : undefined
-                      }
-                    />
+                <Grid container spacing={2} alignItems="flex-end">
+                  <Grid item xs="auto">
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        Ilość {availableStock !== null && <Typography component="span" variant="caption" color="text.secondary">(max: {availableStock})</Typography>}
+                      </Typography>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 1,
+                          height: 40,
+                          width: 120,
+                        }}
+                      >
+                        <IconButton
+                          onClick={() => {
+                            const current = parseInt(quantity, 10) || 0;
+                            if (current > 1) setQuantity((current - 1).toString());
+                          }}
+                          disabled={!currentLocation || isWarehouseSelected || isLoadingProducts || !quantity || parseInt(quantity, 10) <= 1}
+                          sx={{ borderRadius: 0, height: '100%', px: 1.5 }}
+                        >
+                          <Minus size={18} />
+                        </IconButton>
+                        <TextField
+                          type="number"
+                          value={quantity}
+                          onChange={(e) => setQuantity(e.target.value)}
+                          disabled={!currentLocation || isWarehouseSelected || isLoadingProducts}
+                          size="small"
+                          inputProps={{
+                            min: 1,
+                            style: { textAlign: 'center', padding: '4px 0' },
+                          }}
+                          sx={{
+                            flex: 1,
+                            minWidth: 40,
+                            '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                            '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                              display: 'none',
+                            },
+                            '& input[type=number]': {
+                              MozAppearance: 'textfield',
+                            },
+                          }}
+                        />
+                        <IconButton
+                          onClick={() => {
+                            const current = parseInt(quantity, 10) || 0;
+                            const max = availableStock ?? Infinity;
+                            if (current < max) setQuantity((current + 1).toString());
+                          }}
+                          disabled={!currentLocation || isWarehouseSelected || isLoadingProducts || (availableStock !== null && parseInt(quantity, 10) >= availableStock)}
+                          sx={{ borderRadius: 0, height: '100%', px: 1.5 }}
+                        >
+                          <Plus size={18} />
+                        </IconButton>
+                      </Box>
+                    </Box>
                   </Grid>
 
-                  <Grid item xs={12} sm={4} md={3}>
-                    <TextField
-                      label="Cena"
-                      type="number"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      fullWidth
-                      disabled={!currentLocation || isWarehouseSelected}
-                      inputProps={{ min: 0, step: 0.01 }}
-                    />
+                  <Grid item xs="auto">
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        Cena (zł)
+                      </Typography>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 1,
+                          height: 40,
+                          width: 220,
+                        }}
+                      >
+                        <IconButton
+                          onClick={() => {
+                            const current = parseFloat(price) || 0;
+                            if (current > 1) setPrice((current - 1).toFixed(2));
+                          }}
+                          disabled={!currentLocation || isWarehouseSelected || isLoadingProducts || !price || parseFloat(price) <= 0}
+                          sx={{ borderRadius: 0, height: '100%', px: 1.5 }}
+                        >
+                          <Minus size={18} />
+                        </IconButton>
+                        <TextField
+                          type="number"
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          disabled={!currentLocation || isWarehouseSelected || isLoadingProducts}
+                          size="small"
+                          inputProps={{
+                            min: 0,
+                            step: 0.01,
+                            style: { textAlign: 'center', padding: '4px 0' },
+                          }}
+                          sx={{
+                            flex: 1,
+                            minWidth: 50,
+                            '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                            '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                              display: 'none',
+                            },
+                            '& input[type=number]': {
+                              MozAppearance: 'textfield',
+                            },
+                          }}
+                        />
+                        <IconButton
+                          onClick={() => {
+                            const current = parseFloat(price) || 0;
+                            setPrice((current + 1).toFixed(2));
+                          }}
+                          disabled={!currentLocation || isWarehouseSelected || isLoadingProducts}
+                          sx={{ borderRadius: 0, height: '100%', px: 1.5 }}
+                        >
+                          <Plus size={18} />
+                        </IconButton>
+                      </Box>
+                    </Box>
                   </Grid>
 
-                  <Grid item xs={12} sm={4} md={3}>
+                  <Grid item xs="auto">
                     <Button
                       variant="contained"
                       startIcon={<Plus size={16} />}
                       onClick={handleAddToCart}
-                      fullWidth
-                      disabled={!currentLocation || isWarehouseSelected}
-                      sx={{ height: '56px' }}
+                      disabled={!currentLocation || isWarehouseSelected || isLoadingProducts}
+                      sx={{ height: 40 }}
                     >
                       Dodaj
                     </Button>
                   </Grid>
                 </Grid>
-              </Box>
 
-              {availableStock === 0 && selectedProduct && (
-                <Alert severity="error" sx={{ mt: 2 }}>
-                  Ten produkt jest niedostępny na wybranej lokalizacji
-                </Alert>
+                {availableStock === 0 && selectedProduct && (
+                  <Alert severity="error" sx={{ mt: 2 }}>
+                    Ten produkt jest niedostępny na wybranej lokalizacji
+                  </Alert>
+                )}
+              </Box>
+              )}
+
+              {/* Form for eyeglass lenses (custom product, not from inventory) */}
+              {productType === PRODUCT_TYPES.EYEGLASS_LENS && (
+              <Box>
+                <Grid container spacing={2} alignItems="flex-end">
+                  <Grid item xs="auto">
+                    <TextField
+                      select
+                      label="Typ soczewki"
+                      value={eyeglassLensType}
+                      onChange={(e) => setEyeglassLensType(e.target.value)}
+                      disabled={!currentLocation || isWarehouseSelected}
+                      sx={{ minWidth: 280 }}
+                    >
+                      {Object.entries(EYEGLASS_LENS_TYPES).map(([key, value]) => (
+                        <MenuItem key={key} value={value}>
+                          {EYEGLASS_LENS_TYPE_LABELS[value]}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+
+                  <Grid item xs="auto">
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        Cena (zł)
+                      </Typography>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 1,
+                          height: 56,
+                          width: 200,
+                        }}
+                      >
+                        <IconButton
+                          onClick={() => {
+                            const current = parseFloat(eyeglassLensPrice) || 0;
+                            if (current > 1) setEyeglassLensPrice((current - 1).toFixed(2));
+                          }}
+                          disabled={!currentLocation || isWarehouseSelected || !eyeglassLensPrice || parseFloat(eyeglassLensPrice) <= 0}
+                          sx={{ borderRadius: 0, height: '100%', px: 1.5 }}
+                        >
+                          <Minus size={18} />
+                        </IconButton>
+                        <TextField
+                          type="number"
+                          value={eyeglassLensPrice}
+                          onChange={(e) => setEyeglassLensPrice(e.target.value)}
+                          disabled={!currentLocation || isWarehouseSelected}
+                          size="small"
+                          inputProps={{
+                            min: 0,
+                            step: 0.01,
+                            style: { textAlign: 'center', padding: '4px 0' },
+                          }}
+                          sx={{
+                            flex: 1,
+                            minWidth: 50,
+                            '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                            '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                              display: 'none',
+                            },
+                            '& input[type=number]': {
+                              MozAppearance: 'textfield',
+                            },
+                          }}
+                        />
+                        <IconButton
+                          onClick={() => {
+                            const current = parseFloat(eyeglassLensPrice) || 0;
+                            setEyeglassLensPrice((current + 1).toFixed(2));
+                          }}
+                          disabled={!currentLocation || isWarehouseSelected}
+                          sx={{ borderRadius: 0, height: '100%', px: 1.5 }}
+                        >
+                          <Plus size={18} />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                  </Grid>
+
+                  <Grid item xs="auto">
+                    <Button
+                      variant="contained"
+                      startIcon={<Plus size={16} />}
+                      onClick={handleAddEyeglassLens}
+                      disabled={!currentLocation || isWarehouseSelected}
+                      sx={{ height: 56 }}
+                    >
+                      Dodaj
+                    </Button>
+                  </Grid>
+                </Grid>
+
+                <Box sx={{ mt: 2 }}>
+                  <TextField
+                    label="Notatka (opcjonalnie)"
+                    value={eyeglassLensNotes}
+                    onChange={(e) => setEyeglassLensNotes(e.target.value)}
+                    fullWidth
+                    multiline
+                    rows={2}
+                    disabled={!currentLocation || isWarehouseSelected}
+                    placeholder="np. parametry soczewki, indeks, powłoki..."
+                  />
+                </Box>
+              </Box>
               )}
             </Paper>
 
@@ -495,31 +890,24 @@ function CreateSalePage() {
                               </Typography>
                             </TableCell>
                             <TableCell align="right">
-                            <TextField
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) =>
-                                handleQuantityChange(item.product.id, e.target.value)
-                              }
-                              size="small"
-                              inputProps={{ min: 1 }}
-                              sx={{ width: 80 }}
-                            />
-                          </TableCell>
-                          <TableCell align="right">{item.unitPrice.toFixed(2)} zł</TableCell>
-                          <TableCell align="right">
-                            <strong>{item.subtotal.toFixed(2)} zł</strong>
-                          </TableCell>
-                          <TableCell align="right">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => handleRemoveFromCart(item.product.id)}
-                            >
-                              <Trash2 size={16} />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
+                              <Typography sx={{ fontWeight: 500 }}>
+                                {item.quantity}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">{item.unitPrice.toFixed(2)} zł</TableCell>
+                            <TableCell align="right">
+                              <strong>{item.subtotal.toFixed(2)} zł</strong>
+                            </TableCell>
+                            <TableCell align="right">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleRemoveFromCart(item.product.id)}
+                              >
+                                <Trash2 size={16} />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
                         );
                       })}
                     </TableBody>
@@ -536,6 +924,41 @@ function CreateSalePage() {
                 <Typography variant="h5" sx={{ mb: 4, fontWeight: 600 }}>
                   Podsumowanie sprzedaży
                 </Typography>
+
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+                  Dane klienta (opcjonalne)
+                </Typography>
+
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={12} sm={6}>
+                    <FormField
+                      name="customerFirstName"
+                      control={control}
+                      label="Imię klienta"
+                      type="text"
+                      rules={{
+                        maxLength: {
+                          value: 100,
+                          message: 'Imię nie może przekroczyć 100 znaków',
+                        },
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormField
+                      name="customerLastName"
+                      control={control}
+                      label="Nazwisko klienta"
+                      type="text"
+                      rules={{
+                        maxLength: {
+                          value: 100,
+                          message: 'Nazwisko nie może przekroczyć 100 znaków',
+                        },
+                      }}
+                    />
+                  </Grid>
+                </Grid>
 
                 <Box sx={{ mb: 4 }}>
                   <FormField

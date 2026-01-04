@@ -18,7 +18,7 @@ import {
   TableHead,
   TableRow,
 } from '@mui/material';
-import { ArrowLeft, RotateCcw } from 'lucide-react';
+import { ArrowLeft, RotateCcw, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -33,6 +33,7 @@ import {
 import {
   OPERATION_TYPE_LABELS,
   ENTITY_TYPE_LABELS,
+  ENTITY_TYPES,
   DATE_FORMATS,
 } from '../../../constants';
 
@@ -60,15 +61,48 @@ function HistoryDetailsPage() {
     setConfirmDialog({ open: false });
   };
 
-  const handleConfirmRevert = async () => {
+  const handleConfirmRevert = async (reason) => {
     try {
-      await dispatch(revertOperation(historyItem.id)).unwrap();
+      await dispatch(revertOperation({ id: historyItem.id, reason })).unwrap();
       toast.success('Operacja została cofnięta');
       navigate('/history');
     } catch (error) {
       toast.error(error || 'Nie udało się cofnąć operacji');
     }
     handleCloseConfirm();
+  };
+
+  const getEntityNavigationPath = (entityType, entityId) => {
+    // Map entity types to navigation paths
+    switch (entityType) {
+      case ENTITY_TYPES.FRAME:
+      case ENTITY_TYPES.CONTACT_LENS:
+      case ENTITY_TYPES.SOLUTION:
+      case ENTITY_TYPES.OTHER:
+      case ENTITY_TYPES.OTHER_PRODUCT:
+      case ENTITY_TYPES.SUNGLASSES:
+        return `/inventory/${entityId}?type=${entityType}`;
+      case ENTITY_TYPES.SALE:
+        return `/sales/${entityId}`;
+      case ENTITY_TYPES.TRANSFER:
+        return `/transfers/${entityId}`;
+      case ENTITY_TYPES.USER:
+        return `/users/${entityId}`;
+      case ENTITY_TYPES.BRAND:
+      case ENTITY_TYPES.LOCATION:
+      case ENTITY_TYPES.INVENTORY:
+      default:
+        return null;
+    }
+  };
+
+  const handleGoToEntity = () => {
+    const path = getEntityNavigationPath(historyItem.entityType, historyItem.entityId);
+    if (path) {
+      navigate(path);
+    } else {
+      toast.error('Nie można przejść do tego elementu');
+    }
   };
 
   if (loading || !historyItem) {
@@ -185,6 +219,16 @@ function HistoryDetailsPage() {
           { label: 'Szczegóły' },
         ]}
         actions={[
+          ...(getEntityNavigationPath(historyItem.entityType, historyItem.entityId)
+            ? [
+                {
+                  label: 'Przejdź do',
+                  icon: <ArrowRight size={20} />,
+                  onClick: handleGoToEntity,
+                  variant: 'contained',
+                },
+              ]
+            : []),
           {
             label: 'Wróć',
             icon: <ArrowLeft size={20} />,
@@ -386,10 +430,13 @@ function HistoryDetailsPage() {
         open={confirmDialog.open}
         onClose={handleCloseConfirm}
         onConfirm={handleConfirmRevert}
-        title="Potwierdź cofnięcie"
-        message={`Czy na pewno chcesz cofnąć tę operację ${historyItem.operationType?.toLowerCase()}? To cofnie zmiany i nie będzie można tego cofnąć.`}
-        confirmText="Cofnij"
+        title="Potwierdź cofnięcie operacji"
+        message="Czy na pewno chcesz cofnąć tę operację? To utworzy wpis kompensujący, który odwróci zmiany. Oryginalny wpis pozostanie w historii dla celów audytu."
+        confirmText="Cofnij operację"
         confirmColor="warning"
+        requireReason={true}
+        reasonLabel="Powód cofnięcia operacji *"
+        reasonPlaceholder="Proszę wyjaśnić, dlaczego cofasz tę operację (min. 10 znaków)..."
       />
     </Container>
   );

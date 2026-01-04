@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Container, Paper, Box, Button, Tabs, Tab, Typography } from '@mui/material';
 import { ArrowLeft } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -15,15 +15,23 @@ import { createProduct } from '../productsSlice';
 import { fetchActiveBrands, selectActiveBrands } from '../../brands/brandsSlice';
 import { selectCurrentLocation, selectActiveLocations } from '../../locations/locationsSlice';
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS, PRODUCT_TYPE_SINGULAR } from '../../../constants';
+import { cleanProductData } from '../utils/productDataCleaner';
 
 function CreateProductPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const activeBrands = useSelector(selectActiveBrands);
   const currentLocation = useSelector(selectCurrentLocation);
   const activeLocations = useSelector(selectActiveLocations);
 
-  const [productType, setProductType] = useState(PRODUCT_TYPES.FRAME);
+  // Get product type from URL parameter or default to FRAME
+  const typeFromUrl = searchParams.get('type');
+  const initialType = typeFromUrl && Object.values(PRODUCT_TYPES).includes(typeFromUrl)
+    ? typeFromUrl
+    : PRODUCT_TYPES.FRAME;
+
+  const [productType, setProductType] = useState(initialType);
   const { control, handleSubmit, reset } = useForm({
     defaultValues: {
       brandId: '',
@@ -56,8 +64,8 @@ function CreateProductPage() {
 
   const onSubmit = async (data) => {
     try {
-      // Clean data based on product type
-      const cleanedData = { ...data };
+      // Clean data based on product type (removes irrelevant fields)
+      let cleanedData = cleanProductData(data, productType);
 
       // Convert numeric fields
       if (cleanedData.purchasePrice) cleanedData.purchasePrice = parseFloat(cleanedData.purchasePrice);
@@ -103,7 +111,7 @@ function CreateProductPage() {
       }
 
       toast.success(successMessage);
-      navigate('/inventory');
+      navigate('/inventory', { state: { refresh: true } });
     } catch (error) {
       toast.error(error || 'Nie udało się utworzyć produktu');
     }
@@ -156,10 +164,10 @@ function CreateProductPage() {
             </Typography>
             <Tabs value={productType} onChange={handleTypeChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
               <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.FRAME]} value={PRODUCT_TYPES.FRAME} />
+              <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SUNGLASSES]} value={PRODUCT_TYPES.SUNGLASSES} />
               <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.CONTACT_LENS]} value={PRODUCT_TYPES.CONTACT_LENS} />
               <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SOLUTION]} value={PRODUCT_TYPES.SOLUTION} />
               <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.OTHER]} value={PRODUCT_TYPES.OTHER} />
-              <Tab label={PRODUCT_TYPE_LABELS[PRODUCT_TYPES.SUNGLASSES]} value={PRODUCT_TYPES.SUNGLASSES} />
             </Tabs>
           </Box>
 

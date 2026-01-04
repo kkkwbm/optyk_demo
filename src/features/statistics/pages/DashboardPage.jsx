@@ -1,481 +1,370 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Typography,
-  Paper,
-  Box,
-  Grid,
-  Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Button,
-  Chip,
-} from '@mui/material';
-import {
-  BarChart3,
-  Package,
-  ShoppingCart,
-  ArrowLeftRight,
-  DollarSign,
-  Glasses,
-} from 'lucide-react';
+import { Typography, Paper, Box, Tabs, Tab } from '@mui/material';
+import { format, subMonths, subYears } from 'date-fns';
 import {
   fetchDashboardStats,
   selectDashboardStats,
+  fetchProductAnalytics,
+  selectProductAnalytics,
+  fetchStoreComparison,
+  selectStoreComparison,
+  fetchUserSalesStatistics,
+  selectUserSalesStatistics,
+  fetchProductInventoryByLocation,
+  selectProductInventoryByLocation,
+  fetchSalesTrend,
+  selectSalesTrend,
+  selectStatisticsLoading,
+  selectProductInventoryLoading,
 } from '../statisticsSlice';
-import locationService from '../../../services/locationService';
-import { selectCurrentLocation } from '../../locations/locationsSlice';
-import { PRODUCT_TYPE_LABELS } from '../../../constants';
+import { fetchActiveLocations, selectActiveLocations } from '../../locations/locationsSlice';
+import { DATE_FORMATS, DEBOUNCE_DELAYS } from '../../../constants';
+import { useDebounce } from '../../../hooks/useDebounce';
+import StatisticsFilters from '../components/StatisticsFilters';
+import OverviewTab from '../components/OverviewTab';
+import OverviewTabSkeleton from '../components/OverviewTabSkeleton';
+import SalesTab from '../components/SalesTab';
+import SalesTabSkeleton from '../components/SalesTabSkeleton';
+import StoreComparisonTab from '../components/StoreComparisonTab';
+import StoreComparisonTabSkeleton from '../components/StoreComparisonTabSkeleton';
+import UserComparisonTab from '../components/UserComparisonTab';
+import UserComparisonTabSkeleton from '../components/UserComparisonTabSkeleton';
+
+const DATE_RANGE_OPTIONS = {
+  ALL_TIME: 'all_time',
+  LAST_MONTH: 'last_month',
+  LAST_3_MONTHS: 'last_3_months',
+  LAST_YEAR: 'last_year',
+};
 
 function DashboardPage() {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
 
   const stats = useSelector(selectDashboardStats);
-  const currentLocation = useSelector(selectCurrentLocation);
+  const activeLocations = useSelector(selectActiveLocations);
+  const productAnalytics = useSelector(selectProductAnalytics);
+  const storeComparison = useSelector(selectStoreComparison);
+  const userSalesStatistics = useSelector(selectUserSalesStatistics);
+  const productInventoryByLocation = useSelector(selectProductInventoryByLocation);
+  const salesTrend = useSelector(selectSalesTrend);
+  const isLoading = useSelector(selectStatisticsLoading);
+  const productInventoryLoading = useSelector(selectProductInventoryLoading);
 
-  const [storeComparison, setStoreComparison] = useState([]);
+  // Filter values
+  const [selectedLocationIds, setSelectedLocationIds] = useState([]);
+  const [selectedDateRange, setSelectedDateRange] = useState(DATE_RANGE_OPTIONS.ALL_TIME);
+
+  // Debounced filter values (300ms delay for better UX)
+  const debouncedLocationIds = useDebounce(selectedLocationIds, DEBOUNCE_DELAYS.SEARCH);
+  const debouncedDateRange = useDebounce(selectedDateRange, DEBOUNCE_DELAYS.SEARCH);
+
+  // Tab state
+  const [currentTab, setCurrentTab] = useState(0);
+
+  // Product type inventory chart state
+  const [selectedProductTypes, setSelectedProductTypes] = useState([
+    'FRAME',
+    'SUNGLASSES',
+    'CONTACT_LENS',
+    'SOLUTION',
+    'OTHER'
+  ]);
+
+  // Store comparison tab state
+  const [selectedStoreComparisonLocationIds, setSelectedStoreComparisonLocationIds] = useState([]);
+
+  // Sales trend chart state - default to last year
+  const [customStartDate, setCustomStartDate] = useState(() =>
+    format(subYears(new Date(), 1), DATE_FORMATS.API)
+  );
+  const [customEndDate, setCustomEndDate] = useState(() =>
+    format(new Date(), DATE_FORMATS.API)
+  );
+  const [trendPeriod, setTrendPeriod] = useState('month');
+  const [trendChartType, setTrendChartType] = useState('line');
+
+  // Debounced custom date range for sales trend
+  const debouncedStartDate = useDebounce(customStartDate, DEBOUNCE_DELAYS.SEARCH);
+  const debouncedEndDate = useDebounce(customEndDate, DEBOUNCE_DELAYS.SEARCH);
 
   useEffect(() => {
-    // Fetch all-time statistics (no date range filter)
-    // Handle "All Stores" by sending undefined (which becomes null in backend)
-    // If currentLocation is null (Global view), it's also undefined
-    const locationId = (currentLocation?.id === 'ALL_STORES' || !currentLocation)
-      ? undefined
-      : currentLocation.id;
+    // Fetch active locations
+    dispatch(fetchActiveLocations());
+  }, [dispatch]);
 
-    dispatch(fetchDashboardStats({ locationId }));
-  }, [dispatch, currentLocation]);
-
-  // Fetch store comparison data
   useEffect(() => {
-    const fetchStoreComparison = async () => {
-      try {
-        const response = await locationService.getLocations({
-          page: 0,
-          size: 1000,
-          status: 'ACTIVE'
-        });
-        const locations = response.data?.content || response.data?.data || response.data || [];
+    // Set default store comparison locations to all stores (not warehouses) when locations are loaded
+    if (activeLocations.length > 0 && selectedStoreComparisonLocationIds.length === 0) {
+      const storeIds = activeLocations
+        .filter(loc => loc.type === 'STORE')
+        .map(loc => loc.id);
+      setSelectedStoreComparisonLocationIds(storeIds);
+    }
+  }, [activeLocations, selectedStoreComparisonLocationIds.length]);
 
-        // Filter only stores (exclude warehouses)
-        const storesOnly = locations.filter(location => location.type === 'STORE');
+  useEffect(() => {
+    // Fetch product inventory by location when product types are selected
+    if (selectedProductTypes.length > 0) {
+      dispatch(fetchProductInventoryByLocation(selectedProductTypes));
+    }
+  }, [dispatch, selectedProductTypes]);
 
-        // Fetch stats for each store
-        const comparisonData = await Promise.all(
-          storesOnly.map(async (location) => {
-            try {
-              const statsResponse = await dispatch(fetchDashboardStats({ locationId: location.id })).unwrap();
-              return {
-                id: location.id,
-                name: location.name,
-                type: location.type,
-                totalSales: statsResponse?.totalSales || 0,
-                salesCount: statsResponse?.salesCount || 0,
-                totalProducts: statsResponse?.totalProductsInStock || 0,
-              };
-            } catch (error) {
-              return {
-                id: location.id,
-                name: location.name,
-                type: location.type,
-                totalSales: 0,
-                salesCount: 0,
-                totalProducts: 0,
-              };
-            }
-          })
-        );
+  useEffect(() => {
+    // Fetch sales trend when on Sales tab and custom date range is set
+    if (currentTab === 1 && debouncedStartDate && debouncedEndDate) {
+      const params = {
+        startDate: debouncedStartDate,
+        endDate: debouncedEndDate,
+        period: trendPeriod,
+        ...(debouncedLocationIds.length > 0 && { locationIds: debouncedLocationIds }),
+      };
+      dispatch(fetchSalesTrend(params));
+    }
+  }, [dispatch, currentTab, debouncedStartDate, debouncedEndDate, trendPeriod, debouncedLocationIds]);
 
-        setStoreComparison(comparisonData.sort((a, b) => b.totalSales - a.totalSales));
-      } catch (error) {
-        // Error handled silently
+  useEffect(() => {
+    // Fetch statistics when filters change
+    const getDateRangeParams = () => {
+      const today = new Date();
+
+      switch (debouncedDateRange) {
+        case DATE_RANGE_OPTIONS.LAST_MONTH:
+          return {
+            startDate: format(subMonths(today, 1), DATE_FORMATS.API),
+            endDate: format(today, DATE_FORMATS.API),
+          };
+        case DATE_RANGE_OPTIONS.LAST_3_MONTHS:
+          return {
+            startDate: format(subMonths(today, 3), DATE_FORMATS.API),
+            endDate: format(today, DATE_FORMATS.API),
+          };
+        case DATE_RANGE_OPTIONS.LAST_YEAR:
+          return {
+            startDate: format(subYears(today, 1), DATE_FORMATS.API),
+            endDate: format(today, DATE_FORMATS.API),
+          };
+        case DATE_RANGE_OPTIONS.ALL_TIME:
+        default:
+          return {};
       }
     };
 
-    fetchStoreComparison();
-  }, [dispatch]);
+    const params = {
+      ...(debouncedLocationIds.length > 0 && { locationIds: debouncedLocationIds }),
+      ...getDateRangeParams(),
+    };
+    dispatch(fetchDashboardStats(params));
 
-  const formatCurrency = (value) => {
-    return `${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`;
+    // Fetch additional stats for Overview tab when on tab 0
+    if (currentTab === 0) {
+      const dateParams = getDateRangeParams();
+      dispatch(fetchProductAnalytics(dateParams));
+    }
+
+    // Fetch additional stats for Sales tab when on tab 1
+    if (currentTab === 1) {
+      const dateParams = getDateRangeParams();
+      dispatch(fetchProductAnalytics(dateParams));
+      dispatch(fetchStoreComparison(dateParams));
+      dispatch(fetchUserSalesStatistics(dateParams));
+    }
+
+    // Fetch store comparison for Store Comparison tab when on tab 2
+    if (currentTab === 2) {
+      const dateParams = getDateRangeParams();
+      dispatch(fetchStoreComparison(dateParams));
+    }
+
+    // Fetch user sales statistics for User Comparison tab when on tab 3
+    if (currentTab === 3) {
+      const dateParams = getDateRangeParams();
+      dispatch(fetchUserSalesStatistics(dateParams));
+    }
+  }, [dispatch, debouncedLocationIds, debouncedDateRange, currentTab]);
+
+  const handleLocationChange = (event, newLocationIds) => {
+    setSelectedLocationIds(newLocationIds);
+  };
+
+  const handleDateRangeChange = (event, newDateRange) => {
+    if (newDateRange !== null) {
+      setSelectedDateRange(newDateRange);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedLocationIds.length === activeLocations.length) {
+      setSelectedLocationIds([]);
+    } else {
+      setSelectedLocationIds(activeLocations.map(loc => loc.id));
+    }
+  };
+
+  const handleSelectWarehouses = () => {
+    setSelectedLocationIds(activeLocations.filter(loc => loc.type === 'WAREHOUSE').map(loc => loc.id));
+  };
+
+  const handleSelectStores = () => {
+    setSelectedLocationIds(activeLocations.filter(loc => loc.type === 'STORE').map(loc => loc.id));
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setCurrentTab(newValue);
+  };
+
+  // Store comparison location handlers
+  const handleStoreComparisonLocationChange = (event, newLocationIds) => {
+    setSelectedStoreComparisonLocationIds(newLocationIds);
+  };
+
+  const handleStoreComparisonSelectAll = () => {
+    if (selectedStoreComparisonLocationIds.length === activeLocations.length) {
+      setSelectedStoreComparisonLocationIds([]);
+    } else {
+      setSelectedStoreComparisonLocationIds(activeLocations.map(loc => loc.id));
+    }
+  };
+
+  const handleStoreComparisonSelectWarehouses = () => {
+    setSelectedStoreComparisonLocationIds(activeLocations.filter(loc => loc.type === 'WAREHOUSE').map(loc => loc.id));
+  };
+
+  const handleStoreComparisonSelectStores = () => {
+    setSelectedStoreComparisonLocationIds(activeLocations.filter(loc => loc.type === 'STORE').map(loc => loc.id));
+  };
+
+  const handleProductTypesChange = (event, newValue) => {
+    setSelectedProductTypes(newValue);
   };
 
   return (
-    <Container maxWidth="xl">
-      <Box sx={{ mb: 3 }}>
+    <Box sx={{ width: '100%', maxWidth: '100vw', px: 0 }}>
+      <Box sx={{ mb: 3, px: { xs: 2, md: 3 } }}>
         <Typography variant="h4" sx={{ fontWeight: 600 }}>
           Statystyki
         </Typography>
       </Box>
 
       {/* Welcome Message */}
-      <Paper sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-        <Typography variant="h5" sx={{ mb: 1, color: 'white', fontWeight: 600 }}>
-          Przegląd statystyk
-        </Typography>
-        <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)' }}>
-          Analizuj wydajność sprzedaży i zapasów w sieci salonów optycznych.
-        </Typography>
-      </Paper>
-
-      {/* Main Statistics Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {/* Total Sales */}
-        <Grid item xs={12} sm={6} md={4} lg={2}>
-          <Card sx={{ cursor: 'pointer', height: '100%' }} onClick={() => navigate('/sales')}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 2,
-                    bgcolor: 'success.light',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <DollarSign size={24} color="#fff" />
-                </Box>
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {formatCurrency(stats?.totalSales)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Łączna sprzedaż
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Number of Sales */}
-        <Grid item xs={12} sm={6} md={4} lg={2}>
-          <Card sx={{ cursor: 'pointer', height: '100%' }} onClick={() => navigate('/sales')}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 2,
-                    bgcolor: 'info.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <ShoppingCart size={24} color="#fff" />
-                </Box>
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {stats?.salesCount || 0}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Liczba sprzedaży
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Transfers */}
-        <Grid item xs={12} sm={6} md={4} lg={2}>
-          <Card sx={{ cursor: 'pointer', height: '100%' }} onClick={() => navigate('/inventory/transfers')}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 2,
-                    bgcolor: 'warning.light',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <ArrowLeftRight size={24} color="#fff" />
-                </Box>
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {stats?.pendingTransfers || 0}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Aktywne transfery
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Total Products */}
-        <Grid item xs={12} sm={6} md={4} lg={2}>
-          <Card sx={{ cursor: 'pointer', height: '100%' }} onClick={() => navigate('/inventory')}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 2,
-                    bgcolor: 'primary.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Package size={24} color="#fff" />
-                </Box>
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {stats?.totalProductsInStock || 0}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Wszystkie produkty
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Unique Frame Models */}
-        <Grid item xs={12} sm={6} md={4} lg={2}>
-          <Card sx={{ cursor: 'pointer', height: '100%' }} onClick={() => navigate('/inventory/frames/unique')}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 2,
-                    bgcolor: 'secondary.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Glasses size={24} color="#fff" />
-                </Box>
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {stats?.uniqueFrameModels || 0}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Unikalne modele opraw
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Inventory Aging */}
-        <Grid item xs={12} sm={6} md={4} lg={2}>
-          <Card sx={{ cursor: 'pointer', height: '100%' }} onClick={() => navigate('/inventory/aging')}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 2,
-                    bgcolor: 'error.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Package size={24} color="#fff" />
-                </Box>
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {stats?.inventoryAgingCount || 0}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Zalegający towar (&gt;2 lata)
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid >
-
-      {/* Sales by Product Type */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-          Sprzedaż wg typu produktu
-        </Typography>
-        {stats?.salesByType && stats.salesByType.length > 0 ? (
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-            {stats.salesByType.map((item) => (
-              <Box key={item.type} sx={{ flex: '1 1 200px', minWidth: 200 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {PRODUCT_TYPE_LABELS[item.type] || item.type}
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {formatCurrency(item.total)}
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{
-                    width: '100%',
-                    height: 10,
-                    bgcolor: 'grey.200',
-                    borderRadius: 1,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: `${(item.total / (stats.totalSales || 1)) * 100}%`,
-                      height: '100%',
-                      bgcolor: 'primary.main',
-                      borderRadius: 1,
-                    }}
-                  />
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            Brak danych sprzedażowych za ten okres
+      <Box sx={{ px: { xs: 2, md: 3 } }}>
+        <Paper sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+          <Typography variant="h5" sx={{ mb: 1, color: 'white', fontWeight: 600 }}>
+            Przegląd statystyk
           </Typography>
-        )}
-      </Paper>
-
-      {/* Sales by Brand */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-          Sprzedaż wg marki
-        </Typography>
-        {stats?.salesByBrand && stats.salesByBrand.length > 0 ? (
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-            {stats.salesByBrand.slice(0, 10).map((item, index) => (
-              <Box key={index} sx={{ flex: '1 1 200px', minWidth: 200 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {item.brand || 'Nieznana marka'}
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {formatCurrency(item.totalSales)}
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{
-                    width: '100%',
-                    height: 10,
-                    bgcolor: 'grey.200',
-                    borderRadius: 1,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: `${(item.totalSales / (stats.totalSales || 1)) * 100}%`,
-                      height: '100%',
-                      bgcolor: 'secondary.main',
-                      borderRadius: 1,
-                    }}
-                  />
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            Brak danych sprzedażowych za ten okres
+          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+            Analizuj wydajność sprzedaży i zapasów w sieci salonów optycznych.
           </Typography>
-        )}
-      </Paper>
+        </Paper>
+      </Box>
 
-      {/* Store Comparison */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-          Porównanie salonów
-        </Typography>
-        {storeComparison.length > 0 ? (
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 600 }}>Salon</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Łączna sprzedaż</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Liczba sprzedaży</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Produkty w magazynie</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Udział w sprzedaży</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {storeComparison.map((store) => {
-                  const totalRevenue = storeComparison.reduce((sum, s) => sum + s.totalSales, 0);
-                  const salesPercentage = totalRevenue > 0 ? (store.totalSales / totalRevenue) * 100 : 0;
+      {/* Filters Section */}
+      <Box sx={{ px: { xs: 2, md: 3 } }}>
+        <StatisticsFilters
+          currentTab={currentTab}
+          selectedLocationIds={selectedLocationIds}
+          onLocationChange={handleLocationChange}
+          activeLocations={activeLocations}
+          onSelectAll={handleSelectAll}
+          onSelectWarehouses={handleSelectWarehouses}
+          onSelectStores={handleSelectStores}
+          selectedDateRange={selectedDateRange}
+          onDateRangeChange={handleDateRangeChange}
+          selectedStoreComparisonLocationIds={selectedStoreComparisonLocationIds}
+          onStoreComparisonLocationChange={handleStoreComparisonLocationChange}
+          onStoreComparisonSelectAll={handleStoreComparisonSelectAll}
+          onStoreComparisonSelectWarehouses={handleStoreComparisonSelectWarehouses}
+          onStoreComparisonSelectStores={handleStoreComparisonSelectStores}
+          isLoading={isLoading}
+        />
+      </Box>
 
-                  return (
-                    <TableRow key={store.id} hover>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {store.name}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {formatCurrency(store.totalSales)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2">
-                          {store.salesCount}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2">
-                          {store.totalProducts}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Box
-                            sx={{
-                              flex: 1,
-                              height: 8,
-                              bgcolor: 'grey.200',
-                              borderRadius: 1,
-                              overflow: 'hidden',
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                width: `${salesPercentage}%`,
-                                height: '100%',
-                                bgcolor: 'primary.main',
-                                borderRadius: 1,
-                              }}
-                            />
-                          </Box>
-                          <Typography variant="caption" sx={{ minWidth: 45, textAlign: 'right' }}>
-                            {salesPercentage.toFixed(1)}%
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        ) : (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="body2" color="text.secondary">
-              Brak danych do porównania
-            </Typography>
-          </Box>
+      {/* Tabs */}
+      <Box sx={{ px: { xs: 2, md: 3 } }}>
+        <Paper sx={{ mb: 3 }}>
+          <Tabs
+            value={currentTab}
+            onChange={handleTabChange}
+            aria-label="zakładki statystyk"
+            sx={{
+              borderBottom: 1,
+              borderColor: 'divider',
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontSize: '1rem',
+                fontWeight: 500,
+                minHeight: 56,
+              },
+            }}
+          >
+            <Tab label="Przegląd" />
+            <Tab label="Sprzedaż" />
+            <Tab label="Porównanie salonów" />
+            <Tab label="Porównanie użytkowników" />
+          </Tabs>
+        </Paper>
+      </Box>
+
+      {/* Tab Content */}
+      <Box sx={{ px: { xs: 2, md: 3 } }}>
+        {currentTab === 0 && (
+          isLoading ? (
+            <OverviewTabSkeleton />
+          ) : (
+            <OverviewTab
+              stats={stats}
+              productAnalytics={productAnalytics}
+            />
+          )
         )}
-      </Paper>
-    </Container >
+
+        {currentTab === 1 && (
+          isLoading ? (
+            <SalesTabSkeleton />
+          ) : (
+            <SalesTab
+              customStartDate={customStartDate}
+              customEndDate={customEndDate}
+              onStartDateChange={setCustomStartDate}
+              onEndDateChange={setCustomEndDate}
+              trendPeriod={trendPeriod}
+              onTrendPeriodChange={setTrendPeriod}
+              trendChartType={trendChartType}
+              onTrendChartTypeChange={setTrendChartType}
+              salesTrend={salesTrend?.trendData}
+              stats={stats}
+              productAnalytics={productAnalytics}
+              storeComparison={storeComparison}
+            />
+          )
+        )}
+
+        {currentTab === 2 && (
+          isLoading ? (
+            <StoreComparisonTabSkeleton />
+          ) : (
+            <StoreComparisonTab
+              selectedStoreComparisonLocationIds={selectedStoreComparisonLocationIds}
+              storeComparison={storeComparison}
+              productInventoryByLocation={productInventoryByLocation}
+              productInventoryLoading={productInventoryLoading}
+              selectedProductTypes={selectedProductTypes}
+              onProductTypesChange={handleProductTypesChange}
+            />
+          )
+        )}
+
+        {currentTab === 3 && (
+          isLoading ? (
+            <UserComparisonTabSkeleton />
+          ) : (
+            <UserComparisonTab
+              userSalesStatistics={userSalesStatistics}
+            />
+          )
+        )}
+      </Box>
+    </Box>
   );
 }
 

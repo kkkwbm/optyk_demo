@@ -102,9 +102,9 @@ export const updateProduct = createAsyncThunk(
 
 export const deleteProduct = createAsyncThunk(
   'products/deleteProduct',
-  async ({ type, id }, { rejectWithValue }) => {
+  async ({ type, id, locationId }, { rejectWithValue }) => {
     try {
-      const response = await productService.deleteProduct(type, id);
+      const response = await productService.deleteProduct(type, id, locationId);
       // Backend returns 204 No Content on success, so response.data will be empty
       if (response.status === 204 || response.data?.success) {
         return { id };

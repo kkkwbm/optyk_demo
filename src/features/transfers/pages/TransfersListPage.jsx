@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -12,8 +12,9 @@ import {
   Grid,
   Typography,
   Divider,
+  InputAdornment,
 } from '@mui/material';
-import { Plus, XCircle, Warehouse, Store, CheckCircle2, Trash2, Eye, Edit } from 'lucide-react';
+import { Plus, XCircle, Warehouse, Store, CheckCircle2, Trash2, Eye, Edit, Search } from 'lucide-react';
 import { formatDate } from '../../../utils/dateFormat';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
@@ -47,6 +48,7 @@ import {
 function TransfersListPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const transfers = useSelector(selectTransfers);
   const loading = useSelector(selectTransfersLoading);
@@ -60,6 +62,8 @@ function TransfersListPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [allPendingTransfers, setAllPendingTransfers] = useState([]);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [sort, setSort] = useState({ sortBy: 'date', sortDirection: 'desc' });
@@ -80,16 +84,26 @@ function TransfersListPage() {
     dispatch(fetchActiveLocations());
   }, [dispatch]);
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // Fetch all pending transfers independently (not affected by history filters)
   useEffect(() => {
     const fetchPendingTransfers = async () => {
       setPendingLoading(true);
       try {
         // Use transferService directly to avoid Redux state conflicts
+        // Fetch more pending transfers to handle larger queues
         const params = {
           status: 'PENDING',
           page: 0,
-          size: 100,
+          size: 500,
         };
 
         const response = await transferService.getTransfers(params);
@@ -122,6 +136,11 @@ function TransfersListPage() {
 
   // Fetch transfer history with filters
   useEffect(() => {
+    // Date validation: ensure startDate is not after endDate
+    if (startDate && endDate && startDate > endDate) {
+      return; // Don't fetch if dates are invalid
+    }
+
     // Map frontend sort field to backend field
     const sortFieldMap = {
       'date': 'transferDate',
@@ -139,6 +158,7 @@ function TransfersListPage() {
       status: statusFilter || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
+      search: debouncedSearchQuery || undefined,
     };
 
     if (currentLocation) {
@@ -146,7 +166,41 @@ function TransfersListPage() {
     } else {
       dispatch(fetchTransfers(params));
     }
-  }, [dispatch, pagination.page, pagination.size, fromLocationFilters, toLocationFilters, statusFilter, startDate, endDate, currentLocation, sort]);
+  }, [dispatch, pagination.page, pagination.size, fromLocationFilters, toLocationFilters, statusFilter, startDate, endDate, debouncedSearchQuery, currentLocation, sort]);
+
+  // Refresh data when navigating back with refresh state
+  useEffect(() => {
+    if (location.state?.refresh) {
+      // Trigger refresh by dispatching fetchTransfers
+      const sortFieldMap = {
+        'date': 'transferDate',
+      };
+      const backendSortField = sortFieldMap[sort.sortBy] || 'transferDate';
+      const sortParam = `${backendSortField},${sort.sortDirection}`;
+
+      const params = {
+        page: pagination.page,
+        size: pagination.size,
+        sort: sortParam,
+        fromLocationIds: fromLocationFilters.length > 0 ? fromLocationFilters.join(',') : undefined,
+        toLocationIds: toLocationFilters.length > 0 ? toLocationFilters.join(',') : undefined,
+        status: statusFilter || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        search: debouncedSearchQuery || undefined,
+      };
+
+      if (currentLocation) {
+        dispatch(fetchTransfersByLocation({ locationId: currentLocation.id, params }));
+      } else {
+        dispatch(fetchTransfers(params));
+      }
+
+      // Clear the state to prevent refresh on subsequent renders
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   const hasPermission = (permission) => {
     return PERMISSIONS[permission]?.includes(currentUser?.role);
@@ -208,7 +262,7 @@ function TransfersListPage() {
       }
 
       // Refresh pending transfers using transferService directly
-      const response = await transferService.getTransfers({ status: 'PENDING', page: 0, size: 100 });
+      const response = await transferService.getTransfers({ status: 'PENDING', page: 0, size: 500 });
       if (response.data.success) {
         const result = response.data.data;
         const pendingData = result.content || result || [];
@@ -232,6 +286,7 @@ function TransfersListPage() {
         status: statusFilter || undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
+        search: debouncedSearchQuery || undefined,
       };
 
       if (currentLocation) {
@@ -281,7 +336,7 @@ function TransfersListPage() {
       }
 
       // Refresh pending transfers
-      const response = await transferService.getTransfers({ status: 'PENDING', page: 0, size: 100 });
+      const response = await transferService.getTransfers({ status: 'PENDING', page: 0, size: 500 });
       if (response.data.success) {
         const result = response.data.data;
         const pendingData = result.content || result || [];
@@ -305,6 +360,7 @@ function TransfersListPage() {
         status: statusFilter || undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
+        search: debouncedSearchQuery || undefined,
       };
 
       if (currentLocation) {
@@ -325,6 +381,7 @@ function TransfersListPage() {
     setStatusFilter('');
     setStartDate('');
     setEndDate('');
+    setSearchQuery('');
   };
 
   const handleSortChange = (columnId, direction) => {
@@ -664,6 +721,7 @@ function TransfersListPage() {
         <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
           Historia transferów
         </Typography>
+
         {/* Location Filters in Two Columns */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           {/* Source Locations Column */}
@@ -740,6 +798,8 @@ function TransfersListPage() {
             size="small"
             InputLabelProps={{ shrink: true }}
             sx={{ minWidth: 150 }}
+            error={startDate && endDate && startDate > endDate}
+            helperText={startDate && endDate && startDate > endDate ? 'Data początkowa musi być przed końcową' : ''}
           />
           <TextField
             label="Data zakończenia"
@@ -749,12 +809,31 @@ function TransfersListPage() {
             size="small"
             InputLabelProps={{ shrink: true }}
             sx={{ minWidth: 150 }}
+            error={startDate && endDate && startDate > endDate}
           />
-          {(fromLocationFilters.length > 0 || toLocationFilters.length > 0 || statusFilter || startDate || endDate) && (
+          {(fromLocationFilters.length > 0 || toLocationFilters.length > 0 || statusFilter || startDate || endDate || searchQuery) && (
             <Button variant="outlined" onClick={handleClearFilters}>
               Wyczyść filtry
             </Button>
           )}
+        </Box>
+
+        {/* Search Bar */}
+        <Box sx={{ mb: 3 }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Wyszukaj po numerze transferu, nazwie lokalizacji lub użytkowniku..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={20} />
+                </InputAdornment>
+              ),
+            }}
+          />
         </Box>
 
         {/* Tabela transferów */}

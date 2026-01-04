@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import ProtectedRoute from '../shared/components/ProtectedRoute';
 import LoadingSpinner from '../shared/components/LoadingSpinner';
 import AppLayout from '../shared/layouts/AppLayout';
+import StatisticsLayout from '../shared/layouts/StatisticsLayout';
 
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'));
@@ -75,6 +76,26 @@ const router = createBrowserRouter([
     ),
   },
 
+  // Statistics page with standalone layout (ADMIN only)
+  {
+    path: '/statistics',
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <StatisticsLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: (
+          <SuspenseWrapper>
+            <StatisticsPage />
+          </SuspenseWrapper>
+        ),
+      },
+    ],
+  },
+
   // Protected routes with AppLayout
   {
     path: '/',
@@ -88,18 +109,6 @@ const router = createBrowserRouter([
       {
         index: true,
         element: <Navigate to="/inventory" replace />,
-      },
-
-      // Statistics (ADMIN only)
-      {
-        path: 'statistics',
-        element: (
-          <ProtectedRoute allowedRoles={['ADMIN']}>
-            <SuspenseWrapper>
-              <StatisticsPage />
-            </SuspenseWrapper>
-          </ProtectedRoute>
-        ),
       },
 
       // Users Management (ADMIN, OWNER only)

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -11,8 +11,9 @@ import {
   Chip,
   Typography,
   Alert,
+  InputAdornment,
 } from '@mui/material';
-import { Plus, Eye, XCircle } from 'lucide-react';
+import { Plus, Eye, XCircle, Search } from 'lucide-react';
 import { formatDate } from '../../../utils/dateFormat';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
@@ -41,6 +42,7 @@ import {
 function SalesListPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const sales = useSelector(selectSales);
   const loading = useSelector(selectSalesLoading);
@@ -53,6 +55,8 @@ function SalesListPage() {
   const [productTypeFilters, setProductTypeFilters] = useState([]); // Array of selected product types
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [confirmDialog, setConfirmDialog] = useState({ open: false, sale: null });
   const [sort, setSort] = useState({ sortBy: 'date', sortDirection: 'desc' });
 
@@ -65,7 +69,21 @@ function SalesListPage() {
     dispatch(fetchActiveLocations());
   }, [dispatch]);
 
+  // Debounce search query
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    // Date validation: ensure startDate is not after endDate
+    if (startDate && endDate && startDate > endDate) {
+      return; // Don't fetch if dates are invalid
+    }
+
     // Filter by location: if "ALL_STORES" is selected or no location, send undefined to get all sales
     const locationId = (currentLocation?.id === 'ALL_STORES' || !currentLocation)
       ? undefined
@@ -87,9 +105,43 @@ function SalesListPage() {
       productTypes: productTypeFilters.length > 0 ? productTypeFilters.join(',') : undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
+      search: debouncedSearchQuery || undefined,
     };
     dispatch(fetchSales(params));
-  }, [dispatch, pagination.page, pagination.size, currentLocation, statusFilters, productTypeFilters, startDate, endDate, sort]);
+  }, [dispatch, pagination.page, pagination.size, currentLocation, statusFilters, productTypeFilters, startDate, endDate, debouncedSearchQuery, sort]);
+
+  // Refresh data when navigating back with refresh state
+  useEffect(() => {
+    if (location.state?.refresh) {
+      // Trigger refresh by dispatching fetchSales
+      const locationId = (currentLocation?.id === 'ALL_STORES' || !currentLocation)
+        ? undefined
+        : currentLocation.id;
+
+      const getSortField = () => {
+        if (sort.sortBy === 'date') return 'saleDate';
+        if (sort.sortBy === 'total') return 'totalAmount';
+        return 'saleDate';
+      };
+
+      const params = {
+        page: pagination.page,
+        size: pagination.size,
+        sort: `${getSortField()},${sort.sortDirection}`,
+        locationId,
+        statuses: statusFilters.length > 0 ? statusFilters.join(',') : undefined,
+        productTypes: productTypeFilters.length > 0 ? productTypeFilters.join(',') : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        search: debouncedSearchQuery || undefined,
+      };
+      dispatch(fetchSales(params));
+
+      // Clear the state to prevent refresh on subsequent renders
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   const hasPermission = (permission) => {
     return PERMISSIONS[permission]?.includes(currentUser?.role);
@@ -165,6 +217,7 @@ function SalesListPage() {
         productTypes: productTypeFilters.length > 0 ? productTypeFilters.join(',') : undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
+        search: debouncedSearchQuery || undefined,
       }));
     } catch (error) {
       toast.error(error || 'Nie udało się usunąć sprzedaży');
@@ -181,6 +234,7 @@ function SalesListPage() {
     setProductTypeFilters([]);
     setStartDate('');
     setEndDate('');
+    setSearchQuery('');
   };
 
   const toggleStatusFilter = (status) => {
@@ -243,6 +297,17 @@ function SalesListPage() {
       label: 'Lokalizacja',
       sortable: false,
       render: (row) => row.location?.name || '-',
+    },
+    {
+      id: 'customer',
+      label: 'Klient',
+      sortable: false,
+      render: (row) => {
+        const firstName = row.customerFirstName || '';
+        const lastName = row.customerLastName || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+        return fullName || '-';
+      },
     },
     {
       id: 'user',
@@ -411,6 +476,8 @@ function SalesListPage() {
             size="small"
             InputLabelProps={{ shrink: true }}
             sx={{ minWidth: 150 }}
+            error={startDate && endDate && startDate > endDate}
+            helperText={startDate && endDate && startDate > endDate ? 'Data początkowa musi być przed końcową' : ''}
           />
           <TextField
             label="Data końcowa"
@@ -420,13 +487,36 @@ function SalesListPage() {
             size="small"
             InputLabelProps={{ shrink: true }}
             sx={{ minWidth: 150 }}
+            error={startDate && endDate && startDate > endDate}
           />
-          {(statusFilters.length > 0 || productTypeFilters.length > 0 || startDate || endDate) && (
+        </Box>
+
+        {/* Search Bar */}
+        <Box sx={{ mb: 3 }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Wyszukaj po numerze sprzedaży, kliencie, sprzedawcy lub lokalizacji..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={20} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
+
+        {/* Clear Filters Button */}
+        {(statusFilters.length > 0 || productTypeFilters.length > 0 || startDate || endDate || searchQuery) && (
+          <Box sx={{ mb: 3 }}>
             <Button variant="outlined" onClick={handleClearFilters}>
               Wyczyść filtry
             </Button>
-          )}
-        </Box>
+          </Box>
+        )}
 
         {/* Tabela sprzedaży */}
         <DataTable

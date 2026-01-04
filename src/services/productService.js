@@ -69,11 +69,13 @@ export const productService = {
    * Delete product (soft delete)
    * @param {string} type - Product type
    * @param {string} id - Product ID
+   * @param {string} locationId - Optional location ID for history tracking
    * @returns {Promise} Response with success message
    */
-  deleteProduct: (type, id) => {
+  deleteProduct: (type, id, locationId = null) => {
     const endpoint = PRODUCT_ENDPOINTS[type];
-    return api.delete(`${endpoint}/${id}`);
+    const params = locationId ? { locationId } : {};
+    return api.delete(`${endpoint}/${id}`, { params });
   },
 
   /**

@@ -85,10 +85,8 @@ export const tokenManager = {
         }
       }, timeoutDuration);
 
-      console.log(`Token expiration timer set for ${timeoutDuration}ms`);
-
     } catch (error) {
-      console.error('Error decoding token for expiration timer:', error);
+      // Error decoding token for expiration timer
     }
   }
 };

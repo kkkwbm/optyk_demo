@@ -1,0 +1,2096 @@
+import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import {
+  Typography,
+  Paper,
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  ToggleButtonGroup,
+  ToggleButton,
+  Button,
+  Tabs,
+  Tab,
+} from '@mui/material';
+import {
+  Package,
+  ShoppingCart,
+  ArrowLeftRight,
+  DollarSign,
+  Glasses,
+  Sun,
+  Contact,
+  Droplet,
+  ShoppingBag,
+} from 'lucide-react';
+import { format, subMonths, subYears } from 'date-fns';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LabelList,
+} from 'recharts';
+import {
+  fetchDashboardStats,
+  selectDashboardStats,
+  fetchProductAnalytics,
+  selectProductAnalytics,
+  fetchStoreComparison,
+  selectStoreComparison,
+  fetchUserSalesStatistics,
+  selectUserSalesStatistics,
+  fetchProductInventoryByLocation,
+  selectProductInventoryByLocation,
+  fetchSalesTrend,
+  selectSalesTrend,
+} from '../statisticsSlice';
+import { fetchActiveLocations, selectActiveLocations } from '../../locations/locationsSlice';
+import { DATE_FORMATS } from '../../../constants';
+import DateRangePicker from '../components/DateRangePicker';
+import SalesTrendChart from '../components/SalesTrendChart';
+
+const DATE_RANGE_OPTIONS = {
+  ALL_TIME: 'all_time',
+  LAST_MONTH: 'last_month',
+  LAST_3_MONTHS: 'last_3_months',
+  LAST_YEAR: 'last_year',
+};
+
+function DashboardPage() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const stats = useSelector(selectDashboardStats);
+  const activeLocations = useSelector(selectActiveLocations);
+  const productAnalytics = useSelector(selectProductAnalytics);
+  const storeComparison = useSelector(selectStoreComparison);
+  const userSalesStatistics = useSelector(selectUserSalesStatistics);
+  const productInventoryByLocation = useSelector(selectProductInventoryByLocation);
+  const salesTrend = useSelector(selectSalesTrend);
+
+  // Filter values
+  const [selectedLocationIds, setSelectedLocationIds] = useState([]);
+  const [selectedDateRange, setSelectedDateRange] = useState(DATE_RANGE_OPTIONS.ALL_TIME);
+
+  // Tab state
+  const [currentTab, setCurrentTab] = useState(0);
+
+  // Product type inventory chart state
+  const [selectedProductTypes, setSelectedProductTypes] = useState([
+    'FRAME',
+    'SUNGLASSES',
+    'CONTACT_LENS',
+    'SOLUTION',
+    'OTHER'
+  ]);
+
+  // Brand chart state
+  const [brandDisplayCount, setBrandDisplayCount] = useState(10);
+
+  // Store comparison tab state
+  const [selectedStoreComparisonLocationIds, setSelectedStoreComparisonLocationIds] = useState([]);
+
+  // Sales trend chart state - default to last year
+  const [customStartDate, setCustomStartDate] = useState(() =>
+    format(subYears(new Date(), 1), DATE_FORMATS.API)
+  );
+  const [customEndDate, setCustomEndDate] = useState(() =>
+    format(new Date(), DATE_FORMATS.API)
+  );
+  const [trendPeriod, setTrendPeriod] = useState('month');
+  const [trendChartType, setTrendChartType] = useState('line');
+
+  useEffect(() => {
+    // Fetch active locations
+    dispatch(fetchActiveLocations());
+  }, [dispatch]);
+
+  useEffect(() => {
+    // Fetch product inventory by location when product types are selected
+    if (selectedProductTypes.length > 0) {
+      dispatch(fetchProductInventoryByLocation(selectedProductTypes));
+    }
+  }, [dispatch, selectedProductTypes]);
+
+  useEffect(() => {
+    // Fetch sales trend when on Sales tab and custom date range is set
+    if (currentTab === 1 && customStartDate && customEndDate) {
+      const params = {
+        startDate: customStartDate,
+        endDate: customEndDate,
+        period: trendPeriod,
+        ...(selectedLocationIds.length > 0 && { locationIds: selectedLocationIds }),
+      };
+      dispatch(fetchSalesTrend(params));
+    }
+  }, [dispatch, currentTab, customStartDate, customEndDate, trendPeriod, selectedLocationIds]);
+
+  useEffect(() => {
+    // Fetch statistics when filters change
+    const getDateRangeParams = () => {
+      const today = new Date();
+
+      switch (selectedDateRange) {
+        case DATE_RANGE_OPTIONS.LAST_MONTH:
+          return {
+            startDate: format(subMonths(today, 1), DATE_FORMATS.API),
+            endDate: format(today, DATE_FORMATS.API),
+          };
+        case DATE_RANGE_OPTIONS.LAST_3_MONTHS:
+          return {
+            startDate: format(subMonths(today, 3), DATE_FORMATS.API),
+            endDate: format(today, DATE_FORMATS.API),
+          };
+        case DATE_RANGE_OPTIONS.LAST_YEAR:
+          return {
+            startDate: format(subYears(today, 1), DATE_FORMATS.API),
+            endDate: format(today, DATE_FORMATS.API),
+          };
+        case DATE_RANGE_OPTIONS.ALL_TIME:
+        default:
+          return {};
+      }
+    };
+
+    const params = {
+      ...(selectedLocationIds.length > 0 && { locationIds: selectedLocationIds }),
+      ...getDateRangeParams(),
+    };
+    dispatch(fetchDashboardStats(params));
+
+    // Fetch additional stats for Overview tab when on tab 0
+    if (currentTab === 0) {
+      const dateParams = getDateRangeParams();
+      dispatch(fetchProductAnalytics(dateParams));
+    }
+
+    // Fetch additional stats for Sales tab when on tab 1
+    if (currentTab === 1) {
+      const dateParams = getDateRangeParams();
+      dispatch(fetchProductAnalytics(dateParams));
+      dispatch(fetchStoreComparison(dateParams));
+      dispatch(fetchUserSalesStatistics(dateParams));
+    }
+
+    // Fetch store comparison for Store Comparison tab when on tab 2
+    if (currentTab === 2) {
+      const dateParams = getDateRangeParams();
+      dispatch(fetchStoreComparison(dateParams));
+    }
+
+    // Fetch user sales statistics for User Comparison tab when on tab 3
+    if (currentTab === 3) {
+      const dateParams = getDateRangeParams();
+      dispatch(fetchUserSalesStatistics(dateParams));
+    }
+  }, [dispatch, selectedLocationIds, selectedDateRange, currentTab]);
+
+  const handleLocationChange = (event, newLocationIds) => {
+    setSelectedLocationIds(newLocationIds);
+  };
+
+  const handleDateRangeChange = (event, newDateRange) => {
+    if (newDateRange !== null) {
+      setSelectedDateRange(newDateRange);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedLocationIds.length === activeLocations.length) {
+      setSelectedLocationIds([]);
+    } else {
+      setSelectedLocationIds(activeLocations.map(loc => loc.id));
+    }
+  };
+
+  const handleSelectWarehouses = () => {
+    setSelectedLocationIds(activeLocations.filter(loc => loc.type === 'WAREHOUSE').map(loc => loc.id));
+  };
+
+  const handleSelectStores = () => {
+    setSelectedLocationIds(activeLocations.filter(loc => loc.type === 'STORE').map(loc => loc.id));
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setCurrentTab(newValue);
+  };
+
+  // Store comparison location handlers
+  const handleStoreComparisonLocationChange = (event, newLocationIds) => {
+    setSelectedStoreComparisonLocationIds(newLocationIds);
+  };
+
+  const handleStoreComparisonSelectAll = () => {
+    if (selectedStoreComparisonLocationIds.length === activeLocations.length) {
+      setSelectedStoreComparisonLocationIds([]);
+    } else {
+      setSelectedStoreComparisonLocationIds(activeLocations.map(loc => loc.id));
+    }
+  };
+
+  const handleStoreComparisonSelectWarehouses = () => {
+    setSelectedStoreComparisonLocationIds(activeLocations.filter(loc => loc.type === 'WAREHOUSE').map(loc => loc.id));
+  };
+
+  const handleStoreComparisonSelectStores = () => {
+    setSelectedStoreComparisonLocationIds(activeLocations.filter(loc => loc.type === 'STORE').map(loc => loc.id));
+  };
+
+  const formatCurrency = (value) => {
+    return `${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`;
+  };
+
+  // Product type options
+  const productTypeOptions = [
+    { value: 'FRAME', label: 'Oprawki', icon: <Glasses size={20} /> },
+    { value: 'SUNGLASSES', label: 'Okulary przeciwsłoneczne', icon: <Sun size={20} /> },
+    { value: 'CONTACT_LENS', label: 'Soczewki kontaktowe', icon: <Contact size={20} /> },
+    { value: 'SOLUTION', label: 'Płyny', icon: <Droplet size={20} /> },
+    { value: 'OTHER', label: 'Inne produkty', icon: <ShoppingBag size={20} /> },
+  ];
+
+  // Prepare chart data for product type inventory
+  const prepareProductTypeInventoryChartData = () => {
+    if (!productInventoryByLocation || !productInventoryByLocation.locations) {
+      return [];
+    }
+
+    return productInventoryByLocation.locations.map(location => {
+      const dataPoint = {
+        locationName: location.locationName,
+      };
+
+      // Add each product type's quantity as a separate field
+      productInventoryByLocation.productTypes?.forEach(type => {
+        const quantity = location.productTypeQuantities?.[type] || 0;
+        dataPoint[type] = quantity;
+      });
+
+      return dataPoint;
+    });
+  };
+
+  const productTypeInventoryChartData = prepareProductTypeInventoryChartData();
+
+  // Filter store comparison data based on selected locations
+  const getFilteredStoreComparisonData = () => {
+    if (!storeComparison?.stores) {
+      return [];
+    }
+
+    if (selectedStoreComparisonLocationIds.length === 0) {
+      return storeComparison.stores;
+    }
+
+    return storeComparison.stores.filter(store =>
+      selectedStoreComparisonLocationIds.includes(store.locationId)
+    );
+  };
+
+  // Filter product inventory data based on selected locations
+  const getFilteredProductInventoryData = () => {
+    if (!productInventoryByLocation?.locations) {
+      return [];
+    }
+
+    if (selectedStoreComparisonLocationIds.length === 0) {
+      return productInventoryByLocation.locations.map(location => {
+        const dataPoint = {
+          locationName: location.locationName,
+        };
+
+        productInventoryByLocation.productTypes?.forEach(type => {
+          const quantity = location.productTypeQuantities?.[type] || 0;
+          dataPoint[type] = quantity;
+        });
+
+        return dataPoint;
+      });
+    }
+
+    return productInventoryByLocation.locations
+      .filter(location => selectedStoreComparisonLocationIds.includes(location.locationId))
+      .map(location => {
+        const dataPoint = {
+          locationName: location.locationName,
+        };
+
+        productInventoryByLocation.productTypes?.forEach(type => {
+          const quantity = location.productTypeQuantities?.[type] || 0;
+          dataPoint[type] = quantity;
+        });
+
+        return dataPoint;
+      });
+  };
+
+  // Color and label mapping for product types
+  const productTypeConfig = {
+    'FRAME': { color: '#9c27b0', label: 'Oprawki' },
+    'SUNGLASSES': { color: '#ff6f00', label: 'Okulary przeciwsłoneczne' },
+    'CONTACT_LENS': { color: '#2e7d32', label: 'Soczewki kontaktowe' },
+    'SOLUTION': { color: '#ed6c02', label: 'Płyny' },
+    'OTHER': { color: '#d32f2f', label: 'Inne produkty' },
+  };
+
+  return (
+    <Box sx={{ width: '100%', maxWidth: '100vw', px: 0 }}>
+      <Box sx={{ mb: 3, px: { xs: 2, md: 3 } }}>
+        <Typography variant="h4" sx={{ fontWeight: 600 }}>
+          Statystyki
+        </Typography>
+      </Box>
+
+      {/* Welcome Message */}
+      <Box sx={{ px: { xs: 2, md: 3 } }}>
+        <Paper sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+          <Typography variant="h5" sx={{ mb: 1, color: 'white', fontWeight: 600 }}>
+            Przegląd statystyk
+          </Typography>
+          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+            Analizuj wydajność sprzedaży i zapasów w sieci salonów optycznych.
+          </Typography>
+        </Paper>
+      </Box>
+
+      {/* Filters Section */}
+      <Box sx={{ px: { xs: 2, md: 3 } }}>
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+            Filtry
+          </Typography>
+          <Grid container spacing={3}>
+            {/* Filter: Location - Hidden on Store Comparison tab */}
+            {currentTab !== 2 && (
+              <Grid item xs={12}>
+                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                      Lokalizacje
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {selectedLocationIds.length === 0
+                        ? 'Wszystkie lokalizacje'
+                        : `Wybrano: ${selectedLocationIds.length} lokalizacji`}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={handleSelectAll}
+                      sx={{
+                        textTransform: 'none',
+                        fontSize: '0.75rem',
+                        py: 0.5,
+                        px: 1.5,
+                      }}
+                    >
+                      Wszystko
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={handleSelectWarehouses}
+                      sx={{
+                        textTransform: 'none',
+                        fontSize: '0.75rem',
+                        py: 0.5,
+                        px: 1.5,
+                      }}
+                    >
+                      Wszystkie magazyny
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={handleSelectStores}
+                      sx={{
+                        textTransform: 'none',
+                        fontSize: '0.75rem',
+                        py: 0.5,
+                        px: 1.5,
+                      }}
+                    >
+                      Wszystkie salony
+                    </Button>
+                  </Box>
+                </Box>
+                <ToggleButtonGroup
+                  value={selectedLocationIds}
+                  onChange={handleLocationChange}
+                  aria-label="wybór lokalizacji"
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1
+                  }}
+                >
+                  {activeLocations.map((location) => (
+                    <ToggleButton
+                      key={location.id}
+                      value={location.id}
+                      aria-label={location.name}
+                      sx={{
+                        px: 2,
+                        py: 1,
+                        textTransform: 'none',
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        '&.Mui-selected': {
+                          bgcolor: 'primary.main',
+                          color: 'primary.contrastText',
+                          '&:hover': {
+                            bgcolor: 'primary.dark',
+                          },
+                        },
+                      }}
+                    >
+                      {location.name} ({location.type === 'STORE' ? 'Salon' : 'Magazyn'})
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              </Grid>
+            )}
+
+            {/* Filter: Date Range */}
+            <Grid item xs={12}>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                  Zakres dat
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {selectedDateRange === DATE_RANGE_OPTIONS.ALL_TIME && 'Od zawsze'}
+                  {selectedDateRange === DATE_RANGE_OPTIONS.LAST_MONTH && 'Ostatni miesiąc'}
+                  {selectedDateRange === DATE_RANGE_OPTIONS.LAST_3_MONTHS && 'Ostatnie 3 miesiące'}
+                  {selectedDateRange === DATE_RANGE_OPTIONS.LAST_YEAR && 'Ostatni rok'}
+                </Typography>
+              </Box>
+              <ToggleButtonGroup
+                value={selectedDateRange}
+                exclusive
+                onChange={handleDateRangeChange}
+                aria-label="zakres dat"
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 1
+                }}
+              >
+                <ToggleButton
+                  value={DATE_RANGE_OPTIONS.ALL_TIME}
+                  aria-label="od zawsze"
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                      },
+                    },
+                  }}
+                >
+                  Od zawsze
+                </ToggleButton>
+                <ToggleButton
+                  value={DATE_RANGE_OPTIONS.LAST_MONTH}
+                  aria-label="ostatni miesiąc"
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                      },
+                    },
+                  }}
+                >
+                  Ostatni miesiąc
+                </ToggleButton>
+                <ToggleButton
+                  value={DATE_RANGE_OPTIONS.LAST_3_MONTHS}
+                  aria-label="ostatnie 3 miesiące"
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                      },
+                    },
+                  }}
+                >
+                  Ostatnie 3 miesiące
+                </ToggleButton>
+                <ToggleButton
+                  value={DATE_RANGE_OPTIONS.LAST_YEAR}
+                  aria-label="ostatni rok"
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                      },
+                    },
+                  }}
+                >
+                  Ostatni rok
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Grid>
+          </Grid>
+        </Paper>
+      </Box>
+
+      {/* Tabs */}
+      <Box sx={{ px: { xs: 2, md: 3 } }}>
+        <Paper sx={{ mb: 3 }}>
+          <Tabs
+            value={currentTab}
+            onChange={handleTabChange}
+            aria-label="zakładki statystyk"
+            sx={{
+              borderBottom: 1,
+              borderColor: 'divider',
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontSize: '1rem',
+                fontWeight: 500,
+                minHeight: 56,
+              },
+            }}
+          >
+            <Tab label="Przegląd" />
+            <Tab label="Sprzedaż" />
+            <Tab label="Porównanie salonów" />
+            <Tab label="Porównanie użytkowników" />
+          </Tabs>
+        </Paper>
+      </Box>
+
+      {/* Tab Content */}
+      {currentTab === 0 && (
+        <Box sx={{ px: { xs: 2, md: 3 } }}>
+          {/* Overview Tab - Products, Sales, and Transfers */}
+
+          {/* PRODUCTS SECTION WILL BE HERE */}
+
+          {/* Sales Hierarchy - Total Sales and Sales by Product Type */}
+          <Paper
+            sx={{
+              mb: 3,
+              overflow: 'hidden',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            }}
+          >
+            {/* Sales Header Section */}
+            <Box sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                <Box
+                  sx={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 2,
+                    bgcolor: 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <ShoppingCart size={28} color="#fff" />
+                </Box>
+                <Box>
+                  <Typography variant="h5" sx={{ color: 'white', fontWeight: 600 }}>
+                    Sprzedaż
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                    Podsumowanie i podział według typu produktu
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Main Stats Row */}
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={4}>
+                  <Box
+                    sx={{
+                      p: 2.5,
+                      borderRadius: 2,
+                      bgcolor: 'rgba(255,255,255,0.15)',
+                      backdropFilter: 'blur(10px)',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                      '&:hover': {
+                        bgcolor: 'rgba(255,255,255,0.25)',
+                        transform: 'translateY(-4px)',
+                      },
+                    }}
+                    onClick={() => navigate('/sales')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <DollarSign size={20} color="#fff" />
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+                        Łączna sprzedaż
+                      </Typography>
+                    </Box>
+                    <Typography variant="h3" sx={{ color: 'white', fontWeight: 700 }}>
+                      {formatCurrency(stats?.totalSales)}
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Box
+                    sx={{
+                      p: 2.5,
+                      borderRadius: 2,
+                      bgcolor: 'rgba(255,255,255,0.15)',
+                      backdropFilter: 'blur(10px)',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                      '&:hover': {
+                        bgcolor: 'rgba(255,255,255,0.25)',
+                        transform: 'translateY(-4px)',
+                      },
+                    }}
+                    onClick={() => navigate('/sales')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <ShoppingCart size={20} color="#fff" />
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+                        Liczba sprzedaży
+                      </Typography>
+                    </Box>
+                    <Typography variant="h3" sx={{ color: 'white', fontWeight: 700 }}>
+                      {stats?.salesCount || 0}
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Box
+                    sx={{
+                      p: 2.5,
+                      borderRadius: 2,
+                      bgcolor: 'rgba(255,255,255,0.15)',
+                      backdropFilter: 'blur(10px)',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <ShoppingCart size={20} color="#fff" />
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+                        Średnia wartość
+                      </Typography>
+                    </Box>
+                    <Typography variant="h3" sx={{ color: 'white', fontWeight: 700 }}>
+                      {formatCurrency((stats?.salesCount && stats?.totalSales) ? (stats.totalSales / stats.salesCount) : 0)}
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Box>
+
+            {/* Product Type Breakdown - Nested Section */}
+            <Box sx={{ bgcolor: 'background.paper', p: 3 }}>
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>
+                Podział według typu produktu
+              </Typography>
+
+              <Grid container spacing={2} sx={{ justifyContent: 'stretch' }}>
+                {(() => {
+                  // All product types that should always be displayed
+                  const allProductTypes = ['FRAME', 'SUNGLASSES', 'CONTACT_LENS', 'SOLUTION', 'OTHER'];
+
+                  const getProductTypeLabel = (type) => {
+                    const config = {
+                      'FRAME': 'Oprawki',
+                      'SUNGLASSES': 'Okulary przeciwsłoneczne',
+                      'CONTACT_LENS': 'Soczewki',
+                      'SOLUTION': 'Płyny',
+                      'OTHER': 'Inne produkty',
+                    };
+                    return config[type] || type;
+                  };
+
+                  const getProductTypeIcon = (type) => {
+                    const icons = {
+                      'FRAME': <Glasses size={18} />,
+                      'SUNGLASSES': <Sun size={18} />,
+                      'CONTACT_LENS': <Contact size={18} />,
+                      'SOLUTION': <Droplet size={18} />,
+                      'OTHER': <ShoppingBag size={18} />,
+                    };
+                    return icons[type] || <Package size={18} />;
+                  };
+
+                  const getProductTypeColor = (type) => {
+                    const colors = {
+                      'FRAME': '#9c27b0',
+                      'SUNGLASSES': '#ff6f00',
+                      'CONTACT_LENS': '#2e7d32',
+                      'SOLUTION': '#ed6c02',
+                      'OTHER': '#757575',
+                    };
+                    return colors[type] || '#1976d2';
+                  };
+
+                  // Map all product types and get data from productAnalytics if available
+                  return allProductTypes.map((productType) => {
+                    // Find data for this product type, or use defaults
+                    const typeData = productAnalytics?.salesByProductType?.find(
+                      item => item.productType === productType
+                    ) || {
+                      productType: productType,
+                      totalQuantitySold: 0,
+                      totalRevenue: 0,
+                    };
+
+                    const color = getProductTypeColor(productType);
+
+                    return (
+                      <Grid item xs={12} sm={6} md={2.4} key={productType} sx={{ display: 'flex' }}>
+                        <Paper
+                          variant="outlined"
+                          sx={{
+                            p: 3,
+                            borderRadius: 2,
+                            height: 200,
+                            width: 180,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderColor: color,
+                            bgcolor: `${color}08`,
+                            position: 'relative',
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              top: -12,
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              width: 2,
+                              height: 12,
+                              bgcolor: 'divider',
+                            },
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 56,
+                              height: 56,
+                              borderRadius: 2,
+                              bgcolor: color,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              mb: 2,
+                            }}
+                          >
+                            {getProductTypeIcon(productType)}
+                          </Box>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            align="center"
+                            sx={{
+                              mb: 2,
+                              minHeight: 40,
+                              display: 'flex',
+                              alignItems: 'center',
+                              fontWeight: 500,
+                            }}
+                          >
+                            {getProductTypeLabel(productType)}
+                          </Typography>
+                          <Typography variant="h5" sx={{ fontWeight: 700, color, mb: 0.5 }}>
+                            {typeData.totalQuantitySold || 0} szt.
+                          </Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 600, color }}>
+                            {formatCurrency(typeData.totalRevenue || 0)}
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                    );
+                  });
+                })()}
+              </Grid>
+            </Box>
+          </Paper>
+
+          {/* Transfers Summary - Hierarchical Layout */}
+          <Paper
+            sx={{
+              mb: 3,
+              overflow: 'hidden',
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            }}
+          >
+            {/* Transfers Header Section */}
+            <Box sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                <Box
+                  sx={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 2,
+                    bgcolor: 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <ArrowLeftRight size={28} color="#fff" />
+                </Box>
+                <Box>
+                  <Typography variant="h5" sx={{ color: 'white', fontWeight: 600 }}>
+                    Transfery
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                    Podsumowanie przepływu produktów między lokalizacjami
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Transfers Breakdown - Nested Section */}
+            <Box sx={{ bgcolor: 'background.paper', p: 3 }}>
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>
+                Statystyki transferów
+              </Typography>
+
+              <Grid container spacing={2}>
+                {/* Active Transfers */}
+                <Grid item xs={12} sm={6} md={4}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      height: 120,
+                      width: 180,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderColor: '#ed6c02',
+                      bgcolor: 'rgba(237, 108, 2, 0.04)',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: 2,
+                      },
+                    }}
+                    onClick={() => navigate('/inventory/transfers')}
+                  >
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1.5,
+                        bgcolor: '#ed6c02',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mb: 1,
+                      }}
+                    >
+                      <ArrowLeftRight size={18} color="#fff" />
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#ed6c02' }}>
+                      {stats?.pendingTransfers || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Aktywne transfery
+                    </Typography>
+                  </Paper>
+                </Grid>
+
+                {/* Completed Transfers */}
+                <Grid item xs={12} sm={6} md={4}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      height: 120,
+                      width: 180,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderColor: '#2e7d32',
+                      bgcolor: 'rgba(46, 125, 50, 0.04)',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: 2,
+                      },
+                    }}
+                    onClick={() => navigate('/inventory/transfers')}
+                  >
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1.5,
+                        bgcolor: '#2e7d32',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mb: 1,
+                      }}
+                    >
+                      <ArrowLeftRight size={18} color="#fff" />
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#2e7d32' }}>
+                      {stats?.completedTransfers || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Wykonane transfery
+                    </Typography>
+                  </Paper>
+                </Grid>
+
+                {/* Transferred Products */}
+                <Grid item xs={12} sm={6} md={4}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      height: 120,
+                      width: 180,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderColor: '#1976d2',
+                      bgcolor: 'rgba(25, 118, 210, 0.04)',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1.5,
+                        bgcolor: '#1976d2',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mb: 1,
+                      }}
+                    >
+                      <Package size={18} color="#fff" />
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#1976d2' }}>
+                      {stats?.totalTransferredProducts || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" align="center">
+                      Przeniesione produkty
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Box>
+          </Paper>
+
+          {/* Products Summary - Grouped Hierarchical Layout */}
+          <Paper
+            sx={{
+              mb: 3,
+              overflow: 'hidden',
+              background: 'linear-gradient(135deg, #90a4ae 0%, #b0bec5 100%)',
+            }}
+          >
+            {/* Products Header Section */}
+            <Box sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                <Box
+                  sx={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 2,
+                    bgcolor: 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Package size={28} color="#fff" />
+                </Box>
+                <Box>
+                  <Typography variant="h5" sx={{ color: 'white', fontWeight: 600 }}>
+                    Wszystkie produkty
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                    Podsumowanie asortymentu w magazynie
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Main Stats Row */}
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6}>
+                  <Box sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(10px)',
+                  }}>
+                    <Typography variant="h3" sx={{ color: 'white', fontWeight: 700 }}>
+                      {stats?.totalProductsInStock || 0}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                      Łączna liczba produktów
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Box sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(10px)',
+                  }}>
+                    <Typography variant="h3" sx={{ color: 'white', fontWeight: 700 }}>
+                      {formatCurrency(stats?.totalInventoryValue)}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                      Wartość magazynu
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Box>
+
+            {/* Product Categories - Nested Section */}
+            <Box sx={{ bgcolor: 'background.paper', p: 3 }}>
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>
+                Podział według kategorii
+              </Typography>
+
+              <Grid container spacing={2}>
+                {/* Oprawki - Liczba */}
+                <Grid item xs={6} sm={4} md={2}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      height: 120,
+                      width: 180,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderColor: '#9c27b0',
+                      bgcolor: 'rgba(156, 39, 176, 0.04)',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1.5,
+                        bgcolor: '#9c27b0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mb: 1,
+                      }}
+                    >
+                      <Glasses size={18} color="#fff" />
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#9c27b0' }}>
+                      {stats?.totalFrames || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" align="center">
+                      Oprawki
+                    </Typography>
+                  </Paper>
+                </Grid>
+
+                {/* Oprawki - Unikalne */}
+                <Grid item xs={6} sm={4} md={2}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      height: 120,
+                      width: 180,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderColor: 'secondary.main',
+                      bgcolor: 'rgba(156, 39, 176, 0.04)',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1.5,
+                        bgcolor: 'secondary.main',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mb: 1,
+                      }}
+                    >
+                      <Glasses size={18} color="#fff" />
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: 'secondary.main' }}>
+                      {stats?.uniqueFrameModels || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" align="center">
+                      Unikalne oprawki
+                    </Typography>
+                  </Paper>
+                </Grid>
+
+                {/* Sunglasses */}
+                <Grid item xs={6} sm={4} md={2}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      height: 120,
+                      width: 180,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderColor: '#ff6f00',
+                      bgcolor: 'rgba(255, 111, 0, 0.04)',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1.5,
+                        bgcolor: '#ff6f00',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mb: 1,
+                      }}
+                    >
+                      <Sun size={18} color="#fff" />
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#ff6f00' }}>
+                      {stats?.totalSunglasses || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" align="center">
+                      Okulary przeciwsłoneczne
+                    </Typography>
+                  </Paper>
+                </Grid>
+
+                {/* Contact Lenses */}
+                <Grid item xs={6} sm={4} md={2}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      height: 120,
+                      width: 180,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderColor: '#2e7d32',
+                      bgcolor: 'rgba(46, 125, 50, 0.04)',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1.5,
+                        bgcolor: '#2e7d32',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mb: 1,
+                      }}
+                    >
+                      <Contact size={18} color="#fff" />
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#2e7d32' }}>
+                      {stats?.totalContactLenses || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" align="center">
+                      Soczewki kontaktowe
+                    </Typography>
+                  </Paper>
+                </Grid>
+
+                {/* Solutions */}
+                <Grid item xs={6} sm={4} md={2}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      height: 120,
+                      width: 180,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderColor: '#ed6c02',
+                      bgcolor: 'rgba(237, 108, 2, 0.04)',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1.5,
+                        bgcolor: '#ed6c02',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mb: 1,
+                      }}
+                    >
+                      <Droplet size={18} color="#fff" />
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#ed6c02' }}>
+                      {stats?.totalSolutions || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Płyny
+                    </Typography>
+                  </Paper>
+                </Grid>
+
+                {/* Other Products */}
+                <Grid item xs={6} sm={4} md={2}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      height: 120,
+                      width: 180,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderColor: '#757575',
+                      bgcolor: 'rgba(117, 117, 117, 0.04)',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1.5,
+                        bgcolor: '#757575',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mb: 1,
+                      }}
+                    >
+                      <ShoppingBag size={18} color="#fff" />
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#757575' }}>
+                      {stats?.totalOther || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Inne produkty
+                    </Typography>
+                  </Paper>
+                </Grid>
+
+                {/* Aging Inventory */}
+                <Grid item xs={6} sm={4} md={2}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      height: 120,
+                      width: 180,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderColor: (stats?.inventoryAgingCount || 0) > 0 ? '#ed6c02' : '#2e7d32',
+                      bgcolor: (stats?.inventoryAgingCount || 0) > 0 ? 'rgba(237, 108, 2, 0.04)' : 'rgba(46, 125, 50, 0.04)',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1.5,
+                        bgcolor: (stats?.inventoryAgingCount || 0) > 0 ? '#ed6c02' : '#2e7d32',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mb: 1,
+                      }}
+                    >
+                      <Package size={18} color="#fff" />
+                    </Box>
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        fontWeight: 700,
+                        color: (stats?.inventoryAgingCount || 0) > 0 ? '#ed6c02' : '#2e7d32'
+                      }}
+                    >
+                      {stats?.inventoryAgingCount || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" align="center">
+                      Zalegający towar
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Box>
+          </Paper>
+        </Box>
+      )}
+
+      {/* Sales Tab */}
+      {currentTab === 1 && (
+        <Box sx={{ px: { xs: 2, md: 3 } }}>
+          {/* Sales Trend Chart */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+              Wykres sprzedaży w czasie
+            </Typography>
+            <Box sx={{ mb: 3 }}>
+              <DateRangePicker
+                label="Wybierz zakres dat"
+                startDate={customStartDate}
+                endDate={customEndDate}
+                onStartDateChange={setCustomStartDate}
+                onEndDateChange={setCustomEndDate}
+              />
+            </Box>
+            {customStartDate && customEndDate ? (
+              <SalesTrendChart
+                data={salesTrend}
+                period={trendPeriod}
+                onPeriodChange={setTrendPeriod}
+                chartType={trendChartType}
+                onChartTypeChange={setTrendChartType}
+              />
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 10 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Wybierz zakres dat, aby zobaczyć wykres sprzedaży w czasie
+                </Typography>
+              </Box>
+            )}
+          </Paper>
+
+          {/* Sales by Brand */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  Sprzedaż według marki
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {stats?.salesByBrand?.length > 0
+                    ? `Łącznie ${stats.salesByBrand.length} marek | Wyświetlam top ${Math.min(brandDisplayCount, stats.salesByBrand.length)}`
+                    : 'Brak danych'}
+                </Typography>
+              </Box>
+              {stats?.salesByBrand && stats.salesByBrand.length > 0 && (
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Button
+                    size="small"
+                    variant={brandDisplayCount === 5 ? 'contained' : 'outlined'}
+                    onClick={() => setBrandDisplayCount(5)}
+                    sx={{ textTransform: 'none', minWidth: 70 }}
+                  >
+                    Top 5
+                  </Button>
+                  <Button
+                    size="small"
+                    variant={brandDisplayCount === 10 ? 'contained' : 'outlined'}
+                    onClick={() => setBrandDisplayCount(10)}
+                    sx={{ textTransform: 'none', minWidth: 70 }}
+                  >
+                    Top 10
+                  </Button>
+                  <Button
+                    size="small"
+                    variant={brandDisplayCount === 20 ? 'contained' : 'outlined'}
+                    onClick={() => setBrandDisplayCount(20)}
+                    sx={{ textTransform: 'none', minWidth: 70 }}
+                  >
+                    Top 20
+                  </Button>
+                  <Button
+                    size="small"
+                    variant={brandDisplayCount === 999 ? 'contained' : 'outlined'}
+                    onClick={() => setBrandDisplayCount(999)}
+                    sx={{ textTransform: 'none', minWidth: 90 }}
+                  >
+                    Wszystkie
+                  </Button>
+                </Box>
+              )}
+            </Box>
+            {stats?.salesByBrand && stats.salesByBrand.length > 0 ? (
+              (() => {
+                // Sort brands by totalSales descending
+                const sortedBrands = [...stats.salesByBrand].sort((a, b) => b.totalSales - a.totalSales);
+                const displayedBrands = sortedBrands.slice(0, brandDisplayCount);
+                const totalBrandSales = sortedBrands.reduce((sum, brand) => sum + brand.totalSales, 0);
+
+                return (
+                  <Box sx={{ width: '100%', height: Math.max(400, displayedBrands.length * 40 + 100) }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={displayedBrands}
+                        layout="vertical"
+                        margin={{ top: 5, right: 100, left: 120, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" tickFormatter={(value) => formatCurrency(value)} />
+                        <YAxis
+                          dataKey="brand"
+                          type="category"
+                          width={110}
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => value || 'Nieznana'}
+                        />
+                        <Tooltip
+                          formatter={(value) => formatCurrency(value)}
+                          labelFormatter={(label) => label || 'Nieznana marka'}
+                        />
+                        <Bar
+                          dataKey="totalSales"
+                          fill="#9c27b0"
+                          name="Wartość sprzedaży"
+                          radius={[0, 4, 4, 0]}
+                        >
+                          <LabelList
+                            dataKey="totalSales"
+                            position="right"
+                            formatter={(value) => {
+                              const percentage = ((value / totalBrandSales) * 100).toFixed(1);
+                              return `${formatCurrency(value)} (${percentage}%)`;
+                            }}
+                            style={{ fontSize: '11px', fontWeight: 600 }}
+                          />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                );
+              })()
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Brak danych sprzedażowych za ten okres
+              </Typography>
+            )}
+          </Paper>
+
+          {/* Sales by Product Type */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              Sprzedaż według typów produktów
+            </Typography>
+            {productAnalytics?.salesByProductType && productAnalytics.salesByProductType.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {productAnalytics.salesByProductType.map((typeData, index) => {
+                  // Get product type configuration
+                  const getProductTypeLabel = (type) => {
+                    const config = {
+                      'FRAME': 'Oprawki',
+                      'SUNGLASSES': 'Okulary przeciwsłoneczne',
+                      'CONTACT_LENS': 'Soczewki kontaktowe',
+                      'SOLUTION': 'Płyny',
+                      'OTHER': 'Inne produkty',
+                    };
+                    return config[type] || type;
+                  };
+
+                  const getProductTypeIcon = (type) => {
+                    const icons = {
+                      'FRAME': <Glasses size={20} />,
+                      'SUNGLASSES': <Sun size={20} />,
+                      'CONTACT_LENS': <Contact size={20} />,
+                      'SOLUTION': <Droplet size={20} />,
+                      'OTHER': <ShoppingBag size={20} />,
+                    };
+                    return icons[type] || <Package size={20} />;
+                  };
+
+                  return (
+                    <Box
+                      key={index}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        p: 2,
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'grey.50',
+                        borderRadius: 1,
+                      }}
+                    >
+                      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+                        {getProductTypeIcon(typeData.productType)}
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {getProductTypeLabel(typeData.productType)}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                        <Box sx={{ textAlign: 'right' }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Ilość sprzedana
+                          </Typography>
+                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            {typeData.totalQuantitySold} szt.
+                          </Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'right' }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Przychód
+                          </Typography>
+                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            {formatCurrency(typeData.totalRevenue)}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'right' }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Liczba transakcji
+                          </Typography>
+                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            {typeData.transactionCount}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                  );
+                })}
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Brak danych sprzedażowych produktów za ten okres
+              </Typography>
+            )}
+          </Paper>
+
+          {/* Sales by Locations */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              Sprzedaż według salonów
+            </Typography>
+            {storeComparison?.stores && storeComparison.stores.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {storeComparison.stores.map((store, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      p: 2,
+                      bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'grey.50',
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                        #{store.rank} {store.locationName}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {store.locationType === 'STORE' ? 'Salon' : 'Magazyn'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Liczba sprzedaży
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {store.salesCount}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Łączna sprzedaż
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {formatCurrency(store.totalSales)}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Średnia wartość
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {formatCurrency(store.averageSaleValue)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Brak danych sprzedażowych salonów za ten okres
+              </Typography>
+            )}
+          </Paper>
+        </Box>
+      )}
+
+      {/* Store Comparison Tab */}
+      {currentTab === 2 && (
+        <Box sx={{ px: { xs: 2, md: 3 } }}>
+          {/* Location Filter for Store Comparison */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+              Filtry lokalizacji
+            </Typography>
+            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                  Lokalizacje na wykresach
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {selectedStoreComparisonLocationIds.length === 0
+                    ? 'Wszystkie lokalizacje'
+                    : `Wybrano: ${selectedStoreComparisonLocationIds.length} lokalizacji`}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleStoreComparisonSelectAll}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    py: 0.5,
+                    px: 1.5,
+                  }}
+                >
+                  Wszystko
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleStoreComparisonSelectWarehouses}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    py: 0.5,
+                    px: 1.5,
+                  }}
+                >
+                  Wszystkie magazyny
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleStoreComparisonSelectStores}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    py: 0.5,
+                    px: 1.5,
+                  }}
+                >
+                  Wszystkie salony
+                </Button>
+              </Box>
+            </Box>
+            <ToggleButtonGroup
+              value={selectedStoreComparisonLocationIds}
+              onChange={handleStoreComparisonLocationChange}
+              aria-label="wybór lokalizacji do porównania"
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 1
+              }}
+            >
+              {activeLocations.map((location) => (
+                <ToggleButton
+                  key={location.id}
+                  value={location.id}
+                  aria-label={location.name}
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                      },
+                    },
+                  }}
+                >
+                  {location.name} ({location.type === 'STORE' ? 'Salon' : 'Magazyn'})
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Paper>
+
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, width: '100%' }}>
+            {/* Sales Quantity Chart */}
+            <Paper sx={{ p: 3, flex: 1, minWidth: 0 }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                Ilość sprzedaży w salonach
+              </Typography>
+              {(() => {
+                const filteredStores = getFilteredStoreComparisonData();
+                return filteredStores && filteredStores.length > 0 ? (
+                  (() => {
+                    const totalSalesCount = filteredStores.reduce((sum, store) => sum + store.salesCount, 0);
+
+                    return (
+                      <Box sx={{ width: '100%', height: 450 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={filteredStores}
+                            margin={{ top: 20, right: 20, left: 10, bottom: 50 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="locationName"
+                              angle={-45}
+                              textAnchor="end"
+                              height={80}
+                              interval={0}
+                              tick={{ fontSize: 13 }}
+                            />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend wrapperStyle={{ fontSize: '12px' }} />
+                            <Bar
+                              dataKey="salesCount"
+                              fill="#1976d2"
+                              name="Liczba sprzedaży"
+                              radius={[4, 4, 0, 0]}
+                            >
+                              <LabelList
+                                dataKey="salesCount"
+                                position="top"
+                                formatter={(value) => `${((value / totalSalesCount) * 100).toFixed(1)}%`}
+                                style={{ fontSize: '12px', fontWeight: 600 }}
+                              />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </Box>
+                    );
+                  })()
+                ) : (
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 10 }}>
+                    Brak danych do wyświetlenia
+                  </Typography>
+                );
+              })()}
+            </Paper>
+
+            {/* Sales Value Chart */}
+            <Paper sx={{ p: 3, flex: 1, minWidth: 0 }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                Wartość sprzedaży w salonach
+              </Typography>
+              {(() => {
+                const filteredStores = getFilteredStoreComparisonData();
+                return filteredStores && filteredStores.length > 0 ? (
+                  (() => {
+                    const totalSalesValue = filteredStores.reduce((sum, store) => sum + store.totalSales, 0);
+
+                    return (
+                      <Box sx={{ width: '100%', height: 450 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={filteredStores}
+                            margin={{ top: 20, right: 20, left: 10, bottom: 50 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="locationName"
+                              angle={-45}
+                              textAnchor="end"
+                              height={80}
+                              interval={0}
+                              tick={{ fontSize: 13 }}
+                            />
+                            <YAxis />
+                            <Tooltip
+                              formatter={(value) => formatCurrency(value)}
+                            />
+                            <Legend wrapperStyle={{ fontSize: '12px' }} />
+                            <Bar
+                              dataKey="totalSales"
+                              fill="#2e7d32"
+                              name="Wartość sprzedaży (zł)"
+                              radius={[4, 4, 0, 0]}
+                            >
+                              <LabelList
+                                dataKey="totalSales"
+                                position="top"
+                                formatter={(value) => `${((value / totalSalesValue) * 100).toFixed(1)}%`}
+                                style={{ fontSize: '12px', fontWeight: 600 }}
+                              />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </Box>
+                    );
+                  })()
+                ) : (
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 10 }}>
+                    Brak danych do wyświetlenia
+                  </Typography>
+                );
+              })()}
+            </Paper>
+          </Box>
+
+          {/* Product Type Inventory by Location Chart */}
+          <Box sx={{ width: '100%', mt: 3 }}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+                Ilość produktów w salonach
+              </Typography>
+
+              {/* Product Type Selection */}
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Typy produktów
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {selectedProductTypes.length === 0
+                      ? 'Wybierz typy produktów'
+                      : `Wybrano: ${selectedProductTypes.length} typów`}
+                  </Typography>
+                </Box>
+                <ToggleButtonGroup
+                  value={selectedProductTypes}
+                  onChange={(event, newValue) => {
+                    setSelectedProductTypes(newValue);
+                  }}
+                  aria-label="wybór typów produktów"
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1
+                  }}
+                >
+                  {productTypeOptions.map((option) => (
+                    <ToggleButton
+                      key={option.value}
+                      value={option.value}
+                      aria-label={option.label}
+                      sx={{
+                        px: 2,
+                        py: 1,
+                        textTransform: 'none',
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        '&.Mui-selected': {
+                          bgcolor: 'primary.main',
+                          color: 'primary.contrastText',
+                          '&:hover': {
+                            bgcolor: 'primary.dark',
+                          },
+                        },
+                      }}
+                    >
+                      {option.icon}
+                      {option.label}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              </Box>
+
+              {/* Chart */}
+              {selectedProductTypes.length > 0 ? (
+                (() => {
+                  const filteredInventoryData = getFilteredProductInventoryData();
+                  return filteredInventoryData.length > 0 ? (
+                    <Box sx={{ width: '100%', height: 450 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={filteredInventoryData}
+                          margin={{ top: 20, right: 20, left: 10, bottom: 50 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="locationName"
+                            angle={-45}
+                            textAnchor="end"
+                            height={80}
+                            interval={0}
+                            tick={{ fontSize: 13 }}
+                          />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend wrapperStyle={{ fontSize: '12px' }} />
+                          {productInventoryByLocation?.productTypes?.map((type) => (
+                            <Bar
+                              key={type}
+                              dataKey={type}
+                              fill={productTypeConfig[type]?.color || '#1976d2'}
+                              name={productTypeConfig[type]?.label || type}
+                              radius={[4, 4, 0, 0]}
+                            />
+                          ))}
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 10 }}>
+                      Brak danych do wyświetlenia
+                    </Typography>
+                  );
+                })()
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 10 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Wybierz typy produktów powyżej, aby zobaczyć wykres ich dostępności w różnych lokalizacjach
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
+          </Box>
+        </Box>
+      )}
+
+      {/* User Comparison Tab */}
+      {currentTab === 3 && (
+        <Box sx={{ px: { xs: 2, md: 3 } }}>
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              Porównanie użytkowników
+            </Typography>
+            {userSalesStatistics?.userSales && userSalesStatistics.userSales.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {userSalesStatistics.userSales.map((user, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      p: 2,
+                      bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'grey.50',
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                        #{user.rank} {user.userName}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {user.userEmail}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Liczba sprzedaży
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {user.salesCount}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Łączna kwota sprzedaży
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {formatCurrency(user.totalSales)}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Średnia wartość sprzedaży
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {formatCurrency(user.averageSaleValue)}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Łączna liczba operacji
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {user.totalOperations || 0}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Brak danych użytkowników za ten okres
+              </Typography>
+            )}
+          </Paper>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+export default DashboardPage;

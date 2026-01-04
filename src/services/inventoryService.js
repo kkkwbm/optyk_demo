@@ -36,7 +36,9 @@ export const inventoryService = {
    */
   adjustStock: (data) => {
     const endpoint = data.type === 'ADD' ? '/inventory/add-stock' : '/inventory/remove-stock';
-    return api.post(endpoint, data);
+    // Remove 'type' field before sending - it's only used to determine endpoint
+    const { type, ...requestData } = data;
+    return api.post(endpoint, requestData);
   },
 
   /**

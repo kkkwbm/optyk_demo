@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -16,8 +17,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  InputAdornment,
+  Checkbox,
 } from '@mui/material';
-import { RotateCcw, MoreVertical, Trash2 } from 'lucide-react';
+import { RotateCcw, MoreVertical, Trash2, ArrowRight, Search, CheckSquare, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -29,6 +32,7 @@ import {
   revertOperation,
   deleteHistory,
   deleteAllHistory,
+  deleteManyHistory,
   selectHistoryItems,
   selectHistoryLoading,
   selectHistoryPagination,
@@ -48,6 +52,7 @@ import {
 
 function HistoryListPage() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const historyItems = useSelector(selectHistoryItems);
   const loading = useSelector(selectHistoryLoading);
@@ -59,10 +64,14 @@ function HistoryListPage() {
   const [entityFilters, setEntityFilters] = useState([]); // Array of selected entity types
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [confirmDialog, setConfirmDialog] = useState({ open: false, item: null, action: null });
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedRow, setSelectedRow] = useState(null);
   const [descriptionDialog, setDescriptionDialog] = useState({ open: false, description: '' });
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]);
 
   const pagination = usePagination({
     defaultSize: 20,
@@ -78,18 +87,52 @@ function HistoryListPage() {
     dispatch(fetchActiveLocations());
   }, [dispatch]);
 
+  // Debounce search query
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    // Date validation: ensure startDate is not after endDate
+    if (startDate && endDate && startDate > endDate) {
+      return; // Don't fetch if dates are invalid
+    }
+
+    // Determine locationId and locationType based on current location selection
+    // - ALL_STORES: only stores (locationType: STORE)
+    // - ALL_WAREHOUSES: only warehouses (locationType: WAREHOUSE)
+    // - Specific location ID: filter by that location
+    // - null/undefined: all locations (no filter)
+    let locationId = undefined;
+    let locationType = undefined;
+
+    if (currentLocation?.id) {
+      if (currentLocation.id === 'ALL_STORES') {
+        locationType = 'STORE';
+      } else if (currentLocation.id === 'ALL_WAREHOUSES') {
+        locationType = 'WAREHOUSE';
+      } else {
+        locationId = currentLocation.id;
+      }
+    }
+
     const params = {
       page: pagination.page,
       size: pagination.size,
       operationTypes: operationFilters.length > 0 ? operationFilters.join(',') : undefined,
       entityTypes: entityFilters.length > 0 ? entityFilters.join(',') : undefined,
-      locationId: currentLocation?.id && currentLocation.id !== 'ALL_STORES' ? currentLocation.id : undefined,
+      locationId,
+      locationType,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
+      search: debouncedSearchQuery || undefined,
     };
     dispatch(fetchHistory(params));
-  }, [dispatch, pagination.page, pagination.size, operationFilters, entityFilters, currentLocation, startDate, endDate]);
+  }, [dispatch, pagination.page, pagination.size, operationFilters, entityFilters, currentLocation, startDate, endDate, debouncedSearchQuery]);
 
   const hasPermission = (permission) => {
     return PERMISSIONS[permission]?.includes(currentUser?.role);
@@ -147,7 +190,7 @@ function HistoryListPage() {
     setDescriptionDialog({ open: false, description: '' });
   };
 
-  const handleConfirmAction = async () => {
+  const handleConfirmAction = async (reason) => {
     const { item, action } = confirmDialog;
     try {
       if (action === 'delete') {
@@ -161,8 +204,13 @@ function HistoryListPage() {
         const result = await dispatch(deleteAllHistory(locationId)).unwrap();
         toast.success(result.message || 'Cała historia została usunięta');
         dispatch(fetchHistory({ page: 0, size: pagination.size, locationId }));
+      } else if (action === 'deleteMany') {
+        const result = await dispatch(deleteManyHistory(selectedItems)).unwrap();
+        toast.success(result.message || `Usunięto ${selectedItems.length} wybranych wpisów`);
+        setSelectedItems([]);
+        setSelectionMode(false);
       } else if (action === 'revert') {
-        await dispatch(revertOperation({ id: item.id, reason: 'Manual revert by user' })).unwrap();
+        await dispatch(revertOperation({ id: item.id, reason })).unwrap();
         toast.success('Operacja została cofnięta');
         dispatch(fetchHistory({ page: pagination.page, size: pagination.size }));
       }
@@ -177,6 +225,7 @@ function HistoryListPage() {
     setEntityFilters([]);
     setStartDate('');
     setEndDate('');
+    setSearchQuery('');
   };
 
   const handleMenuClick = (event, row) => {
@@ -204,8 +253,69 @@ function HistoryListPage() {
     handleMenuClose();
   };
 
+  const handleGoTo = () => {
+    if (selectedRow) {
+      const path = getEntityNavigationPath(selectedRow.entityType, selectedRow.entityId);
+      if (path) {
+        navigate(path);
+      } else {
+        toast.error('Nie można przejść do tego elementu');
+      }
+    }
+    handleMenuClose();
+  };
+
+  const getEntityNavigationPath = (entityType, entityId) => {
+    // Map entity types to navigation paths
+    switch (entityType) {
+      case ENTITY_TYPES.FRAME:
+      case ENTITY_TYPES.CONTACT_LENS:
+      case ENTITY_TYPES.SOLUTION:
+      case ENTITY_TYPES.OTHER:
+      case ENTITY_TYPES.OTHER_PRODUCT:
+      case ENTITY_TYPES.SUNGLASSES:
+        return `/inventory/${entityId}?type=${entityType}`;
+      case ENTITY_TYPES.SALE:
+        return `/sales/${entityId}`;
+      case ENTITY_TYPES.TRANSFER:
+        return `/transfers/${entityId}`;
+      case ENTITY_TYPES.USER:
+        return `/users/${entityId}`;
+      case ENTITY_TYPES.BRAND:
+      case ENTITY_TYPES.LOCATION:
+      case ENTITY_TYPES.INVENTORY:
+      default:
+        return null;
+    }
+  };
+
   const handleDeleteAll = () => {
     handleOpenConfirm(null, 'deleteAll');
+  };
+
+  const handleToggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedItems([]);
+  };
+
+  const handleSelectItem = (itemId) => {
+    setSelectedItems(prev =>
+      prev.includes(itemId)
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedItems.length === historyItems.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(historyItems.map(item => item.id));
+    }
+  };
+
+  const handleDeleteMany = () => {
+    handleOpenConfirm(null, 'deleteMany');
   };
 
   const toggleOperationFilter = (operation) => {
@@ -232,6 +342,12 @@ function HistoryListPage() {
     { value: OPERATION_TYPES.SALE, label: 'Sprzedaż' },
     { value: OPERATION_TYPES.RETURN, label: 'Zwrot' },
     { value: OPERATION_TYPES.TRANSFER, label: 'Transfer' },
+    { value: OPERATION_TYPES.TRANSFER_INITIATED, label: 'Inicjacja transferu' },
+    { value: OPERATION_TYPES.TRANSFER_CONFIRMED, label: 'Potwierdzenie transferu' },
+    { value: OPERATION_TYPES.TRANSFER_REJECTED, label: 'Odrzucenie transferu' },
+    { value: OPERATION_TYPES.TRANSFER_CANCELLED, label: 'Anulowanie transferu' },
+    { value: OPERATION_TYPES.REVERT, label: 'Cofnięcie' },
+    { value: OPERATION_TYPES.STOCK_ADJUST, label: 'Korekta stanu' },
   ];
 
   // Product entity types
@@ -270,6 +386,28 @@ function HistoryListPage() {
   };
 
   const columns = [
+    // Selection checkbox column (only in selection mode)
+    ...(selectionMode ? [{
+      id: 'select',
+      label: (
+        <Checkbox
+          checked={selectedItems.length === historyItems.length && historyItems.length > 0}
+          indeterminate={selectedItems.length > 0 && selectedItems.length < historyItems.length}
+          onChange={handleSelectAll}
+          size="small"
+        />
+      ),
+      sortable: false,
+      width: 50,
+      render: (row) => (
+        <Checkbox
+          checked={selectedItems.includes(row.id)}
+          onChange={() => handleSelectItem(row.id)}
+          size="small"
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+    }] : []),
     {
       id: 'operation',
       label: 'Operacja',
@@ -435,6 +573,8 @@ function HistoryListPage() {
             size="small"
             InputLabelProps={{ shrink: true }}
             sx={{ minWidth: 150 }}
+            error={startDate && endDate && startDate > endDate}
+            helperText={startDate && endDate && startDate > endDate ? 'Data początkowa musi być przed końcową' : ''}
           />
           <TextField
             label="Data końcowa"
@@ -444,22 +584,79 @@ function HistoryListPage() {
             size="small"
             InputLabelProps={{ shrink: true }}
             sx={{ minWidth: 150 }}
+            error={startDate && endDate && startDate > endDate}
           />
-          {(operationFilters.length > 0 || entityFilters.length > 0 || startDate || endDate) && (
+          {(operationFilters.length > 0 || entityFilters.length > 0 || startDate || endDate || searchQuery) && (
             <Button variant="outlined" onClick={handleClearFilters}>
               Wyczyść filtry
             </Button>
           )}
-          <Box sx={{ marginLeft: 'auto' }}>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={handleDeleteAll}
-              startIcon={<Trash2 size={18} />}
-            >
-              {currentLocation ? `Usuń całą historię z ${currentLocation.name}` : 'Usuń całą historię'}
-            </Button>
+          <Box sx={{ marginLeft: 'auto', display: 'flex', gap: 1 }}>
+            {selectionMode ? (
+              <>
+                <Button
+                  variant="outlined"
+                  onClick={handleSelectAll}
+                  size="small"
+                >
+                  {selectedItems.length === historyItems.length ? 'Odznacz wszystkie' : 'Zaznacz wszystkie'}
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={handleDeleteMany}
+                  disabled={selectedItems.length === 0}
+                  startIcon={<Trash2 size={18} />}
+                >
+                  Usuń zaznaczone ({selectedItems.length})
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={handleToggleSelectionMode}
+                  startIcon={<X size={18} />}
+                >
+                  Anuluj
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={handleToggleSelectionMode}
+                  startIcon={<CheckSquare size={18} />}
+                >
+                  Usuń wiele
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={handleDeleteAll}
+                  startIcon={<Trash2 size={18} />}
+                >
+                  {currentLocation ? `Usuń całą historię z ${currentLocation.name}` : 'Usuń całą historię'}
+                </Button>
+              </>
+            )}
           </Box>
+        </Box>
+
+        {/* Search Bar */}
+        <Box sx={{ mb: 3 }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Wyszukaj po użytkowniku, lokalizacji lub opisie operacji..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={20} />
+                </InputAdornment>
+              ),
+            }}
+          />
         </Box>
 
         {/* History Table */}
@@ -486,6 +683,8 @@ function HistoryListPage() {
         title={
           confirmDialog.action === 'deleteAll'
             ? 'Potwierdź usunięcie całej historii'
+            : confirmDialog.action === 'deleteMany'
+            ? 'Potwierdź usunięcie wybranych wpisów'
             : confirmDialog.action === 'delete'
             ? 'Potwierdź usunięcie'
             : 'Potwierdź cofnięcie operacji'
@@ -495,6 +694,8 @@ function HistoryListPage() {
             ? currentLocation
               ? `Czy na pewno chcesz usunąć CAŁĄ historię z lokalizacji "${currentLocation.name}"? Ta operacja jest NIEODWRACALNA i usunie wszystkie wpisy historii z tej lokalizacji.`
               : 'Czy na pewno chcesz usunąć CAŁĄ historię ze WSZYSTKICH lokalizacji? Ta operacja jest NIEODWRACALNA i usunie wszystkie wpisy historii w systemie.'
+            : confirmDialog.action === 'deleteMany'
+            ? `Czy na pewno chcesz usunąć ${selectedItems.length} wybranych wpisów z historii? Ta operacja jest nieodwracalna.`
             : confirmDialog.action === 'delete'
             ? 'Czy na pewno chcesz usunąć ten wpis z historii? Ta operacja jest nieodwracalna.'
             : 'Czy na pewno chcesz cofnąć tę operację? To utworzy wpis kompensujący, który odwróci zmiany. Oryginalny wpis pozostanie w historii dla celów audytu.'
@@ -502,11 +703,16 @@ function HistoryListPage() {
         confirmText={
           confirmDialog.action === 'deleteAll'
             ? 'Usuń całą historię'
+            : confirmDialog.action === 'deleteMany'
+            ? `Usuń ${selectedItems.length} wpisów`
             : confirmDialog.action === 'delete'
             ? 'Usuń'
             : 'Cofnij operację'
         }
-        confirmColor={confirmDialog.action === 'deleteAll' || confirmDialog.action === 'delete' ? 'error' : 'warning'}
+        confirmColor={confirmDialog.action === 'deleteAll' || confirmDialog.action === 'delete' || confirmDialog.action === 'deleteMany' ? 'error' : 'warning'}
+        requireReason={confirmDialog.action === 'revert'}
+        reasonLabel="Powód cofnięcia operacji *"
+        reasonPlaceholder="Proszę wyjaśnić, dlaczego cofasz tę operację (min. 10 znaków)..."
       />
 
       {/* Description Dialog */}
@@ -543,6 +749,12 @@ function HistoryListPage() {
           horizontal: 'right',
         }}
       >
+        {selectedRow && getEntityNavigationPath(selectedRow.entityType, selectedRow.entityId) && (
+          <MenuItem onClick={handleGoTo} sx={{ color: 'primary.main' }}>
+            <ArrowRight size={16} style={{ marginRight: 8 }} />
+            Przejdź do
+          </MenuItem>
+        )}
         <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
           <Trash2 size={16} style={{ marginRight: 8 }} />
           Usuń

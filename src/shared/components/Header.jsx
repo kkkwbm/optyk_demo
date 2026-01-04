@@ -121,12 +121,6 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
       disabledReason: 'Sprzedaż nie jest dostępna w magazynie',
     },
     {
-      text: 'Statystyki',
-      icon: <BarChart3 size={18} />,
-      path: '/statistics',
-      permission: 'VIEW_STATISTICS_ALL',
-    },
-    {
       text: 'Historia',
       icon: <History size={18} />,
       path: '/history',
@@ -136,6 +130,12 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
 
   // Right-aligned navigation items
   const rightNavigationItems = [
+    {
+      text: 'Statystyki',
+      icon: <BarChart3 size={18} />,
+      path: '/statistics',
+      permission: 'VIEW_STATISTICS_ALL',
+    },
     {
       text: 'Użytkownicy',
       icon: <Users size={18} />,

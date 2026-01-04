@@ -16,7 +16,12 @@ const initialState = {
   stockLevels: null,
   transferStats: null,
   brandPerformance: [],
-  loading: false,
+  productAnalytics: null,
+  storeComparison: null,
+  userSalesStatistics: null,
+  productInventoryByLocation: null,
+  loadingCounter: 0, // Use counter instead of boolean for parallel requests
+  productInventoryLoading: false, // Separate loading state for product inventory chart
   error: null,
   filters: {
     locationId: null,
@@ -234,6 +239,66 @@ export const exportStatisticsReport = createAsyncThunk(
   }
 );
 
+export const fetchProductAnalytics = createAsyncThunk(
+  'statistics/fetchProductAnalytics',
+  async (params, { rejectWithValue }) => {
+    try {
+      const response = await statisticsService.getProductAnalytics(params);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać analizy produktów');
+    }
+  }
+);
+
+export const fetchStoreComparison = createAsyncThunk(
+  'statistics/fetchStoreComparison',
+  async (params, { rejectWithValue }) => {
+    try {
+      const response = await statisticsService.getStoreComparison(params);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać porównania salonów');
+    }
+  }
+);
+
+export const fetchUserSalesStatistics = createAsyncThunk(
+  'statistics/fetchUserSalesStatistics',
+  async (params, { rejectWithValue }) => {
+    try {
+      const response = await statisticsService.getUserSalesStatistics(params);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać statystyk sprzedaży użytkowników');
+    }
+  }
+);
+
+export const fetchProductInventoryByLocation = createAsyncThunk(
+  'statistics/fetchProductInventoryByLocation',
+  async (productTypes, { rejectWithValue }) => {
+    try {
+      const response = await statisticsService.getProductInventoryByLocation(productTypes);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return rejectWithValue(response.data.error);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Nie udało się pobrać inwentarza produktów');
+    }
+  }
+);
+
 // Slice
 const statisticsSlice = createSlice({
   name: 'statistics',
@@ -262,189 +327,245 @@ const statisticsSlice = createSlice({
       state.stockLevels = null;
       state.transferStats = null;
       state.brandPerformance = [];
+      state.productAnalytics = null;
+      state.storeComparison = null;
+      state.userSalesStatistics = null;
+      state.productInventoryByLocation = null;
     },
   },
   extraReducers: (builder) => {
     builder
       // Fetch Dashboard Stats
       .addCase(fetchDashboardStats.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(fetchDashboardStats.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.dashboardStats = action.payload;
       })
       .addCase(fetchDashboardStats.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.error = action.payload;
       })
       // Fetch Sales Stats
       .addCase(fetchSalesStats.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(fetchSalesStats.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.salesStats = action.payload;
       })
       .addCase(fetchSalesStats.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.error = action.payload;
       })
       // Fetch Sales Trend
       .addCase(fetchSalesTrend.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(fetchSalesTrend.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.salesTrend = action.payload;
       })
       .addCase(fetchSalesTrend.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.error = action.payload;
       })
       // Fetch Inventory Stats
       .addCase(fetchInventoryStats.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(fetchInventoryStats.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.inventoryStats = action.payload;
       })
       .addCase(fetchInventoryStats.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.error = action.payload;
       })
       // Fetch Top Products
       .addCase(fetchTopProducts.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(fetchTopProducts.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.topProducts = action.payload;
       })
       .addCase(fetchTopProducts.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.error = action.payload;
       })
       // Fetch Sales By Location
       .addCase(fetchSalesByLocation.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(fetchSalesByLocation.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.salesByLocation = action.payload;
       })
       .addCase(fetchSalesByLocation.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.error = action.payload;
       })
       // Fetch Sales By Product Type
       .addCase(fetchSalesByProductType.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(fetchSalesByProductType.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.salesByProductType = action.payload;
       })
       .addCase(fetchSalesByProductType.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.error = action.payload;
       })
       // Fetch Revenue Stats
       .addCase(fetchRevenueStats.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(fetchRevenueStats.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.revenueStats = action.payload;
       })
       .addCase(fetchRevenueStats.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.error = action.payload;
       })
       // Fetch Comparison Stats
       .addCase(fetchComparisonStats.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(fetchComparisonStats.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.comparisonStats = action.payload;
       })
       .addCase(fetchComparisonStats.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.error = action.payload;
       })
       // Fetch User Performance
       .addCase(fetchUserPerformance.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(fetchUserPerformance.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.userPerformance = action.payload;
       })
       .addCase(fetchUserPerformance.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.error = action.payload;
       })
       // Fetch Stock Levels
       .addCase(fetchStockLevels.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(fetchStockLevels.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.stockLevels = action.payload;
       })
       .addCase(fetchStockLevels.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.error = action.payload;
       })
       // Fetch Transfer Stats
       .addCase(fetchTransferStats.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(fetchTransferStats.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.transferStats = action.payload;
       })
       .addCase(fetchTransferStats.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.error = action.payload;
       })
       // Fetch Brand Performance
       .addCase(fetchBrandPerformance.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(fetchBrandPerformance.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.brandPerformance = action.payload;
       })
       .addCase(fetchBrandPerformance.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
         state.error = action.payload;
       })
       // Export Report
       .addCase(exportStatisticsReport.pending, (state) => {
-        state.loading = true;
+        state.loadingCounter++;
         state.error = null;
       })
       .addCase(exportStatisticsReport.fulfilled, (state) => {
-        state.loading = false;
+        state.loadingCounter--;
       })
       .addCase(exportStatisticsReport.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingCounter--;
+        state.error = action.payload;
+      })
+      // Fetch Product Analytics
+      .addCase(fetchProductAnalytics.pending, (state) => {
+        state.loadingCounter++;
+        state.error = null;
+      })
+      .addCase(fetchProductAnalytics.fulfilled, (state, action) => {
+        state.loadingCounter--;
+        state.productAnalytics = action.payload;
+      })
+      .addCase(fetchProductAnalytics.rejected, (state, action) => {
+        state.loadingCounter--;
+        state.error = action.payload;
+      })
+      // Fetch Store Comparison
+      .addCase(fetchStoreComparison.pending, (state) => {
+        state.loadingCounter++;
+        state.error = null;
+      })
+      .addCase(fetchStoreComparison.fulfilled, (state, action) => {
+        state.loadingCounter--;
+        state.storeComparison = action.payload;
+      })
+      .addCase(fetchStoreComparison.rejected, (state, action) => {
+        state.loadingCounter--;
+        state.error = action.payload;
+      })
+      // Fetch User Sales Statistics
+      .addCase(fetchUserSalesStatistics.pending, (state) => {
+        state.loadingCounter++;
+        state.error = null;
+      })
+      .addCase(fetchUserSalesStatistics.fulfilled, (state, action) => {
+        state.loadingCounter--;
+        state.userSalesStatistics = action.payload;
+      })
+      .addCase(fetchUserSalesStatistics.rejected, (state, action) => {
+        state.loadingCounter--;
+        state.error = action.payload;
+      })
+      // Fetch Product Inventory By Location
+      .addCase(fetchProductInventoryByLocation.pending, (state) => {
+        state.productInventoryLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchProductInventoryByLocation.fulfilled, (state, action) => {
+        state.productInventoryLoading = false;
+        state.productInventoryByLocation = action.payload;
+      })
+      .addCase(fetchProductInventoryByLocation.rejected, (state, action) => {
+        state.productInventoryLoading = false;
         state.error = action.payload;
       });
   },
@@ -467,7 +588,12 @@ export const selectUserPerformance = (state) => state.statistics.userPerformance
 export const selectStockLevels = (state) => state.statistics.stockLevels;
 export const selectTransferStats = (state) => state.statistics.transferStats;
 export const selectBrandPerformance = (state) => state.statistics.brandPerformance;
-export const selectStatisticsLoading = (state) => state.statistics.loading;
+export const selectProductAnalytics = (state) => state.statistics.productAnalytics;
+export const selectStoreComparison = (state) => state.statistics.storeComparison;
+export const selectUserSalesStatistics = (state) => state.statistics.userSalesStatistics;
+export const selectProductInventoryByLocation = (state) => state.statistics.productInventoryByLocation;
+export const selectStatisticsLoading = (state) => state.statistics.loadingCounter > 0;
+export const selectProductInventoryLoading = (state) => state.statistics.productInventoryLoading;
 export const selectStatisticsError = (state) => state.statistics.error;
 export const selectStatisticsFilters = (state) => state.statistics.filters;
 

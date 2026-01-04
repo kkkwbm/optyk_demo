@@ -79,7 +79,11 @@ function ProductsListPage() {
       const actualProductType = product.productType === 'OTHER_PRODUCT' ? 'OTHER' : product.productType;
 
       if (action === 'delete') {
-        await dispatch(deleteProduct({ type: actualProductType, id: product.id })).unwrap();
+        // Pass locationId for history tracking (exclude special aggregate IDs)
+        const locationId = currentLocation?.id && !['ALL_STORES', 'ALL_WAREHOUSES'].includes(currentLocation.id)
+          ? currentLocation.id
+          : null;
+        await dispatch(deleteProduct({ type: actualProductType, id: product.id, locationId })).unwrap();
         toast.success('Produkt został usunięty');
       } else if (action === 'restore') {
         await dispatch(restoreProduct({ type: actualProductType, id: product.id })).unwrap();

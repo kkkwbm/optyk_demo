@@ -27,6 +27,25 @@ const loginSchema = yup.object().shape({
     .required('Hasło jest wymagane'),
 });
 
+// Development quick login credentials from environment variables
+const DEV_ACCOUNTS = import.meta.env.MODE === 'development' ? [
+  {
+    label: 'Admin',
+    email: import.meta.env.VITE_DEV_ADMIN_EMAIL,
+    password: import.meta.env.VITE_DEV_ADMIN_PASSWORD,
+  },
+  {
+    label: 'Employee',
+    email: import.meta.env.VITE_DEV_EMPLOYEE_EMAIL,
+    password: import.meta.env.VITE_DEV_EMPLOYEE_PASSWORD,
+  },
+  {
+    label: 'Maintenance',
+    email: import.meta.env.VITE_DEV_MAINTENANCE_EMAIL,
+    password: import.meta.env.VITE_DEV_MAINTENANCE_PASSWORD,
+  },
+].filter(account => account.email && account.password) : []; // Only include accounts with credentials
+
 function LoginPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -156,38 +175,30 @@ function LoginPage() {
             </Button>
           </form>
 
-          {/* Development Quick Login Buttons - Only in development mode */}
-          {import.meta.env.MODE === 'development' && (
+          {/* Development Quick Login Buttons - Only in development mode on localhost */}
+          {import.meta.env.MODE === 'development' &&
+           (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
+           DEV_ACCOUNTS.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, textAlign: 'center' }}>
-                Quick Login (Development):
+                Quick Login (Development Only):
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleQuickLogin('admin@optyk.com', 'Admin123!')}
-                  sx={{ fontSize: '0.75rem' }}
-                >
-                  Admin
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleQuickLogin('employee@optyk.com', 'Employee123!')}
-                  sx={{ fontSize: '0.75rem' }}
-                >
-                  Employee
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleQuickLogin('maintenance@optyk.com', 'Maintenance123!')}
-                  sx={{ fontSize: '0.75rem' }}
-                >
-                  Maintenance
-                </Button>
+                {DEV_ACCOUNTS.map((account) => (
+                  <Button
+                    key={account.label}
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleQuickLogin(account.email, account.password)}
+                    sx={{ fontSize: '0.75rem' }}
+                  >
+                    {account.label}
+                  </Button>
+                ))}
               </Box>
+              <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 1, textAlign: 'center', fontSize: '0.65rem' }}>
+                ⚠️ Only visible on localhost
+              </Typography>
             </Box>
           )}
 

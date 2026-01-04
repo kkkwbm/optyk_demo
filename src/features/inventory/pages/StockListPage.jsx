@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import DataTable from '../../../shared/components/DataTable';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
+import NotesDialog from '../../../shared/components/NotesDialog';
 import {
   fetchInventoryStock,
   selectInventoryItems,
@@ -45,6 +46,7 @@ function StockListPage() {
   const [typeFilter, setTypeFilter] = useState('');
   const [stockLevelFilter, setStockLevelFilter] = useState(searchParams.get('filter') || '');
   const [confirmDialog, setConfirmDialog] = useState({ open: false, product: null });
+  const [notesDialog, setNotesDialog] = useState({ open: false, title: '', content: '' });
 
   const debouncedSearch = useDebounce(searchTerm, 300);
   const pagination = usePagination({
@@ -78,6 +80,26 @@ function StockListPage() {
     setConfirmDialog({ open: false, product: null });
   };
 
+  const handleOpenNotesDialog = (product) => {
+    const notes = product?.notes || product?.description || '';
+    const productName = product?.model || product?.name || 'Produkt';
+    setNotesDialog({
+      open: true,
+      title: `Notatka - ${productName}`,
+      content: notes,
+    });
+  };
+
+  const handleCloseNotesDialog = () => {
+    setNotesDialog({ open: false, title: '', content: '' });
+  };
+
+  const truncateText = (text, maxLength = 50) => {
+    if (!text) return '-';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
   const handleConfirmDelete = async () => {
     const { product } = confirmDialog;
     try {
@@ -85,7 +107,11 @@ function StockListPage() {
       const productType = product.productType || product.type;
       const actualProductType = productType === 'OTHER_PRODUCT' ? 'OTHER' : productType;
 
-      await dispatch(deleteProduct({ type: actualProductType, id: product.id })).unwrap();
+      // Pass locationId for history tracking (exclude special aggregate IDs)
+      const locationId = currentLocation?.id && !['ALL_STORES', 'ALL_WAREHOUSES'].includes(currentLocation.id)
+        ? currentLocation.id
+        : null;
+      await dispatch(deleteProduct({ type: actualProductType, id: product.id, locationId })).unwrap();
       toast.success('Produkt został usunięty');
       // Refresh inventory list
       const params = {
@@ -147,6 +173,33 @@ function StockListPage() {
       label: 'Lokalizacja',
       sortable: true,
       render: (row) => row.location?.name || '-',
+    },
+    {
+      id: 'notes',
+      label: 'Notatka / Opis',
+      sortable: false,
+      render: (row) => {
+        const notes = row.product?.notes || row.product?.description || '';
+        const isLong = notes && notes.length > 50;
+
+        return (
+          <Box
+            sx={{
+              cursor: isLong ? 'pointer' : 'default',
+              color: isLong ? 'primary.main' : 'text.primary',
+              '&:hover': isLong ? { textDecoration: 'underline' } : {},
+            }}
+            onClick={(e) => {
+              if (isLong) {
+                e.stopPropagation();
+                handleOpenNotesDialog(row.product);
+              }
+            }}
+          >
+            {truncateText(notes)}
+          </Box>
+        );
+      },
     },
     {
       id: 'available',
@@ -242,7 +295,7 @@ function StockListPage() {
           {
             label: 'Dodaj produkt',
             icon: <Package size={20} />,
-            onClick: () => navigate('/inventory/create'),
+            onClick: () => navigate(typeFilter ? `/inventory/create?type=${typeFilter}` : '/inventory/create'),
             variant: 'contained',
           },
           {
@@ -332,6 +385,14 @@ function StockListPage() {
         message={`Czy na pewno chcesz usunąć produkt "${confirmDialog.product?.model || confirmDialog.product?.name || ''}"? Ta operacja jest nieodwracalna.`}
         confirmText="Usuń"
         confirmColor="error"
+      />
+
+      {/* Notes Dialog */}
+      <NotesDialog
+        open={notesDialog.open}
+        onClose={handleCloseNotesDialog}
+        title={notesDialog.title}
+        content={notesDialog.content}
       />
     </Container>
   );

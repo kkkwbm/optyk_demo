@@ -37,6 +37,7 @@ export const PRODUCT_TYPES = {
   SOLUTION: 'SOLUTION',
   OTHER: 'OTHER',
   SUNGLASSES: 'SUNGLASSES',
+  EYEGLASS_LENS: 'EYEGLASS_LENS',
 };
 
 export const PRODUCT_TYPE_LABELS = {
@@ -45,6 +46,7 @@ export const PRODUCT_TYPE_LABELS = {
   [PRODUCT_TYPES.SOLUTION]: 'Płyny',
   [PRODUCT_TYPES.OTHER]: 'Inne produkty',
   [PRODUCT_TYPES.SUNGLASSES]: 'Okulary przeciwsłoneczne',
+  [PRODUCT_TYPES.EYEGLASS_LENS]: 'Soczewki okularowe',
   'OTHER_PRODUCT': 'Inne produkty', // Backend returns OTHER_PRODUCT
 };
 
@@ -54,6 +56,24 @@ export const PRODUCT_TYPE_SINGULAR = {
   [PRODUCT_TYPES.SOLUTION]: 'Płyn',
   [PRODUCT_TYPES.OTHER]: 'Inny produkt',
   [PRODUCT_TYPES.SUNGLASSES]: 'Okulary przeciwsłoneczne',
+  [PRODUCT_TYPES.EYEGLASS_LENS]: 'Soczewka okularowa',
+};
+
+// Eyeglass Lens Types
+export const EYEGLASS_LENS_TYPES = {
+  SINGLE_VISION: 'SINGLE_VISION',
+  PROGRESSIVE: 'PROGRESSIVE',
+  RELAXATION: 'RELAXATION',
+  BIFOCAL: 'BIFOCAL',
+  OFFICE: 'OFFICE',
+};
+
+export const EYEGLASS_LENS_TYPE_LABELS = {
+  [EYEGLASS_LENS_TYPES.SINGLE_VISION]: 'Jednoogniskowe',
+  [EYEGLASS_LENS_TYPES.PROGRESSIVE]: 'Progresywne',
+  [EYEGLASS_LENS_TYPES.RELAXATION]: 'Relaksacyjne',
+  [EYEGLASS_LENS_TYPES.BIFOCAL]: 'Dwuogniskowe',
+  [EYEGLASS_LENS_TYPES.OFFICE]: 'Biurowe',
 };
 
 // Product Status
@@ -94,6 +114,8 @@ export const LOCATION_STATUS_LABELS = {
 // Location Tabs (for user permissions)
 export const LOCATION_TABS = {
   WAREHOUSE: 'WAREHOUSE',
+  WAREHOUSE_EDIT: 'WAREHOUSE_EDIT',
+  WAREHOUSE_DELETE: 'WAREHOUSE_DELETE',
   SALES: 'SALES',
   TRANSFERS: 'TRANSFERS',
   STATISTICS: 'STATISTICS',
@@ -102,6 +124,8 @@ export const LOCATION_TABS = {
 
 export const LOCATION_TAB_LABELS = {
   [LOCATION_TABS.WAREHOUSE]: 'Magazyn',
+  [LOCATION_TABS.WAREHOUSE_EDIT]: 'Edytowanie',
+  [LOCATION_TABS.WAREHOUSE_DELETE]: 'Usuwanie',
   [LOCATION_TABS.SALES]: 'Sprzedaż',
   [LOCATION_TABS.TRANSFERS]: 'Transfery',
   [LOCATION_TABS.STATISTICS]: 'Statystyki',
@@ -109,12 +133,20 @@ export const LOCATION_TAB_LABELS = {
 };
 
 export const LOCATION_TAB_DESCRIPTIONS = {
-  [LOCATION_TABS.WAREHOUSE]: 'Zarządzanie magazynem i stanem towaru',
+  [LOCATION_TABS.WAREHOUSE]: 'Przeglądanie magazynu i stanu towaru',
+  [LOCATION_TABS.WAREHOUSE_EDIT]: 'Edytowanie produktów w magazynie',
+  [LOCATION_TABS.WAREHOUSE_DELETE]: 'Usuwanie produktów z magazynu',
   [LOCATION_TABS.SALES]: 'Rejestrowanie i przeglądanie sprzedaży',
   [LOCATION_TABS.TRANSFERS]: 'Zarządzanie transferami produktów',
   [LOCATION_TABS.STATISTICS]: 'Przeglądanie statystyk i analiz',
   [LOCATION_TABS.HISTORY]: 'Historia operacji i zmian',
 };
+
+// Warehouse sub-permissions (for nested display in PermissionsSelector)
+export const WAREHOUSE_SUB_PERMISSIONS = [
+  LOCATION_TABS.WAREHOUSE_EDIT,
+  LOCATION_TABS.WAREHOUSE_DELETE,
+];
 
 // Brand Status
 export const BRAND_STATUS = {
@@ -176,6 +208,7 @@ export const ENTITY_TYPES = {
   OTHER: 'OTHER',
   OTHER_PRODUCT: 'OTHER_PRODUCT',
   SUNGLASSES: 'SUNGLASSES',
+  EYEGLASS_LENS: 'EYEGLASS_LENS',
   USER: 'USER',
   LOCATION: 'LOCATION',
   BRAND: 'BRAND',
@@ -191,6 +224,7 @@ export const ENTITY_TYPE_LABELS = {
   [ENTITY_TYPES.OTHER]: 'Inny produkt',
   [ENTITY_TYPES.OTHER_PRODUCT]: 'Inny produkt',
   [ENTITY_TYPES.SUNGLASSES]: 'Okulary przeciwsłoneczne',
+  [ENTITY_TYPES.EYEGLASS_LENS]: 'Soczewka okularowa',
   [ENTITY_TYPES.USER]: 'Użytkownik',
   [ENTITY_TYPES.LOCATION]: 'Lokalizacja',
   [ENTITY_TYPES.BRAND]: 'Marka',
@@ -324,6 +358,7 @@ export const CHART_COLORS = {
   SOLUTION: '#ff9800',
   OTHER: '#607d8b',
   SUNGLASSES: '#00bcd4',
+  EYEGLASS_LENS: '#8bc34a',
 };
 
 // File Export Formats

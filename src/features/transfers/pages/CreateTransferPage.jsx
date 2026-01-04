@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -24,6 +24,7 @@ import {
   Tab,
   InputBase,
   FormHelperText,
+  CircularProgress,
 } from '@mui/material';
 import { ArrowLeft, Plus, Trash2, Minus } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
@@ -32,14 +33,14 @@ import PageHeader from '../../../shared/components/PageHeader';
 import FormField from '../../../shared/components/FormField';
 import { createTransfer } from '../transfersSlice';
 import { fetchActiveLocations, selectActiveLocations } from '../../locations/locationsSlice';
-import { fetchInventory, selectInventoryItems, clearInventory } from '../../inventory/inventorySlice';
+import { useInventorySearch, formatProductDetails } from '../../../hooks/useInventorySearch';
+import VirtualizedListbox from '../../../shared/components/VirtualizedListbox';
 import { VALIDATION, PRODUCT_TYPES, PRODUCT_TYPE_LABELS } from '../../../constants';
 
 function CreateTransferPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const inventoryItems = useSelector(selectInventoryItems);
   const locations = useSelector(selectActiveLocations);
 
   const [selectedFromLocation, setSelectedFromLocation] = useState(null);
@@ -62,96 +63,108 @@ function CreateTransferPage() {
   const fromLocationId = watch('fromLocationId');
   const toLocationId = watch('toLocationId');
 
+  // Use server-side search hook with debounce
+  const {
+    searchQuery,
+    setSearchQuery,
+    results: inventoryItems,
+    isLoading: isLoadingProducts,
+    isDebouncing,
+  } = useInventorySearch({
+    locationId: selectedFromLocation?.id,
+    productType: productType,
+    debounceDelay: 300,
+    pageSize: 50,
+  });
+
   useEffect(() => {
     dispatch(fetchActiveLocations());
-    return () => {
-      dispatch(clearInventory());
-    };
   }, [dispatch]);
-
-  useEffect(() => {
-    if (selectedFromLocation) {
-      dispatch(fetchInventory({ locationId: selectedFromLocation.id, params: { size: 1000 } }));
-    } else {
-      dispatch(clearInventory());
-    }
-  }, [dispatch, selectedFromLocation]);
-
-  useEffect(() => {
-    if (selectedProduct) {
-      const item = inventoryItems.find(i => i.product.id === selectedProduct.id);
-      if (item) {
-        setAvailableStock(item.availableQuantity);
-        setQuantity('1');
-      } else {
-        setAvailableStock(0);
-        setQuantity('0');
-      }
-    } else {
-      setAvailableStock(null);
-      setQuantity('1');
-    }
-  }, [selectedProduct, inventoryItems]);
 
   // --- Helpers do formatowania nazw ---
 
-  const getLensTypeLabel = (type) => {
+  const getLensTypeLabel = useCallback((type) => {
     switch (type) {
       case 'DAILY': return 'jednodniowe';
       case 'BI_WEEKLY': return 'dwutygodniowe';
       case 'MONTHLY': return 'miesięczne';
       default: return type || '';
     }
-  };
-
-  /**
-   * Generuje główną nazwę produktu (Model + Szczegóły)
-   * Używane w dropdownie (linia 1) oraz w tabeli.
-   */
-  const getProductMainLabel = (product, type) => {
-    const model = product.model || product.name || '';
-
-    if (type === PRODUCT_TYPES.CONTACT_LENS) {
-      const typeLabel = getLensTypeLabel(product.lensType);
-      return `${model} (${typeLabel})`;
-    }
-
-    if (type === PRODUCT_TYPES.SOLUTION) {
-      // NAPRAWIONE: Dodanie pojemności do głównej nazwy
-      const capacity = product.capacity ? `${product.capacity}ml` : '';
-      return `${model} ${capacity}`;
-    }
-
-    // Dla oprawek i innych
-    return model;
-  };
-
-  /**
-   * Generuje pełną etykietę do wyszukiwania (Label w Autocomplete)
-   * Musi zawierać wszystko (Marka + Model + Szczegóły)
-   */
-  const getSearchLabel = (item) => {
-    const brand = item.product.brand?.name || '';
-    const mainPart = getProductMainLabel(item.product, item.productType);
-    return `${brand} ${mainPart}`;
-  };
+  }, []);
 
   /**
    * Generuje nazwę do wyświetlenia w tabeli (z prefiksem kategorii)
    */
-  const getTableDisplayName = (product, type) => {
-    // For solutions, just show capacity
-    if (type === PRODUCT_TYPES.SOLUTION) {
-      const capacity = product.capacity ? `${product.capacity}ml` : product.model || product.name || '';
-      return `Płyn ${capacity}`;
+  const getTableDisplayName = useCallback((product, type) => {
+    const brand = product.brand?.name || '';
+    const model = product.model || product.name || '';
+
+    switch (type) {
+      case PRODUCT_TYPES.FRAME:
+      case PRODUCT_TYPES.SUNGLASSES:
+        return `${brand} ${model}`;
+
+      case PRODUCT_TYPES.CONTACT_LENS:
+        return `${brand} ${model}`;
+
+      case PRODUCT_TYPES.SOLUTION:
+        return brand;
+
+      case PRODUCT_TYPES.OTHER:
+      default:
+        return `${brand} ${model}`;
     }
+  }, []);
 
-    const mainLabel = getProductMainLabel(product, type);
-    if (type === PRODUCT_TYPES.FRAME) return `Oprawki ${mainLabel}`;
-    if (type === PRODUCT_TYPES.CONTACT_LENS) return `Soczewki ${mainLabel}`;
+  /**
+   * Generuje pełną etykietę do wyszukiwania (Label w Autocomplete)
+   */
+  const getSearchLabel = useCallback((item) => {
+    const brand = item.product.brand?.name || '';
+    const product = item.product;
+    const stock = ` (${item.availableQuantity || 0} szt.)`;
 
-    return mainLabel;
-  };
+    switch (item.productType) {
+      case PRODUCT_TYPES.FRAME:
+      case PRODUCT_TYPES.SUNGLASSES:
+        return `${brand} ${product.model || ''} - ${product.size || ''} - ${product.color || ''}`.trim() + stock;
+
+      case PRODUCT_TYPES.CONTACT_LENS: {
+        const lensType = getLensTypeLabel(product.lensType);
+        return `${brand} ${product.model || ''} - ${lensType} - ${product.power || ''}`.trim() + stock;
+      }
+
+      case PRODUCT_TYPES.SOLUTION:
+        return `${brand} - ${product.volume || product.capacity || ''} ml`.trim() + stock;
+
+      case PRODUCT_TYPES.OTHER:
+      default:
+        return `${brand} ${product.model || product.name || ''}`.trim() + stock;
+    }
+  }, [getLensTypeLabel]);
+
+  /**
+   * Formatuje szczegóły produktu dla tabeli
+   */
+  const formatProductDetailsLocal = useCallback((product, pType) => {
+    switch (pType) {
+      case PRODUCT_TYPES.FRAME:
+      case PRODUCT_TYPES.SUNGLASSES:
+        return `Rozmiar: ${product.size || '-'}, Kolor: ${product.color || '-'}`;
+
+      case PRODUCT_TYPES.CONTACT_LENS: {
+        const lensType = getLensTypeLabel(product.lensType);
+        return `Typ: ${lensType || '-'}, Moc: ${product.power || '-'}`;
+      }
+
+      case PRODUCT_TYPES.SOLUTION:
+        return `Pojemność: ${product.volume || product.capacity || '-'} (ml)`;
+
+      case PRODUCT_TYPES.OTHER:
+      default:
+        return product.notes || '-';
+    }
+  }, [getLensTypeLabel]);
 
   const handleAddItem = () => {
     if (!selectedProduct) {
@@ -257,29 +270,32 @@ function CreateTransferPage() {
 
       await dispatch(createTransfer(transferData)).unwrap();
       toast.success('Transfer utworzony pomyślnie');
-      navigate('/transfers');
+      navigate('/transfers', { state: { refresh: true } });
     } catch (error) {
       toast.error(error || 'Nie udało się utworzyć transferu');
     }
   };
 
-  // Mapowanie produktów do opcji
-  const productOptions = inventoryItems
-    .filter((item) => item.productType === productType)
-    .map((item) => ({
-      id: item.product.id,
-      label: getSearchLabel(item), // Pełna nazwa do wyszukiwania
-      product: item.product,
-      productType: item.productType,
-      quantity: item.availableQuantity,
-      brand: item.product.brand?.name
-    }));
+  // Mapowanie produktów do opcji (memoized for performance)
+  const productOptions = useMemo(() => {
+    return inventoryItems
+      .filter((item) => item.product && (item.availableQuantity > 0 || item.quantity > 0))
+      .map((item) => ({
+        id: item.product.id,
+        label: getSearchLabel(item),
+        product: item.product,
+        productType: item.productType,
+        quantity: item.availableQuantity,
+        brand: item.product.brand?.name
+      }));
+  }, [inventoryItems, getSearchLabel]);
 
   const handleProductTypeChange = (event, newType) => {
     setProductType(newType);
     setSelectedProduct(null);
     setQuantity('1');
     setAvailableStock(null);
+    setSearchQuery('');
   };
 
   const locationOptions = locations.map((location) => ({
@@ -445,26 +461,69 @@ function CreateTransferPage() {
                         ? productOptions.find((opt) => opt.id === selectedProduct.id)
                         : null
                     }
+                    inputValue={searchQuery}
+                    onInputChange={(_, newInputValue, reason) => {
+                      if (reason === 'input') {
+                        setSearchQuery(newInputValue);
+                      } else if (reason === 'clear') {
+                        setSearchQuery('');
+                      }
+                    }}
                     onChange={(_, newValue) => {
                       setSelectedProduct(newValue?.product || null);
                       setQuantity('1');
+                      if (newValue) {
+                        setSearchQuery(newValue.label);
+                        setAvailableStock(newValue.quantity);
+                      } else {
+                        setAvailableStock(null);
+                      }
                     }}
                     getOptionLabel={(option) => option.label || ''}
+                    filterOptions={(x) => x}
+                    loading={isLoadingProducts || isDebouncing}
                     disabled={!selectedFromLocation}
                     noOptionsText={
                       !selectedFromLocation
                         ? "Wybierz lokalizację źródłową"
-                        : inventoryItems.length === 0
-                          ? "Brak produktów w tej lokalizacji"
-                          : "Brak wyników"
+                        : isLoadingProducts || isDebouncing
+                          ? "Wyszukiwanie..."
+                          : searchQuery.length > 0
+                            ? "Brak wyników"
+                            : "Wpisz nazwę produktu..."
                     }
+                    ListboxComponent={VirtualizedListbox}
                     sx={{ width: '100%', minWidth: { md: '600px' } }}
+                    slotProps={{
+                      popper: {
+                        placement: 'bottom-start',
+                        modifiers: [
+                          {
+                            name: 'flip',
+                            enabled: false,
+                          },
+                        ],
+                      },
+                    }}
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        label="Wybierz produkt"
-                        placeholder={!selectedFromLocation ? "Najpierw wybierz lokalizację źródłową..." : "Wpisz nazwę, model lub markę..."}
+                        label="Wyszukaj produkt"
+                        placeholder={!selectedFromLocation ? "Najpierw wybierz lokalizację źródłową..." : "Wpisz markę, model lub kolor..."}
                         fullWidth
+                        slotProps={{
+                          input: {
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {(isLoadingProducts || isDebouncing) ? (
+                                  <CircularProgress color="inherit" size={20} />
+                                ) : null}
+                                {params.InputProps.endAdornment}
+                              </>
+                            ),
+                          },
+                        }}
                         sx={{
                           '& .MuiInputBase-root': { fontSize: '1rem', minHeight: '50px', p: '8px 12px' },
                           '& .MuiInputLabel-root': { fontSize: '1rem' },
@@ -474,24 +533,16 @@ function CreateTransferPage() {
                     renderOption={(props, option) => {
                       const { key, ...otherProps } = props;
 
-                      // For solutions, show capacity first, then brand
-                      const isSolution = option.productType === PRODUCT_TYPES.SOLUTION;
-                      const primaryText = isSolution
-                        ? (option.product.capacity ? `${option.product.capacity}ml` : option.product.model || option.product.name || '')
-                        : getProductMainLabel(option.product, option.productType);
-
                       return (
                         <li key={key} {...otherProps} style={{ display: 'block', padding: '12px 16px' }}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                            <Box>
-                              {/* GŁÓWNA NAZWA (Pojemność dla płynów, Model dla innych) */}
+                            <Box sx={{ flex: 1 }}>
                               <Typography variant="body1" fontWeight="600" sx={{ fontSize: '1.1rem' }}>
-                                {primaryText}
+                                {option.brand} {option.product.model || option.product.name || ''}
                               </Typography>
 
-                              {/* MARKA */}
-                              <Typography variant="body2" color="text.secondary">
-                                {option.brand}
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                {formatProductDetailsLocal(option.product, option.productType)}
                               </Typography>
                             </Box>
 
@@ -502,7 +553,8 @@ function CreateTransferPage() {
                               py: 0.75,
                               borderRadius: 1,
                               fontWeight: 600,
-                              fontSize: '1rem'
+                              fontSize: '1rem',
+                              ml: 2
                             }}>
                               {option.quantity} szt.
                             </Typography>
@@ -605,6 +657,7 @@ function CreateTransferPage() {
                       <TableHead>
                         <TableRow>
                           <TableCell sx={{ fontWeight: 600 }}>Produkt</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Szczegóły</TableCell>
                           <TableCell align="right" sx={{ fontWeight: 600 }}>Dostępne</TableCell>
                           <TableCell align="center" sx={{ fontWeight: 600 }}>Ilość</TableCell>
                           <TableCell align="right" sx={{ fontWeight: 600 }}>Akcje</TableCell>
@@ -614,14 +667,14 @@ function CreateTransferPage() {
                         {transferItems.map((item) => (
                           <TableRow key={item.product.id}>
                             <TableCell>
-                              <Box>
-                                <Typography variant="body1" fontWeight="500">
-                                  {getTableDisplayName(item.product, item.productType)}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  Marka: {item.product.brand?.name || '-'}
-                                </Typography>
-                              </Box>
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {getTableDisplayName(item.product, item.productType)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" color="text.secondary">
+                                {formatProductDetails(item.product, item.productType)}
+                              </Typography>
                             </TableCell>
                             <TableCell align="right">{item.availableStock}</TableCell>
                             <TableCell align="center">
@@ -667,7 +720,7 @@ function CreateTransferPage() {
                           </TableRow>
                         ))}
                         <TableRow>
-                          <TableCell colSpan={2} align="right">
+                          <TableCell colSpan={3} align="right">
                             <strong>Razem produktów:</strong>
                           </TableCell>
                           <TableCell align="center">
