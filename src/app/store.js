@@ -10,6 +10,7 @@ import brandsReducer from '../features/brands/brandsSlice';
 import locationsReducer from '../features/locations/locationsSlice';
 import historyReducer from '../features/history/historySlice';
 import statisticsReducer from '../features/statistics/statisticsSlice';
+import companySettingsReducer from '../features/settings/companySettingsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -24,6 +25,7 @@ export const store = configureStore({
     locations: locationsReducer,
     history: historyReducer,
     statistics: statisticsReducer,
+    companySettings: companySettingsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -68,7 +68,7 @@
           },
           {
             "key": "Content-Security-Policy",
-            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://maps.googleapis.com https://maps.gstatic.com https://*.run.app blob:; connect-src 'self' https://maps.googleapis.com https://*.run.app https://neon.tech; frame-src https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"
+            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://maps.googleapis.com https://maps.gstatic.com https://*.run.app blob:; connect-src 'self' https://maps.googleapis.com https://*.run.app https://neon.tech; frame-src 'self' blob: https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"
           },
           {
             "key": "Strict-Transport-Security",

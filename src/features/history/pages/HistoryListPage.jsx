@@ -72,6 +72,7 @@ function HistoryListPage() {
   const [descriptionDialog, setDescriptionDialog] = useState({ open: false, description: '' });
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
+  const [sort, setSort] = useState({ sortBy: 'operationTimestamp', sortDirection: 'desc' });
 
   const pagination = usePagination({
     defaultSize: 20,
@@ -123,6 +124,7 @@ function HistoryListPage() {
     const params = {
       page: pagination.page,
       size: pagination.size,
+      sort: sort.sortBy ? `${sort.sortBy},${sort.sortDirection}` : undefined,
       operationTypes: operationFilters.length > 0 ? operationFilters.join(',') : undefined,
       entityTypes: entityFilters.length > 0 ? entityFilters.join(',') : undefined,
       locationId,
@@ -132,7 +134,7 @@ function HistoryListPage() {
       search: debouncedSearchQuery || undefined,
     };
     dispatch(fetchHistory(params));
-  }, [dispatch, pagination.page, pagination.size, operationFilters, entityFilters, currentLocation, startDate, endDate, debouncedSearchQuery]);
+  }, [dispatch, pagination.page, pagination.size, sort, operationFilters, entityFilters, currentLocation, startDate, endDate, debouncedSearchQuery]);
 
   const hasPermission = (permission) => {
     return PERMISSIONS[permission]?.includes(currentUser?.role);
@@ -226,6 +228,10 @@ function HistoryListPage() {
     setStartDate('');
     setEndDate('');
     setSearchQuery('');
+  };
+
+  const handleSortChange = (sortBy, sortDirection) => {
+    setSort({ sortBy, sortDirection });
   };
 
   const handleMenuClick = (event, row) => {
@@ -340,14 +346,11 @@ function HistoryListPage() {
     { value: OPERATION_TYPES.UPDATE, label: 'Edycja' },
     { value: OPERATION_TYPES.DELETE, label: 'Usunięcie' },
     { value: OPERATION_TYPES.SALE, label: 'Sprzedaż' },
-    { value: OPERATION_TYPES.RETURN, label: 'Zwrot' },
-    { value: OPERATION_TYPES.TRANSFER, label: 'Transfer' },
     { value: OPERATION_TYPES.TRANSFER_INITIATED, label: 'Inicjacja transferu' },
     { value: OPERATION_TYPES.TRANSFER_CONFIRMED, label: 'Potwierdzenie transferu' },
     { value: OPERATION_TYPES.TRANSFER_REJECTED, label: 'Odrzucenie transferu' },
     { value: OPERATION_TYPES.TRANSFER_CANCELLED, label: 'Anulowanie transferu' },
     { value: OPERATION_TYPES.REVERT, label: 'Cofnięcie' },
-    { value: OPERATION_TYPES.STOCK_ADJUST, label: 'Korekta stanu' },
   ];
 
   // Product entity types
@@ -355,7 +358,7 @@ function HistoryListPage() {
     { value: ENTITY_TYPES.FRAME, label: 'Oprawki' },
     { value: ENTITY_TYPES.CONTACT_LENS, label: 'Szkła kontaktowe' },
     { value: ENTITY_TYPES.SOLUTION, label: 'Płyny' },
-    { value: ENTITY_TYPES.OTHER, label: 'Inne' },
+    { value: ENTITY_TYPES.OTHER_PRODUCT, label: 'Inne' },
   ];
 
   const getOperationColor = (type) => {
@@ -417,6 +420,8 @@ function HistoryListPage() {
           label={OPERATION_TYPE_LABELS[row.operationType]}
           size="small"
           color={getOperationColor(row.operationType)}
+          clickable={false}
+          sx={{ pointerEvents: 'none' }}
         />
       ),
     },
@@ -429,6 +434,8 @@ function HistoryListPage() {
           label={ENTITY_TYPE_LABELS[row.entityType] || row.entityType}
           size="small"
           variant="outlined"
+          clickable={false}
+          sx={{ pointerEvents: 'none' }}
         />
       ),
     },
@@ -671,6 +678,8 @@ function HistoryListPage() {
           }}
           onPageChange={pagination.setPage}
           onRowsPerPageChange={pagination.setSize}
+          sort={sort}
+          onSortChange={handleSortChange}
           emptyMessage="Nie znaleziono rekordów historii. Spróbuj dostosować filtry."
         />
       </Paper>

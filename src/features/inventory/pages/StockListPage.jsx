@@ -148,19 +148,19 @@ function StockListPage() {
     {
       id: 'product',
       label: 'Produkt',
-      sortable: true,
+      sortable: false,
       render: (row) => row.product?.model || row.product?.name || '-',
     },
     {
       id: 'brand',
       label: 'Marka',
-      sortable: true,
+      sortable: false,
       render: (row) => row.product?.brand?.name || '-',
     },
     {
       id: 'type',
       label: 'Typ',
-      sortable: true,
+      sortable: false,
       render: (row) => (
         <Chip
           label={PRODUCT_TYPE_LABELS[row.product?.type] || 'Nieznany'}
@@ -171,7 +171,7 @@ function StockListPage() {
     {
       id: 'location',
       label: 'Lokalizacja',
-      sortable: true,
+      sortable: false,
       render: (row) => row.location?.name || '-',
     },
     {
@@ -204,7 +204,7 @@ function StockListPage() {
     {
       id: 'available',
       label: 'Dostępne',
-      sortable: true,
+      sortable: false,
       render: (row) => (
         <Box sx={{ fontWeight: 600 }}>
           {row.availableQuantity}

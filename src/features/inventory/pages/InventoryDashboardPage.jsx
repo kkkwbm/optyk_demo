@@ -12,8 +12,10 @@ import {
   TextField,
   Paper,
   Typography,
+  Button,
+  ButtonGroup,
 } from '@mui/material';
-import { Plus, MoreVertical, Edit } from 'lucide-react';
+import { Plus, MoreVertical, Edit, ArrowUp, ArrowDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
 import DataTable from '../../../shared/components/DataTable';
@@ -72,6 +74,8 @@ function InventoryDashboardPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [notesDialog, setNotesDialog] = useState({ open: false, title: '', content: '' });
+  const [quantitySort, setQuantitySort] = useState(null); // null, 'desc', 'asc'
+  const [priceSort, setPriceSort] = useState(null); // null, 'desc', 'asc'
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // Derived State
@@ -82,7 +86,7 @@ function InventoryDashboardPage() {
   // Normalize data for the table
   const tableData = useMemo(() => {
     // Backend already filters by productType, so just map the data
-    return inventoryItems.map(item => ({
+    let data = inventoryItems.map(item => ({
       ...item.product, // Spread the full product object
       inventoryQuantity: item.quantity,
       inventoryId: item.id,
@@ -92,7 +96,24 @@ function InventoryDashboardPage() {
       type: item.product?.type || item.productType, // Add type field for consistency
       location: item.location, // Add location for display
     }));
-  }, [inventoryItems]);
+
+    // Apply sorting
+    if (quantitySort) {
+      data = [...data].sort((a, b) => {
+        const qtyA = a.inventoryQuantity || 0;
+        const qtyB = b.inventoryQuantity || 0;
+        return quantitySort === 'desc' ? qtyB - qtyA : qtyA - qtyB;
+      });
+    } else if (priceSort) {
+      data = [...data].sort((a, b) => {
+        const priceA = a.sellingPrice || 0;
+        const priceB = b.sellingPrice || 0;
+        return priceSort === 'desc' ? priceB - priceA : priceA - priceB;
+      });
+    }
+
+    return data;
+  }, [inventoryItems, quantitySort, priceSort]);
 
   // Helper function to refresh inventory data
   const refreshInventory = (pageOverride = null, sizeOverride = null) => {
@@ -333,6 +354,36 @@ function InventoryDashboardPage() {
     setSearchTerm(e.target.value);
   };
 
+  const handleQuantitySortToggle = () => {
+    // Cycle: null -> desc -> asc -> null
+    if (quantitySort === null) {
+      setQuantitySort('desc');
+      setPriceSort(null); // Reset price sort
+    } else if (quantitySort === 'desc') {
+      setQuantitySort('asc');
+    } else {
+      setQuantitySort(null);
+    }
+  };
+
+  const handlePriceSortToggle = () => {
+    // Cycle: null -> desc -> asc -> null
+    if (priceSort === null) {
+      setPriceSort('desc');
+      setQuantitySort(null); // Reset quantity sort
+    } else if (priceSort === 'desc') {
+      setPriceSort('asc');
+    } else {
+      setPriceSort(null);
+    }
+  };
+
+  const getSortIcon = (sortValue) => {
+    if (sortValue === 'desc') return <ArrowDown size={16} />;
+    if (sortValue === 'asc') return <ArrowUp size={16} />;
+    return null;
+  };
+
   const handleViewProduct = (product) => {
     navigate(`/inventory/${product.id}`);
   };
@@ -376,20 +427,20 @@ function InventoryDashboardPage() {
       {
         id: 'brand',
         label: 'Marka',
-        sortable: true,
+        sortable: false,
         render: (row) => row.brand?.name || '-',
       },
     ] : [];
 
     const typeSpecificColumns = {
       [PRODUCT_TYPES.FRAME]: [
-        { id: 'model', label: 'Model', sortable: true },
-        { id: 'color', label: 'Kolor', sortable: true },
-        { id: 'size', label: 'Rozmiar', sortable: true },
+        { id: 'model', label: 'Model', sortable: false },
+        { id: 'color', label: 'Kolor', sortable: false },
+        { id: 'size', label: 'Rozmiar', sortable: false },
         {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
-          sortable: true,
+          sortable: false,
           render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
         },
         {
@@ -420,12 +471,12 @@ function InventoryDashboardPage() {
         },
       ],
       [PRODUCT_TYPES.CONTACT_LENS]: [
-        { id: 'model', label: 'Model', sortable: true },
-        { id: 'power', label: 'Moc', sortable: true },
+        { id: 'model', label: 'Model', sortable: false },
+        { id: 'power', label: 'Moc', sortable: false },
         {
           id: 'lensType',
           label: 'Typ',
-          sortable: true,
+          sortable: false,
           render: (row) => {
             const lensTypeLabels = {
               'DAILY': 'Jednodniowe',
@@ -438,7 +489,7 @@ function InventoryDashboardPage() {
         {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
-          sortable: true,
+          sortable: false,
           render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
         },
         {
@@ -469,11 +520,11 @@ function InventoryDashboardPage() {
         },
       ],
       [PRODUCT_TYPES.SOLUTION]: [
-        { id: 'volume', label: 'Pojemność (ml)', sortable: true },
+        { id: 'volume', label: 'Pojemność (ml)', sortable: false },
         {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
-          sortable: true,
+          sortable: false,
           render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
         },
         {
@@ -504,17 +555,17 @@ function InventoryDashboardPage() {
         },
       ],
       [PRODUCT_TYPES.OTHER]: [
-        { id: 'name', label: 'Nazwa', sortable: true },
+        { id: 'name', label: 'Nazwa', sortable: false },
         { id: 'description', label: 'Opis', sortable: false },
       ],
       [PRODUCT_TYPES.SUNGLASSES]: [
-        { id: 'model', label: 'Model', sortable: true },
-        { id: 'color', label: 'Kolor', sortable: true },
-        { id: 'size', label: 'Rozmiar', sortable: true },
+        { id: 'model', label: 'Model', sortable: false },
+        { id: 'color', label: 'Kolor', sortable: false },
+        { id: 'size', label: 'Rozmiar', sortable: false },
         {
           id: 'sellingPrice',
           label: 'Cena sprzedaży',
-          sortable: true,
+          sortable: false,
           render: (row) => row.sellingPrice ? `${row.sellingPrice.toFixed(2)} zł` : '-',
         },
         {
@@ -550,17 +601,17 @@ function InventoryDashboardPage() {
     const extraColumns = isLocationView ? [{
       id: 'inventoryQuantity',
       label: 'Ilość',
-      sortable: true,
+      sortable: false,
       render: (row) => row.inventoryQuantity !== undefined ? row.inventoryQuantity : '-',
     }] : [{
       id: 'location',
       label: 'Lokalizacja',
-      sortable: true,
+      sortable: false,
       render: (row) => row.location?.name || '-',
     }, {
       id: 'inventoryQuantity',
       label: 'Ilość',
-      sortable: true,
+      sortable: false,
       render: (row) => row.inventoryQuantity !== undefined ? row.inventoryQuantity : '-',
     }];
 
@@ -647,8 +698,8 @@ function InventoryDashboardPage() {
         <SummaryTab />
       ) : (
         <>
-          {/* Search */}
-          <Box sx={{ mb: 2 }}>
+          {/* Search and Sort */}
+          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
             <TextField
               placeholder={`Szukaj ${PRODUCT_TYPE_LABELS[currentType].toLowerCase()}...`}
               value={searchTerm}
@@ -656,6 +707,29 @@ function InventoryDashboardPage() {
               size="small"
               sx={{ width: 300 }}
             />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Sortuj:
+              </Typography>
+              <Button
+                variant={quantitySort ? 'contained' : 'outlined'}
+                size="small"
+                onClick={handleQuantitySortToggle}
+                endIcon={getSortIcon(quantitySort)}
+                sx={{ textTransform: 'none' }}
+              >
+                Ilość
+              </Button>
+              <Button
+                variant={priceSort ? 'contained' : 'outlined'}
+                size="small"
+                onClick={handlePriceSortToggle}
+                endIcon={getSortIcon(priceSort)}
+                sx={{ textTransform: 'none' }}
+              >
+                Cena
+              </Button>
+            </Box>
           </Box>
 
           {/* Data Table */}

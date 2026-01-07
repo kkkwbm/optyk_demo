@@ -13,6 +13,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   Button,
   Alert,
   Chip,
@@ -56,6 +57,8 @@ const PendingTransfersPage = () => {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, transfer: null });
   const [rejectDialog, setRejectDialog] = useState({ open: false, transfer: null });
   const [actionLoading, setActionLoading] = useState(false);
+  const [incomingSort, setIncomingSort] = useState('desc'); // 'asc' or 'desc'
+  const [outgoingSort, setOutgoingSort] = useState('desc'); // 'asc' or 'desc'
 
   const incomingTransfers = useSelector(selectIncomingTransfers);
   const outgoingTransfers = useSelector(selectOutgoingTransfers);
@@ -156,8 +159,30 @@ const PendingTransfersPage = () => {
     return <LoadingSpinner />;
   }
 
-  const incomingPending = incomingTransfers.filter(t => t.status === 'PENDING');
-  const outgoingPending = outgoingTransfers.filter(t => t.status === 'PENDING');
+  const sortByDate = (transfers, direction) => {
+    return [...transfers].sort((a, b) => {
+      const dateA = new Date(a.transferDate || 0);
+      const dateB = new Date(b.transferDate || 0);
+      return direction === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+  };
+
+  const handleIncomingSortToggle = () => {
+    setIncomingSort(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
+
+  const handleOutgoingSortToggle = () => {
+    setOutgoingSort(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
+
+  const incomingPending = sortByDate(
+    incomingTransfers.filter(t => t.status === 'PENDING'),
+    incomingSort
+  );
+  const outgoingPending = sortByDate(
+    outgoingTransfers.filter(t => t.status === 'PENDING'),
+    outgoingSort
+  );
 
   return (
     <Box>
@@ -210,7 +235,15 @@ const PendingTransfersPage = () => {
                       <TableCell sx={{ fontWeight: 600 }}>Produkty</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Powód</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Zainicjował</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Data</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>
+                        <TableSortLabel
+                          active={true}
+                          direction={incomingSort}
+                          onClick={handleIncomingSortToggle}
+                        >
+                          Data
+                        </TableSortLabel>
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 600 }}>Akcje</TableCell>
                     </TableRow>
@@ -289,7 +322,15 @@ const PendingTransfersPage = () => {
                       <TableCell sx={{ fontWeight: 600 }}>Do lokalizacji</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Produkty</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Powód</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Data</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>
+                        <TableSortLabel
+                          active={true}
+                          direction={outgoingSort}
+                          onClick={handleOutgoingSortToggle}
+                        >
+                          Data
+                        </TableSortLabel>
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 600 }}>Akcje</TableCell>
                     </TableRow>

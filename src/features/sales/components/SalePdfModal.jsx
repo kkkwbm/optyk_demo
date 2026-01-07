@@ -19,6 +19,7 @@ import {
 import { FileText, X, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import locationService from '../../../services/locationService';
+import companySettingsService from '../../../services/companySettingsService';
 import {
   generatePdfBlob,
   downloadPdf,
@@ -60,16 +61,21 @@ const FIELD_GROUPS = [
 ];
 
 function SalePdfModal({ open, onClose, sale }) {
-  const [selectedFields, setSelectedFields] = useState(DEFAULT_SELECTED_FIELDS);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [locationData, setLocationData] = useState(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  const [companySettings, setCompanySettings] = useState(null);
+  const [loadingSettings, setLoadingSettings] = useState(false);
   const debounceRef = useRef(null);
 
-  // Fetch full location data when modal opens
+  // Use PDF fields from company settings (configured by admin) or defaults
+  const selectedFields = companySettings?.pdfSelectedFields || DEFAULT_SELECTED_FIELDS;
+
+  // Fetch full location data and company settings when modal opens
   useEffect(() => {
     if (open && sale?.location?.id) {
+      // Fetch location data
       setLoadingLocation(true);
       locationService
         .getLocationById(sale.location.id)
@@ -84,6 +90,22 @@ function SalePdfModal({ open, onClose, sale }) {
         .finally(() => {
           setLoadingLocation(false);
         });
+
+      // Fetch company settings
+      setLoadingSettings(true);
+      companySettingsService
+        .getSettings()
+        .then((response) => {
+          setCompanySettings(response.data?.data || response.data);
+        })
+        .catch((error) => {
+          console.error('Failed to fetch company settings:', error);
+          // Continue without custom settings - will use defaults
+          setCompanySettings(null);
+        })
+        .finally(() => {
+          setLoadingSettings(false);
+        });
     }
   }, [open, sale?.location?.id]);
 
@@ -93,7 +115,7 @@ function SalePdfModal({ open, onClose, sale }) {
 
     setLoading(true);
     try {
-      const blob = await generatePdfBlob(sale, locationData || sale.location, selectedFields);
+      const blob = await generatePdfBlob(sale, locationData || sale.location, selectedFields, companySettings);
       const url = URL.createObjectURL(blob);
 
       // Revoke previous URL
@@ -108,11 +130,11 @@ function SalePdfModal({ open, onClose, sale }) {
     } finally {
       setLoading(false);
     }
-  }, [sale, locationData, selectedFields, previewUrl]);
+  }, [sale, locationData, selectedFields, companySettings, previewUrl]);
 
   // Debounced preview regeneration
   useEffect(() => {
-    if (!open || !sale || loadingLocation) return;
+    if (!open || !sale || loadingLocation || loadingSettings) return;
 
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -127,7 +149,7 @@ function SalePdfModal({ open, onClose, sale }) {
         clearTimeout(debounceRef.current);
       }
     };
-  }, [open, sale, selectedFields, locationData, loadingLocation]);
+  }, [open, sale, selectedFields, locationData, loadingLocation, loadingSettings, companySettings]);
 
   // Cleanup on unmount or close
   useEffect(() => {
@@ -143,31 +165,14 @@ function SalePdfModal({ open, onClose, sale }) {
       URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
     }
-    setSelectedFields(DEFAULT_SELECTED_FIELDS);
     onClose();
-  };
-
-  const handleFieldChange = (fieldKey) => {
-    setSelectedFields((prev) => {
-      const newFields = { ...prev, [fieldKey]: !prev[fieldKey] };
-
-      // If disabling 'products', disable all dependent fields
-      if (fieldKey === 'products' && !newFields.products) {
-        newFields.productBrand = false;
-        newFields.productQuantity = false;
-        newFields.productUnitPrice = false;
-        newFields.productTotal = false;
-      }
-
-      return newFields;
-    });
   };
 
   const handleDownload = async () => {
     if (!sale) return;
 
     try {
-      await downloadPdf(sale, locationData || sale.location, selectedFields);
+      await downloadPdf(sale, locationData || sale.location, selectedFields, companySettings);
       toast.success('PDF zostal pobrany');
     } catch (error) {
       console.error('PDF download failed:', error);
@@ -175,17 +180,7 @@ function SalePdfModal({ open, onClose, sale }) {
     }
   };
 
-  const handleSelectAll = () => {
-    setSelectedFields(DEFAULT_SELECTED_FIELDS);
-  };
-
-  const handleDeselectAll = () => {
-    const allFalse = {};
-    Object.keys(DEFAULT_SELECTED_FIELDS).forEach((key) => {
-      allFalse[key] = false;
-    });
-    setSelectedFields(allFalse);
-  };
+  const isDataLoading = loadingLocation || loadingSettings;
 
   return (
     <Dialog
@@ -209,16 +204,11 @@ function SalePdfModal({ open, onClose, sale }) {
 
       <DialogContent dividers>
         <Grid container spacing={3}>
-          {/* Left column - Field selection */}
+          {/* Left column - Field selection (read-only) */}
           <Grid size={{ xs: 12, md: 4 }}>
-            <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
-              <Button size="small" variant="outlined" onClick={handleSelectAll}>
-                Zaznacz wszystko
-              </Button>
-              <Button size="small" variant="outlined" onClick={handleDeselectAll}>
-                Odznacz wszystko
-              </Button>
-            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Pola wyświetlane w PDF są konfigurowane przez administratora w ustawieniach.
+            </Typography>
 
             {FIELD_GROUPS.map((group, groupIndex) => (
               <Box key={group.label} sx={{ mb: 2 }}>
@@ -229,32 +219,27 @@ function SalePdfModal({ open, onClose, sale }) {
                   {group.label}
                 </Typography>
                 <FormGroup>
-                  {group.fields.map((field) => {
-                    const isDisabled =
-                      field.dependsOn && !selectedFields[field.dependsOn];
-                    return (
-                      <FormControlLabel
-                        key={field.key}
-                        control={
-                          <Checkbox
-                            checked={selectedFields[field.key]}
-                            onChange={() => handleFieldChange(field.key)}
-                            disabled={isDisabled}
-                            size="small"
-                          />
-                        }
-                        label={
-                          <Typography
-                            variant="body2"
-                            sx={{ color: isDisabled ? 'text.disabled' : 'text.primary' }}
-                          >
-                            {field.label}
-                          </Typography>
-                        }
-                        sx={{ ml: field.dependsOn ? 2 : 0 }}
-                      />
-                    );
-                  })}
+                  {group.fields.map((field) => (
+                    <FormControlLabel
+                      key={field.key}
+                      control={
+                        <Checkbox
+                          checked={selectedFields[field.key] || false}
+                          disabled
+                          size="small"
+                        />
+                      }
+                      label={
+                        <Typography
+                          variant="body2"
+                          sx={{ color: 'text.secondary' }}
+                        >
+                          {field.label}
+                        </Typography>
+                      }
+                      sx={{ ml: field.dependsOn ? 2 : 0 }}
+                    />
+                  ))}
                 </FormGroup>
                 {groupIndex < FIELD_GROUPS.length - 1 && <Divider sx={{ mt: 1 }} />}
               </Box>
@@ -274,7 +259,7 @@ function SalePdfModal({ open, onClose, sale }) {
                 overflow: 'hidden',
               }}
             >
-              {loading || loadingLocation ? (
+              {loading || isDataLoading ? (
                 <Box sx={{ textAlign: 'center' }}>
                   <CircularProgress size={40} />
                   <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
@@ -308,7 +293,7 @@ function SalePdfModal({ open, onClose, sale }) {
           color="primary"
           startIcon={<Download size={18} />}
           onClick={handleDownload}
-          disabled={loading || loadingLocation}
+          disabled={loading || isDataLoading}
         >
           Pobierz PDF
         </Button>

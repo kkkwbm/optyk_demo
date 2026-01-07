@@ -432,17 +432,19 @@ function SalesListPage() {
             Status sprzedaży
           </Typography>
           <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-            {Object.values(SALE_STATUS).map((status) => (
-              <Button
-                key={status}
-                variant={statusFilters.includes(status) ? 'contained' : 'outlined'}
-                size="small"
-                onClick={() => toggleStatusFilter(status)}
-                sx={{ textTransform: 'none' }}
-              >
-                {SALE_STATUS_LABELS[status]}
-              </Button>
-            ))}
+            {Object.values(SALE_STATUS)
+              .filter((status) => status !== SALE_STATUS.PARTIALLY_RETURNED)
+              .map((status) => (
+                <Button
+                  key={status}
+                  variant={statusFilters.includes(status) ? 'contained' : 'outlined'}
+                  size="small"
+                  onClick={() => toggleStatusFilter(status)}
+                  sx={{ textTransform: 'none' }}
+                >
+                  {SALE_STATUS_LABELS[status]}
+                </Button>
+              ))}
           </Box>
         </Box>
 

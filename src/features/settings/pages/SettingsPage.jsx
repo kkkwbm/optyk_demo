@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Container,
@@ -29,8 +29,11 @@ import {
   Avatar,
   useTheme,
   alpha,
+  CircularProgress,
+  Checkbox,
+  FormGroup,
 } from '@mui/material';
-import { Settings, Moon, Sun, MapPin, Plus, Trash2, User, Shield, Mail, Phone, Edit } from 'lucide-react';
+import { Settings, Moon, Sun, MapPin, Plus, Trash2, User, Shield, Mail, Phone, Edit, FileText, Upload, Image, X } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../shared/components/PageHeader';
@@ -39,8 +42,62 @@ import ConfirmDialog from '../../../shared/components/ConfirmDialog';
 import { selectTheme, setTheme } from '../../../app/uiSlice';
 import { selectUser } from '../../auth/authSlice';
 import { createLocation, deleteLocation, fetchActiveLocations, selectActiveLocations, updateLocation } from '../../locations/locationsSlice';
-import { LOCATION_TYPES, LOCATION_TYPE_LABELS, VALIDATION } from '../../../constants';
+import {
+  fetchCompanySettings,
+  updateCompanySettings,
+  uploadCompanyLogo,
+  deleteCompanyLogo,
+  selectCompanySettings,
+  selectCompanySettingsLoading,
+} from '../companySettingsSlice';
+import { LOCATION_TYPES, LOCATION_TYPE_LABELS, VALIDATION, USER_ROLES } from '../../../constants';
 import userService from '../../../services/userService';
+
+const PDF_FIELD_GROUPS = [
+  {
+    label: 'Nagłówek',
+    fields: [{ key: 'locationData', label: 'Dane lokalizacji (adres, telefon)' }],
+  },
+  {
+    label: 'Informacje o sprzedaży',
+    fields: [
+      { key: 'saleNumber', label: 'Numer sprzedaży' },
+      { key: 'dateTime', label: 'Data i godzina' },
+      { key: 'salesperson', label: 'Sprzedawca' },
+      { key: 'customer', label: 'Klient' },
+      { key: 'notes', label: 'Notatki' },
+    ],
+  },
+  {
+    label: 'Produkty',
+    fields: [
+      { key: 'products', label: 'Lista produktów' },
+      { key: 'productBrand', label: 'Marka produktu' },
+      { key: 'productQuantity', label: 'Ilość' },
+      { key: 'productUnitPrice', label: 'Cena jednostkowa' },
+      { key: 'productTotal', label: 'Suma za produkt' },
+    ],
+  },
+  {
+    label: 'Podsumowanie',
+    fields: [{ key: 'totalAmount', label: 'Suma całkowita' }],
+  },
+];
+
+const DEFAULT_PDF_FIELDS = {
+  locationData: true,
+  saleNumber: true,
+  dateTime: true,
+  salesperson: true,
+  customer: true,
+  notes: true,
+  products: true,
+  productBrand: true,
+  productQuantity: true,
+  productUnitPrice: true,
+  productTotal: true,
+  totalAmount: true,
+};
 
 function SettingsPage() {
   const dispatch = useDispatch();
@@ -49,11 +106,23 @@ function SettingsPage() {
   const currentTheme = useSelector(selectTheme);
   const user = useSelector(selectUser);
   const locations = useSelector(selectActiveLocations);
+  const companySettings = useSelector(selectCompanySettings);
+  const companySettingsLoading = useSelector(selectCompanySettingsLoading);
 
   const [openLocationDialog, setOpenLocationDialog] = useState(false);
   const [editingLocation, setEditingLocation] = useState(null);
   const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, location: null });
+
+  // Company settings state
+  const [companyName, setCompanyName] = useState('');
+  const [savingCompanyName, setSavingCompanyName] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [pdfSelectedFields, setPdfSelectedFields] = useState(DEFAULT_PDF_FIELDS);
+  const [savingPdfFields, setSavingPdfFields] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const isAdmin = user?.role === USER_ROLES.ADMIN;
 
   const { control, handleSubmit, reset } = useForm({
     defaultValues: {
@@ -69,7 +138,19 @@ function SettingsPage() {
 
   useEffect(() => {
     dispatch(fetchActiveLocations());
-  }, [dispatch]);
+    if (isAdmin) {
+      dispatch(fetchCompanySettings());
+    }
+  }, [dispatch, isAdmin]);
+
+  useEffect(() => {
+    if (companySettings?.companyName) {
+      setCompanyName(companySettings.companyName);
+    }
+    if (companySettings?.pdfSelectedFields) {
+      setPdfSelectedFields(companySettings.pdfSelectedFields);
+    }
+  }, [companySettings]);
 
   const handleThemeToggle = async () => {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -143,6 +224,84 @@ function SettingsPage() {
       toast.error(errorMessage);
     }
   };
+
+  // Company settings handlers
+  const handleSaveCompanyName = async () => {
+    if (!companyName.trim()) {
+      toast.error('Nazwa firmy nie może być pusta');
+      return;
+    }
+    setSavingCompanyName(true);
+    try {
+      await dispatch(updateCompanySettings({ companyName: companyName.trim() })).unwrap();
+      toast.success('Nazwa firmy została zaktualizowana');
+    } catch (error) {
+      toast.error(error || 'Nie udało się zaktualizować nazwy firmy');
+    } finally {
+      setSavingCompanyName(false);
+    }
+  };
+
+  const handleLogoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Dozwolone formaty: JPEG, PNG, GIF');
+      return;
+    }
+
+    // Validate file size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Maksymalny rozmiar pliku to 2MB');
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      await dispatch(uploadCompanyLogo(file)).unwrap();
+      toast.success('Logo zostało zaktualizowane');
+    } catch (error) {
+      toast.error(error || 'Nie udało się wgrać logo');
+    } finally {
+      setUploadingLogo(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDeleteLogo = async () => {
+    try {
+      await dispatch(deleteCompanyLogo()).unwrap();
+      toast.success('Logo zostało usunięte');
+    } catch (error) {
+      toast.error(error || 'Nie udało się usunąć logo');
+    }
+  };
+
+  const handlePdfFieldToggle = (fieldKey) => {
+    setPdfSelectedFields((prev) => ({
+      ...prev,
+      [fieldKey]: !prev[fieldKey],
+    }));
+  };
+
+  const handleSavePdfFields = async () => {
+    setSavingPdfFields(true);
+    try {
+      await dispatch(updateCompanySettings({ pdfSelectedFields })).unwrap();
+      toast.success('Ustawienia pól PDF zostały zapisane');
+    } catch (error) {
+      toast.error(error || 'Nie udało się zapisać ustawień pól PDF');
+    } finally {
+      setSavingPdfFields(false);
+    }
+  };
+
+  const isPdfFieldsChanged = JSON.stringify(pdfSelectedFields) !== JSON.stringify(companySettings?.pdfSelectedFields || DEFAULT_PDF_FIELDS);
 
   return (
     <Container maxWidth="lg" sx={{ pb: 4 }}>
@@ -290,7 +449,232 @@ function SettingsPage() {
           </Paper>
         </Grid>
 
-        {/* Row 2: Location Management */}
+        {/* Row 2: PDF Settings (Admin Only) */}
+        {isAdmin && (
+          <Grid item xs={12}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                <FileText size={20} />
+                <Box>
+                  <Typography variant="h6">Ustawienia PDF</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Konfiguruj dane firmy wyświetlane w dokumentach PDF
+                  </Typography>
+                </Box>
+              </Box>
+
+              {companySettingsLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <Grid container spacing={3}>
+                  {/* Company Name */}
+                  <Grid item xs={12} md={6}>
+                    <Box
+                      sx={{
+                        p: 2.5,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1.5,
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                      }}
+                    >
+                      <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                        Nazwa firmy
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Nazwa wyświetlana w nagłówku dokumentów PDF
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          placeholder="np. Salon Optyczny Family"
+                          inputProps={{ maxLength: 255 }}
+                        />
+                        <Button
+                          variant="contained"
+                          onClick={handleSaveCompanyName}
+                          disabled={savingCompanyName || companyName === companySettings?.companyName}
+                          sx={{ minWidth: 100 }}
+                        >
+                          {savingCompanyName ? <CircularProgress size={20} /> : 'Zapisz'}
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Grid>
+
+                  {/* Logo Upload */}
+                  <Grid item xs={12} md={6}>
+                    <Box
+                      sx={{
+                        p: 2.5,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1.5,
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                      }}
+                    >
+                      <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                        Logo firmy
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Logo wyświetlane w nagłówku dokumentów PDF (max 2MB, JPEG/PNG/GIF)
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 'auto' }}>
+                        {companySettings?.logoBase64 ? (
+                          <Box
+                            sx={{
+                              position: 'relative',
+                              width: 64,
+                              height: 64,
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              borderRadius: 1,
+                              overflow: 'hidden',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: 'background.default',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <img
+                              src={`data:${companySettings.logoContentType || 'image/jpeg'};base64,${companySettings.logoBase64}`}
+                              alt="Logo firmy"
+                              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                            />
+                            <IconButton
+                              size="small"
+                              onClick={handleDeleteLogo}
+                              sx={{
+                                position: 'absolute',
+                                top: 2,
+                                right: 2,
+                                bgcolor: 'error.main',
+                                color: 'white',
+                                '&:hover': { bgcolor: 'error.dark' },
+                                width: 18,
+                                height: 18,
+                              }}
+                            >
+                              <X size={10} />
+                            </IconButton>
+                          </Box>
+                        ) : (
+                          <Box
+                            sx={{
+                              width: 64,
+                              height: 64,
+                              border: '2px dashed',
+                              borderColor: 'divider',
+                              borderRadius: 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: 'background.default',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Image size={28} color={theme.palette.text.disabled} />
+                          </Box>
+                        )}
+                        <Box>
+                          <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleLogoUpload}
+                            accept="image/jpeg,image/png,image/gif"
+                            style={{ display: 'none' }}
+                          />
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={uploadingLogo ? <CircularProgress size={14} /> : <Upload size={14} />}
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploadingLogo}
+                          >
+                            {uploadingLogo ? 'Wgrywanie...' : 'Wgraj logo'}
+                          </Button>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Grid>
+
+                  {/* PDF Fields Configuration */}
+                  <Grid item xs={12}>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="subtitle2" gutterBottom>
+                      Pola wyświetlane w PDF
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Wybierz, które informacje mają być widoczne w dokumentach PDF sprzedaży
+                    </Typography>
+                    <Grid container spacing={2}>
+                      {PDF_FIELD_GROUPS.map((group) => (
+                        <Grid item xs={12} sm={6} md={3} key={group.label}>
+                          <Paper
+                            variant="outlined"
+                            sx={{ p: 2, height: '100%' }}
+                          >
+                            <Typography variant="subtitle2" color="primary" gutterBottom>
+                              {group.label}
+                            </Typography>
+                            <FormGroup>
+                              {group.fields.map((field) => (
+                                <FormControlLabel
+                                  key={field.key}
+                                  control={
+                                    <Checkbox
+                                      size="small"
+                                      checked={pdfSelectedFields[field.key] || false}
+                                      onChange={() => handlePdfFieldToggle(field.key)}
+                                    />
+                                  }
+                                  label={
+                                    <Typography variant="body2">
+                                      {field.label}
+                                    </Typography>
+                                  }
+                                />
+                              ))}
+                            </FormGroup>
+                          </Paper>
+                        </Grid>
+                      ))}
+                    </Grid>
+                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                      <Button
+                        variant="contained"
+                        onClick={handleSavePdfFields}
+                        disabled={savingPdfFields || !isPdfFieldsChanged}
+                      >
+                        {savingPdfFields ? <CircularProgress size={20} /> : 'Zapisz ustawienia pól'}
+                      </Button>
+                    </Box>
+                  </Grid>
+                </Grid>
+              )}
+            </Paper>
+          </Grid>
+        )}
+
+        {/* Row 3: Location Management */}
         <Grid item xs={12}>
           <Stack spacing={3}>
             <Paper
