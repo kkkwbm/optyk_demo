@@ -73,54 +73,56 @@ const TransferActionsMenu = memo(function TransferActionsMenu({
           horizontal: 'right',
         }}
       >
-        <MenuItem onClick={() => handleAction(onView)}>
-          <ListItemIcon>
-            <Eye size={20} />
-          </ListItemIcon>
-          <ListItemText>View Details</ListItemText>
-        </MenuItem>
-
-        {isPending && canConfirm && (
-          <MenuItem onClick={() => handleAction(onConfirm)}>
+        {[
+          <MenuItem key="view" onClick={() => handleAction(onView)}>
             <ListItemIcon>
-              <CheckCircle size={20} color="green" />
+              <Eye size={20} />
             </ListItemIcon>
-            <ListItemText>Confirm Transfer</ListItemText>
-          </MenuItem>
-        )}
+            <ListItemText>View Details</ListItemText>
+          </MenuItem>,
 
-        {isPending && canReject && (
-          <MenuItem onClick={() => handleAction(onReject)}>
-            <ListItemIcon>
-              <XCircle size={20} color="red" />
-            </ListItemIcon>
-            <ListItemText>Reject Transfer</ListItemText>
-          </MenuItem>
-        )}
+          isPending && canConfirm && (
+            <MenuItem key="confirm" onClick={() => handleAction(onConfirm)}>
+              <ListItemIcon>
+                <CheckCircle size={20} color="green" />
+              </ListItemIcon>
+              <ListItemText>Confirm Transfer</ListItemText>
+            </MenuItem>
+          ),
 
-        {isPending && canCancel && (
-          <>
-            <Divider />
-            <MenuItem onClick={() => handleAction(onCancel)}>
+          isPending && canReject && (
+            <MenuItem key="reject" onClick={() => handleAction(onReject)}>
+              <ListItemIcon>
+                <XCircle size={20} color="red" />
+              </ListItemIcon>
+              <ListItemText>Reject Transfer</ListItemText>
+            </MenuItem>
+          ),
+
+          isPending && canCancel && (
+            <Divider key="divider-cancel" />
+          ),
+          isPending && canCancel && (
+            <MenuItem key="cancel" onClick={() => handleAction(onCancel)}>
               <ListItemIcon>
                 <X size={20} />
               </ListItemIcon>
               <ListItemText>Cancel Transfer</ListItemText>
             </MenuItem>
-          </>
-        )}
+          ),
 
-        {isCompleted && onCreateReturn && (
-          <>
-            <Divider />
-            <MenuItem onClick={() => handleAction(onCreateReturn)}>
+          isCompleted && onCreateReturn && (
+            <Divider key="divider-return" />
+          ),
+          isCompleted && onCreateReturn && (
+            <MenuItem key="return" onClick={() => handleAction(onCreateReturn)}>
               <ListItemIcon>
                 <RotateCcw size={20} />
               </ListItemIcon>
               <ListItemText>Create Return Transfer</ListItemText>
             </MenuItem>
-          </>
-        )}
+          ),
+        ].filter(Boolean)}
       </Menu>
     </>
   );

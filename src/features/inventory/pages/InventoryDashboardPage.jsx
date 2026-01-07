@@ -85,8 +85,8 @@ function InventoryDashboardPage() {
 
   // Normalize data for the table
   const tableData = useMemo(() => {
-    // Backend already filters by productType, so just map the data
-    let data = inventoryItems.map(item => ({
+    // Backend already filters by productType and sorts, so just map the data
+    return inventoryItems.map(item => ({
       ...item.product, // Spread the full product object
       inventoryQuantity: item.quantity,
       inventoryId: item.id,
@@ -96,24 +96,7 @@ function InventoryDashboardPage() {
       type: item.product?.type || item.productType, // Add type field for consistency
       location: item.location, // Add location for display
     }));
-
-    // Apply sorting
-    if (quantitySort) {
-      data = [...data].sort((a, b) => {
-        const qtyA = a.inventoryQuantity || 0;
-        const qtyB = b.inventoryQuantity || 0;
-        return quantitySort === 'desc' ? qtyB - qtyA : qtyA - qtyB;
-      });
-    } else if (priceSort) {
-      data = [...data].sort((a, b) => {
-        const priceA = a.sellingPrice || 0;
-        const priceB = b.sellingPrice || 0;
-        return priceSort === 'desc' ? priceB - priceA : priceA - priceB;
-      });
-    }
-
-    return data;
-  }, [inventoryItems, quantitySort, priceSort]);
+  }, [inventoryItems]);
 
   // Helper function to refresh inventory data
   const refreshInventory = (pageOverride = null, sizeOverride = null) => {
@@ -129,6 +112,15 @@ function InventoryDashboardPage() {
 
     if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
       params.search = debouncedSearchTerm.trim();
+    }
+
+    // Add sorting parameters
+    if (quantitySort) {
+      params.sortBy = 'quantity';
+      params.sortDirection = quantitySort;
+    } else if (priceSort) {
+      params.sortBy = 'product.sellingPrice';
+      params.sortDirection = priceSort;
     }
 
     // Handle "All Stores" and "All Warehouses" special cases
@@ -159,7 +151,7 @@ function InventoryDashboardPage() {
   useEffect(() => {
     refreshInventory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentType, pagination.size, currentLocation, isLocationView, debouncedSearchTerm]);
+  }, [currentType, pagination.size, currentLocation, isLocationView, debouncedSearchTerm, quantitySort, priceSort]);
 
   // Refresh data when navigating back with refresh state
   useEffect(() => {
@@ -715,8 +707,8 @@ function InventoryDashboardPage() {
                 variant={quantitySort ? 'contained' : 'outlined'}
                 size="small"
                 onClick={handleQuantitySortToggle}
-                endIcon={getSortIcon(quantitySort)}
-                sx={{ textTransform: 'none' }}
+                endIcon={<Box sx={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{getSortIcon(quantitySort)}</Box>}
+                sx={{ textTransform: 'none', minWidth: 85 }}
               >
                 Ilość
               </Button>
@@ -724,8 +716,8 @@ function InventoryDashboardPage() {
                 variant={priceSort ? 'contained' : 'outlined'}
                 size="small"
                 onClick={handlePriceSortToggle}
-                endIcon={getSortIcon(priceSort)}
-                sx={{ textTransform: 'none' }}
+                endIcon={<Box sx={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{getSortIcon(priceSort)}</Box>}
+                sx={{ textTransform: 'none', minWidth: 85 }}
               >
                 Cena
               </Button>
@@ -748,38 +740,36 @@ function InventoryDashboardPage() {
 
       {/* Actions Menu */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-        {selectedProduct?.status !== PRODUCT_STATUS.DELETED ? (
-          <>
-            {canEditProducts && (
-              <MenuItem
-                key="edit"
-                onClick={() => {
-                  handleEditProduct(selectedProduct);
-                  handleMenuClose();
-                }}
-              >
-                <Edit size={16} style={{ marginRight: 8 }} />
-                Edytuj
-              </MenuItem>
-            )}
-            {canDeleteProducts && (
-              <MenuItem
-                key="delete"
-                onClick={() => {
-                  handleOpenConfirm(selectedProduct, 'delete');
-                  handleMenuClose();
-                }}
-              >
-                Usuń
-              </MenuItem>
-            )}
-            {!canEditProducts && !canDeleteProducts && (
-              <MenuItem disabled>
-                Brak uprawnień do akcji
-              </MenuItem>
-            )}
-          </>
-        ) : (
+        {selectedProduct?.status !== PRODUCT_STATUS.DELETED ? [
+          canEditProducts && (
+            <MenuItem
+              key="edit"
+              onClick={() => {
+                handleEditProduct(selectedProduct);
+                handleMenuClose();
+              }}
+            >
+              <Edit size={16} style={{ marginRight: 8 }} />
+              Edytuj
+            </MenuItem>
+          ),
+          canDeleteProducts && (
+            <MenuItem
+              key="delete"
+              onClick={() => {
+                handleOpenConfirm(selectedProduct, 'delete');
+                handleMenuClose();
+              }}
+            >
+              Usuń
+            </MenuItem>
+          ),
+          !canEditProducts && !canDeleteProducts && (
+            <MenuItem key="no-permission" disabled>
+              Brak uprawnień do akcji
+            </MenuItem>
+          ),
+        ].filter(Boolean) : (
           <MenuItem
             onClick={() => {
               handleOpenConfirm(selectedProduct, 'restore');

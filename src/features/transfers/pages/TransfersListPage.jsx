@@ -722,100 +722,101 @@ function TransfersListPage() {
           Historia transferów
         </Typography>
 
-        {/* Location Filters in Two Columns */}
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          {/* Source Locations Column */}
-          <Grid item xs={12} md={6}>
+        {/* Location, Status and Date Filters */}
+        <Box sx={{ mb: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {/* Source Locations */}
+          <Box>
             <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
               Lokalizacja źródłowa
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {locations.map((location) => (
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {locations.map((loc) => (
                 <Button
-                  key={`from-${location.id}`}
-                  variant={fromLocationFilters.includes(location.id) ? 'contained' : 'outlined'}
+                  key={`from-${loc.id}`}
+                  variant={fromLocationFilters.includes(loc.id) ? 'contained' : 'outlined'}
                   size="small"
-                  startIcon={getLocationIcon(location)}
-                  onClick={() => toggleFromLocationFilter(location.id)}
-                  sx={{
-                    textTransform: 'none',
-                    justifyContent: 'flex-start',
-                  }}
+                  onClick={() => toggleFromLocationFilter(loc.id)}
+                  sx={{ textTransform: 'none' }}
                 >
-                  {location.name}
+                  {loc.name}
                 </Button>
               ))}
             </Box>
-          </Grid>
+          </Box>
 
-          {/* Destination Locations Column */}
-          <Grid item xs={12} md={6}>
+          {/* Destination Locations */}
+          <Box>
             <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
               Lokalizacja docelowa
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {locations.map((location) => (
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {locations.map((loc) => (
                 <Button
-                  key={`to-${location.id}`}
-                  variant={toLocationFilters.includes(location.id) ? 'contained' : 'outlined'}
+                  key={`to-${loc.id}`}
+                  variant={toLocationFilters.includes(loc.id) ? 'contained' : 'outlined'}
                   size="small"
-                  startIcon={getLocationIcon(location)}
-                  onClick={() => toggleToLocationFilter(location.id)}
-                  sx={{
-                    textTransform: 'none',
-                    justifyContent: 'flex-start',
-                  }}
+                  onClick={() => toggleToLocationFilter(loc.id)}
+                  sx={{ textTransform: 'none' }}
                 >
-                  {location.name}
+                  {loc.name}
                 </Button>
               ))}
             </Box>
-          </Grid>
-        </Grid>
+          </Box>
 
-        {/* Status and Date Filters */}
-        <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          <TextField
-            select
-            label="Status"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            size="small"
-            sx={{ minWidth: 150 }}
-          >
-            <MenuItem value="">Wszystkie statusy</MenuItem>
-            {Object.values(TRANSFER_STATUS).map((status) => (
-              <MenuItem key={status} value={status}>
-                {TRANSFER_STATUS_LABELS[status]}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            label="Data rozpoczęcia"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            size="small"
-            InputLabelProps={{ shrink: true }}
-            sx={{ minWidth: 150 }}
-            error={startDate && endDate && startDate > endDate}
-            helperText={startDate && endDate && startDate > endDate ? 'Data początkowa musi być przed końcową' : ''}
-          />
-          <TextField
-            label="Data zakończenia"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            size="small"
-            InputLabelProps={{ shrink: true }}
-            sx={{ minWidth: 150 }}
-            error={startDate && endDate && startDate > endDate}
-          />
-          {(fromLocationFilters.length > 0 || toLocationFilters.length > 0 || statusFilter || startDate || endDate || searchQuery) && (
-            <Button variant="outlined" onClick={handleClearFilters}>
-              Wyczyść filtry
-            </Button>
-          )}
+          {/* Status Filter */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+              Status
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {Object.values(TRANSFER_STATUS).map((status) => (
+                <Button
+                  key={status}
+                  variant={statusFilter === status ? 'contained' : 'outlined'}
+                  size="small"
+                  onClick={() => setStatusFilter(statusFilter === status ? '' : status)}
+                  sx={{ textTransform: 'none' }}
+                >
+                  {TRANSFER_STATUS_LABELS[status]}
+                </Button>
+              ))}
+            </Box>
+          </Box>
+
+          {/* Date Filters */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+              Data
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+              <TextField
+                label="Od"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                sx={{ minWidth: 150 }}
+                error={startDate && endDate && startDate > endDate}
+              />
+              <TextField
+                label="Do"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                sx={{ minWidth: 150 }}
+                error={startDate && endDate && startDate > endDate}
+              />
+              {(fromLocationFilters.length > 0 || toLocationFilters.length > 0 || statusFilter || startDate || endDate || searchQuery) && (
+                <Button variant="outlined" size="small" onClick={handleClearFilters}>
+                  Wyczyść filtry
+                </Button>
+              )}
+            </Box>
+          </Box>
         </Box>
 
         {/* Search Bar */}

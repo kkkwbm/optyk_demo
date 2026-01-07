@@ -550,54 +550,79 @@ function HistoryListPage() {
           </Box>
         </Box>
 
-        {/* Product Type Filters */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
-            Typ produktu
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-            {productEntityTypes.map((entity) => (
-              <Button
-                key={entity.value}
-                variant={entityFilters.includes(entity.value) ? 'contained' : 'outlined'}
+        {/* Product Type and Date Filters - same row */}
+        <Box sx={{ mb: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {/* Product Type Filters */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+              Typ produktu
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+              {productEntityTypes.map((entity) => (
+                <Button
+                  key={entity.value}
+                  variant={entityFilters.includes(entity.value) ? 'contained' : 'outlined'}
+                  size="small"
+                  onClick={() => toggleEntityFilter(entity.value)}
+                  sx={{ textTransform: 'none' }}
+                >
+                  {entity.label}
+                </Button>
+              ))}
+            </Box>
+          </Box>
+
+          {/* Date Filters */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+              Data
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+              <TextField
+                label="Od"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
                 size="small"
-                onClick={() => toggleEntityFilter(entity.value)}
-                sx={{ textTransform: 'none' }}
-              >
-                {entity.label}
-              </Button>
-            ))}
+                InputLabelProps={{ shrink: true }}
+                sx={{ minWidth: 150 }}
+                error={startDate && endDate && startDate > endDate}
+              />
+              <TextField
+                label="Do"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                sx={{ minWidth: 150 }}
+                error={startDate && endDate && startDate > endDate}
+              />
+              {(operationFilters.length > 0 || entityFilters.length > 0 || startDate || endDate || searchQuery) && (
+                <Button variant="outlined" size="small" onClick={handleClearFilters}>
+                  Wyczyść filtry
+                </Button>
+              )}
+            </Box>
           </Box>
         </Box>
 
-        {/* Date Filters */}
-        <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Search Bar and Delete Buttons - same row */}
+        <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
           <TextField
-            label="Data początkowa"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
             size="small"
-            InputLabelProps={{ shrink: true }}
-            sx={{ minWidth: 150 }}
-            error={startDate && endDate && startDate > endDate}
-            helperText={startDate && endDate && startDate > endDate ? 'Data początkowa musi być przed końcową' : ''}
+            placeholder="Wyszukaj po użytkowniku, lokalizacji lub opisie operacji..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            sx={{ flex: 1, maxWidth: 600 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={20} />
+                </InputAdornment>
+              ),
+            }}
           />
-          <TextField
-            label="Data końcowa"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            size="small"
-            InputLabelProps={{ shrink: true }}
-            sx={{ minWidth: 150 }}
-            error={startDate && endDate && startDate > endDate}
-          />
-          {(operationFilters.length > 0 || entityFilters.length > 0 || startDate || endDate || searchQuery) && (
-            <Button variant="outlined" onClick={handleClearFilters}>
-              Wyczyść filtry
-            </Button>
-          )}
           <Box sx={{ marginLeft: 'auto', display: 'flex', gap: 1 }}>
             {selectionMode ? (
               <>
@@ -611,16 +636,18 @@ function HistoryListPage() {
                 <Button
                   variant="contained"
                   color="error"
+                  size="small"
                   onClick={handleDeleteMany}
                   disabled={selectedItems.length === 0}
-                  startIcon={<Trash2 size={18} />}
+                  startIcon={<Trash2 size={16} />}
                 >
                   Usuń zaznaczone ({selectedItems.length})
                 </Button>
                 <Button
                   variant="outlined"
+                  size="small"
                   onClick={handleToggleSelectionMode}
-                  startIcon={<X size={18} />}
+                  startIcon={<X size={16} />}
                 >
                   Anuluj
                 </Button>
@@ -630,40 +657,24 @@ function HistoryListPage() {
                 <Button
                   variant="outlined"
                   color="primary"
+                  size="small"
                   onClick={handleToggleSelectionMode}
-                  startIcon={<CheckSquare size={18} />}
+                  startIcon={<CheckSquare size={16} />}
                 >
                   Usuń wiele
                 </Button>
                 <Button
                   variant="contained"
                   color="error"
+                  size="small"
                   onClick={handleDeleteAll}
-                  startIcon={<Trash2 size={18} />}
+                  startIcon={<Trash2 size={16} />}
                 >
                   {currentLocation ? `Usuń całą historię z ${currentLocation.name}` : 'Usuń całą historię'}
                 </Button>
               </>
             )}
           </Box>
-        </Box>
-
-        {/* Search Bar */}
-        <Box sx={{ mb: 3 }}>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Wyszukaj po użytkowniku, lokalizacji lub opisie operacji..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search size={20} />
-                </InputAdornment>
-              ),
-            }}
-          />
         </Box>
 
         {/* History Table */}

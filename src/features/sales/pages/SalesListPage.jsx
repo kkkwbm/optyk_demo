@@ -426,71 +426,78 @@ function SalesListPage() {
       )}
 
       <Paper sx={{ p: 3 }}>
-        {/* Status Filters */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
-            Status sprzedaży
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-            {Object.values(SALE_STATUS)
-              .filter((status) => status !== SALE_STATUS.PARTIALLY_RETURNED)
-              .map((status) => (
+        {/* Status and Product Type Filters - same row */}
+        <Box sx={{ mb: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {/* Status Filters */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+              Status sprzedaży
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+              {Object.values(SALE_STATUS)
+                .filter((status) => status !== SALE_STATUS.PARTIALLY_RETURNED)
+                .map((status) => (
+                  <Button
+                    key={status}
+                    variant={statusFilters.includes(status) ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => toggleStatusFilter(status)}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    {SALE_STATUS_LABELS[status]}
+                  </Button>
+                ))}
+            </Box>
+          </Box>
+
+          {/* Product Type Filters */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+              Typ produktu
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+              {productEntityTypes.map((entity) => (
                 <Button
-                  key={status}
-                  variant={statusFilters.includes(status) ? 'contained' : 'outlined'}
+                  key={entity.value}
+                  variant={productTypeFilters.includes(entity.value) ? 'contained' : 'outlined'}
                   size="small"
-                  onClick={() => toggleStatusFilter(status)}
+                  onClick={() => toggleProductTypeFilter(entity.value)}
                   sx={{ textTransform: 'none' }}
                 >
-                  {SALE_STATUS_LABELS[status]}
+                  {entity.label}
                 </Button>
               ))}
+            </Box>
           </Box>
-        </Box>
 
-        {/* Product Type Filters */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
-            Typ produktu
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-            {productEntityTypes.map((entity) => (
-              <Button
-                key={entity.value}
-                variant={productTypeFilters.includes(entity.value) ? 'contained' : 'outlined'}
+          {/* Date Filters */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+              Data
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+              <TextField
+                label="Od"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
                 size="small"
-                onClick={() => toggleProductTypeFilter(entity.value)}
-                sx={{ textTransform: 'none' }}
-              >
-                {entity.label}
-              </Button>
-            ))}
+                InputLabelProps={{ shrink: true }}
+                sx={{ minWidth: 150 }}
+                error={startDate && endDate && startDate > endDate}
+              />
+              <TextField
+                label="Do"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                sx={{ minWidth: 150 }}
+                error={startDate && endDate && startDate > endDate}
+              />
+            </Box>
           </Box>
-        </Box>
-
-        {/* Date Filters */}
-        <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          <TextField
-            label="Data początkowa"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            size="small"
-            InputLabelProps={{ shrink: true }}
-            sx={{ minWidth: 150 }}
-            error={startDate && endDate && startDate > endDate}
-            helperText={startDate && endDate && startDate > endDate ? 'Data początkowa musi być przed końcową' : ''}
-          />
-          <TextField
-            label="Data końcowa"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            size="small"
-            InputLabelProps={{ shrink: true }}
-            sx={{ minWidth: 150 }}
-            error={startDate && endDate && startDate > endDate}
-          />
         </Box>
 
         {/* Search Bar */}
