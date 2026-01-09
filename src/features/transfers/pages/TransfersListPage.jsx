@@ -67,6 +67,7 @@ function TransfersListPage() {
   const [allPendingTransfers, setAllPendingTransfers] = useState([]);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [sort, setSort] = useState({ sortBy: 'date', sortDirection: 'desc' });
+  const [pendingSort, setPendingSort] = useState({ sortBy: 'date', sortDirection: 'desc' });
 
   // Dialog state: type can be 'CANCEL' or 'DELETE'
   const [confirmDialog, setConfirmDialog] = useState({ open: false, transfer: null, type: null });
@@ -388,6 +389,10 @@ function TransfersListPage() {
     setSort({ sortBy: columnId, sortDirection: direction });
   };
 
+  const handlePendingSortChange = (columnId, direction) => {
+    setPendingSort({ sortBy: columnId, sortDirection: direction });
+  };
+
   const toggleFromLocationFilter = (locationId) => {
     setFromLocationFilters(prev =>
       prev.includes(locationId)
@@ -564,12 +569,23 @@ function TransfersListPage() {
     return 'error';
   };
 
-  // Get pending transfers - just use the fetched pending transfers
+  // Get pending transfers - sort them based on pendingSort state
   const pendingTransfers = useMemo(() => {
-    return allPendingTransfers.filter(
+    const filtered = allPendingTransfers.filter(
       (transfer) => transfer.status === TRANSFER_STATUS.PENDING
     );
-  }, [allPendingTransfers]);
+
+    // Sort by date
+    if (pendingSort.sortBy === 'date') {
+      return [...filtered].sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0);
+        const dateB = new Date(b.createdAt || 0);
+        return pendingSort.sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+      });
+    }
+
+    return filtered;
+  }, [allPendingTransfers, pendingSort]);
 
   // Filter out PENDING from history unless user specifically filtered by that status
   const historyTransfers = useMemo(() => {
@@ -593,7 +609,7 @@ function TransfersListPage() {
     {
       id: 'date',
       label: 'Data',
-      sortable: false,
+      sortable: true,
       render: (row) => formatDate(row.createdAt, DATE_FORMATS.DISPLAY_WITH_TIME),
     },
     {
@@ -713,6 +729,8 @@ function TransfersListPage() {
           onRowClick={(row) => navigate(`/transfers/${row.id}`)}
           emptyMessage="Brak oczekujących transferów"
           pagination={null}
+          sort={pendingSort}
+          onSortChange={handlePendingSortChange}
         />
       </Paper>
 

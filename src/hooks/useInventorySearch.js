@@ -104,8 +104,8 @@ export const useInventorySearch = ({
       const params = {
         page: 0,
         size: pageSize,
-        sortBy: 'product.brand.name',
-        sortDirection: 'asc',
+        sortBy: 'createdAt',
+        sortDirection: 'desc',
       };
 
       // Add search parameter if query exists

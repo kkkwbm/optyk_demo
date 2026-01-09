@@ -63,7 +63,7 @@ function SaleDetailsPage() {
 
   const handleConfirmCancel = async () => {
     try {
-      await dispatch(cancelSale(sale.id)).unwrap();
+      await dispatch(cancelSale({ id: sale.id })).unwrap();
       toast.success('Sprzedaż została anulowana');
       dispatch(fetchSaleById(id));
     } catch (error) {
