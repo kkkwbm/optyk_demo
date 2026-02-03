@@ -143,6 +143,7 @@ const authSlice = createSlice({
     user: null,
     accessToken: null, // Now stored in memory only, not localStorage
     isAuthenticated: false,
+    isDemo: false, // Demo mode flag
     loading: false,
     initializing: true, // New flag for app initialization
     error: null,
@@ -155,12 +156,38 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.isAuthenticated = true;
     },
+    setDemoAuth: (state, action) => {
+      const { user, accessToken } = action.payload;
+      state.user = user;
+      state.accessToken = accessToken;
+      state.isAuthenticated = true;
+      state.initializing = false;
+      state.loading = false;
+      state.error = null;
+      tokenManager.setAccessToken(accessToken);
+    },
     clearAuth: (state) => {
       state.user = null;
       state.accessToken = null;
       state.isAuthenticated = false;
+      state.isDemo = false;
       state.error = null;
       tokenManager.clearAccessToken();
+    },
+    loginAsDemo: (state) => {
+      state.user = {
+        id: 'demo-user',
+        email: 'demo@optyk.pl',
+        firstName: 'Demo',
+        lastName: 'User',
+        role: 'ADMIN',
+      };
+      state.accessToken = null;
+      state.isAuthenticated = true;
+      state.isDemo = true;
+      state.loading = false;
+      state.initializing = false;
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
@@ -240,12 +267,13 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setUser, clearAuth } = authSlice.actions;
+export const { clearError, setUser, setDemoAuth, clearAuth, loginAsDemo } = authSlice.actions;
 
 // Selectors
 export const selectAuth = (state) => state.auth;
 export const selectUser = (state) => state.auth.user;
 export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
+export const selectIsDemo = (state) => state.auth.isDemo;
 export const selectAuthLoading = (state) => state.auth.loading;
 export const selectAuthInitializing = (state) => state.auth.initializing;
 export const selectAuthError = (state) => state.auth.error;

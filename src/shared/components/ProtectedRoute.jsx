@@ -11,7 +11,7 @@ import LoadingSpinner from './LoadingSpinner';
  * @param {string[]} props.allowedRoles - Array of roles allowed to access this route (optional)
  * @param {string} props.redirectTo - Path to redirect to if not authenticated (default: '/login')
  */
-function ProtectedRoute({ children, allowedRoles = null, redirectTo = '/login' }) {
+function ProtectedRoute({ children, allowedRoles = null, redirectTo = '/inventory' }) {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const user = useSelector(selectUser);
   const initializing = useSelector(selectAuthInitializing);

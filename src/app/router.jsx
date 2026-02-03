@@ -6,7 +6,6 @@ import AppLayout from '../shared/layouts/AppLayout';
 import StatisticsLayout from '../shared/layouts/StatisticsLayout';
 
 // Lazy load pages for code splitting
-const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'));
 const UnauthorizedPage = lazy(() => import('../shared/pages/UnauthorizedPage'));
 const NotFoundPage = lazy(() => import('../shared/pages/NotFoundPage'));
 
@@ -59,14 +58,6 @@ const SuspenseWrapper = ({ children }) => (
 
 const router = createBrowserRouter([
   // Public routes
-  {
-    path: '/login',
-    element: (
-      <SuspenseWrapper>
-        <LoginPage />
-      </SuspenseWrapper>
-    ),
-  },
   {
     path: '/unauthorized',
     element: (

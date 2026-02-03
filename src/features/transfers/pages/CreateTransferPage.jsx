@@ -796,24 +796,29 @@ function CreateTransferPage() {
             </Box>
 
             {/* SECTION 4: Actions */}
-            <Box sx={{ display: 'flex', gap: 3, justifyContent: 'flex-end', pt: 2 }}>
-              <Button
-                variant="outlined"
-                onClick={() => navigate('/transfers')}
-                size="large"
-                sx={{ px: 5, py: 1.5, fontSize: '1.1rem', fontWeight: 600 }}
-              >
-                Anuluj
-              </Button>
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={transferItems.length === 0 || !fromLocationId || !toLocationId}
-                size="large"
-                sx={{ px: 5, py: 1.5, fontSize: '1.1rem', fontWeight: 600 }}
-              >
-                Utwórz transfer
-              </Button>
+            <Box sx={{ display: 'flex', gap: 3, justifyContent: 'flex-end', pt: 2, flexDirection: 'column', alignItems: 'flex-end' }}>
+              <Box sx={{ display: 'flex', gap: 3 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/transfers')}
+                  size="large"
+                  sx={{ px: 5, py: 1.5, fontSize: '1.1rem', fontWeight: 600 }}
+                >
+                  Anuluj
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={true}
+                  size="large"
+                  sx={{ px: 5, py: 1.5, fontSize: '1.1rem', fontWeight: 600 }}
+                >
+                  Utwórz transfer
+                </Button>
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                Tworzenie transferów jest wyłączone w trybie demo
+              </Typography>
             </Box>
           </Stack>
         </form>

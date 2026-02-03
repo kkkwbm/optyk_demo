@@ -242,6 +242,39 @@ const locationsSlice = createSlice({
       state.currentLocation = null;
       localStorage.removeItem('currentLocation');
     },
+    setDemoLocations: (state) => {
+      const demoLocations = [
+        {
+          id: 'demo-store-1',
+          name: 'Salon Optyczny Centrum',
+          type: 'STORE',
+          status: 'ACTIVE',
+          city: 'Warszawa',
+          address: 'ul. Marszałkowska 1',
+        },
+        {
+          id: 'demo-store-2',
+          name: 'Salon Optyczny Mokotów',
+          type: 'STORE',
+          status: 'ACTIVE',
+          city: 'Warszawa',
+          address: 'ul. Puławska 100',
+        },
+        {
+          id: 'demo-warehouse-1',
+          name: 'Magazyn Główny',
+          type: 'WAREHOUSE',
+          status: 'ACTIVE',
+          city: 'Warszawa',
+          address: 'ul. Przemysłowa 10',
+        },
+      ];
+      state.items = demoLocations;
+      state.activeLocations = demoLocations;
+      state.myLocations = demoLocations;
+      state.currentLocation = demoLocations[0];
+      state.loading = false;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -438,7 +471,7 @@ const locationsSlice = createSlice({
 });
 
 // Actions
-export const { clearError, setFilters, clearFilters, setCurrentLocation, clearCurrentLocation, initializeCurrentLocation } = locationsSlice.actions;
+export const { clearError, setFilters, clearFilters, setCurrentLocation, clearCurrentLocation, initializeCurrentLocation, setDemoLocations } = locationsSlice.actions;
 
 // Selectors
 export const selectLocations = (state) => state.locations.items;

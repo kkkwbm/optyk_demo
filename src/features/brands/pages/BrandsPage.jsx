@@ -12,6 +12,7 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Typography,
 } from '@mui/material';
 import { Plus, MoreVertical } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -237,6 +238,8 @@ function BrandsPage() {
             label: 'Dodaj markę',
             icon: <Plus size={20} />,
             onClick: () => handleOpenDialog(),
+            disabled: true,
+            disabledTooltip: 'Dodawanie marek jest wyłączone w trybie demo',
           },
         ]}
       />
@@ -279,11 +282,18 @@ function BrandsPage() {
               />
             </Box>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>Anuluj</Button>
-            <Button type="submit" variant="contained">
-              {editingBrand ? 'Zaktualizuj' : 'Utwórz'}
-            </Button>
+          <DialogActions sx={{ flexDirection: 'column', alignItems: 'stretch', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+              <Button onClick={handleCloseDialog}>Anuluj</Button>
+              <Button type="submit" variant="contained" disabled={!editingBrand}>
+                {editingBrand ? 'Zaktualizuj' : 'Utwórz'}
+              </Button>
+            </Box>
+            {!editingBrand && (
+              <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                Dodawanie marek jest wyłączone w trybie demo
+              </Typography>
+            )}
           </DialogActions>
         </form>
       </Dialog>

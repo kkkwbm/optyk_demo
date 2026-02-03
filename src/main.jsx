@@ -46,8 +46,20 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// Start MSW for demo mode, then render the app
+async function startApp() {
+  // Start Mock Service Worker to intercept API calls
+  const { worker } = await import('./mocks/browser');
+  await worker.start({
+    onUnhandledRequest: 'warn', // Warn about unhandled requests so we can add missing handlers
+    quiet: false // Show MSW logs for debugging
+  });
+
+  createRoot(document.getElementById('root')).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+}
+
+startApp();

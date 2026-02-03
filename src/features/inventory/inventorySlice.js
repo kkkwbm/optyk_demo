@@ -207,6 +207,82 @@ const inventorySlice = createSlice({
     clearInventory: (state) => {
       state.items = [];
     },
+    setDemoInventory: (state) => {
+      const demoItems = [
+        {
+          id: 'demo-inv-1',
+          product: {
+            id: 'demo-prod-1',
+            type: 'FRAME',
+            model: 'Aviator Classic',
+            color: 'Gold',
+            size: '58',
+            brand: { id: 'demo-brand-1', name: 'Ray-Ban' },
+            sellingPrice: 599.00,
+            purchasePrice: 350.00,
+            status: 'ACTIVE',
+          },
+          quantity: 5,
+          location: { id: 'demo-store-1', name: 'Salon Optyczny Centrum' },
+        },
+        {
+          id: 'demo-inv-2',
+          product: {
+            id: 'demo-prod-2',
+            type: 'FRAME',
+            model: 'Wayfarer',
+            color: 'Black',
+            size: '54',
+            brand: { id: 'demo-brand-1', name: 'Ray-Ban' },
+            sellingPrice: 499.00,
+            purchasePrice: 280.00,
+            status: 'ACTIVE',
+          },
+          quantity: 3,
+          location: { id: 'demo-store-1', name: 'Salon Optyczny Centrum' },
+        },
+        {
+          id: 'demo-inv-3',
+          product: {
+            id: 'demo-prod-3',
+            type: 'SUNGLASSES',
+            model: 'Holbrook',
+            color: 'Matte Black',
+            size: '55',
+            brand: { id: 'demo-brand-2', name: 'Oakley' },
+            sellingPrice: 749.00,
+            purchasePrice: 420.00,
+            status: 'ACTIVE',
+          },
+          quantity: 2,
+          location: { id: 'demo-store-1', name: 'Salon Optyczny Centrum' },
+        },
+        {
+          id: 'demo-inv-4',
+          product: {
+            id: 'demo-prod-4',
+            type: 'CONTACT_LENS',
+            model: 'Dailies Total1',
+            lensType: 'DAILY',
+            power: '-2.00',
+            brand: { id: 'demo-brand-1', name: 'Ray-Ban' },
+            sellingPrice: 129.00,
+            purchasePrice: 75.00,
+            status: 'ACTIVE',
+          },
+          quantity: 10,
+          location: { id: 'demo-store-1', name: 'Salon Optyczny Centrum' },
+        },
+      ];
+      state.items = demoItems;
+      state.loading = false;
+      state.pagination = {
+        page: 0,
+        size: 20,
+        totalElements: demoItems.length,
+        totalPages: 1,
+      };
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -352,7 +428,7 @@ const inventorySlice = createSlice({
 });
 
 // Actions
-export const { clearError, setFilters, clearFilters, clearInventory } = inventorySlice.actions;
+export const { clearError, setFilters, clearFilters, clearInventory, setDemoInventory } = inventorySlice.actions;
 
 // Selectors
 export const selectInventoryItems = (state) => state.inventory.items;

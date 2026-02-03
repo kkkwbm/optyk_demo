@@ -118,24 +118,28 @@ function ChangePasswordPage() {
             autoComplete="new-password"
           />
 
-          <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
-            <Button
-              type="button"
-              variant="outlined"
-              fullWidth
-              onClick={() => navigate('/profile')}
-              disabled={loading}
-            >
-              Anuluj
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              fullWidth
-              disabled={loading}
-            >
-              {loading ? 'Zmiana...' : 'Zmień hasło'}
-            </Button>
+          <Box sx={{ display: 'flex', gap: 2, mt: 3, flexDirection: 'column' }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                type="button"
+                variant="outlined"
+                fullWidth
+                onClick={() => navigate('/profile')}
+              >
+                Anuluj
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth
+                disabled={true}
+              >
+                Zmień hasło
+              </Button>
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+              Zmiana hasła jest wyłączona w trybie demo
+            </Typography>
           </Box>
         </form>
       </Paper>

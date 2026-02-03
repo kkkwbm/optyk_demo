@@ -14,6 +14,7 @@ import SunglassesForm from '../components/SunglassesForm';
 import { createProduct } from '../productsSlice';
 import { fetchActiveBrands, selectActiveBrands } from '../../brands/brandsSlice';
 import { selectCurrentLocation, selectActiveLocations } from '../../locations/locationsSlice';
+import { selectIsDemo } from '../../auth/authSlice';
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS, PRODUCT_TYPE_SINGULAR } from '../../../constants';
 import { cleanProductData } from '../utils/productDataCleaner';
 
@@ -24,6 +25,7 @@ function CreateProductPage() {
   const activeBrands = useSelector(selectActiveBrands);
   const currentLocation = useSelector(selectCurrentLocation);
   const activeLocations = useSelector(selectActiveLocations);
+  const isDemo = useSelector(selectIsDemo);
 
   // Get product type from URL parameter or default to FRAME
   const typeFromUrl = searchParams.get('type');
@@ -50,8 +52,10 @@ function CreateProductPage() {
   });
 
   useEffect(() => {
-    dispatch(fetchActiveBrands());
-  }, [dispatch]);
+    if (!isDemo) {
+      dispatch(fetchActiveBrands());
+    }
+  }, [dispatch, isDemo]);
 
   useEffect(() => {
     // Reset form when product type changes
@@ -175,13 +179,18 @@ function CreateProductPage() {
           <Box sx={{ mb: 3 }}>{renderForm()}</Box>
 
           {/* Form Actions */}
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-            <Button variant="outlined" onClick={() => navigate('/inventory')}>
-              Anuluj
-            </Button>
-            <Button type="submit" variant="contained">
-              Utwórz {PRODUCT_TYPE_SINGULAR[productType]}
-            </Button>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', flexDirection: 'column', alignItems: 'flex-end' }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button variant="outlined" onClick={() => navigate('/inventory')}>
+                Anuluj
+              </Button>
+              <Button type="submit" variant="contained" disabled={true}>
+                Utwórz {PRODUCT_TYPE_SINGULAR[productType]}
+              </Button>
+            </Box>
+            <Typography variant="caption" color="text.secondary">
+              Dodawanie produktów jest wyłączone w trybie demo
+            </Typography>
           </Box>
         </form>
       </Paper>

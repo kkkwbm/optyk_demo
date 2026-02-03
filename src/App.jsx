@@ -10,8 +10,11 @@ import { createAppTheme } from './shared/styles/theme';
 import ErrorBoundary from './shared/components/ErrorBoundary';
 import { createAriaLiveAnnouncer } from './utils/accessibility';
 import { selectTheme, setTheme } from './app/uiSlice';
-import { initializeAuth, selectUser, logout } from './features/auth/authSlice';
-import { initializeCurrentLocation } from './features/locations/locationsSlice';
+import { setDemoAuth, selectUser, logout } from './features/auth/authSlice';
+import { currentUser, demoAccessToken } from './mocks/data/users';
+import { initializeCurrentLocation, setDemoLocations } from './features/locations/locationsSlice';
+import { setDemoBrands } from './features/brands/brandsSlice';
+import { setDemoInventory } from './features/inventory/inventorySlice';
 import { tokenManager } from './config/api';
 
 function ThemedApp() {
@@ -32,11 +35,13 @@ function ThemedApp() {
       dispatch(logout());
     });
 
-    // Initialize authentication (try to restore session)
-    // Only try once - don't retry on failure to avoid infinite loops
-    dispatch(initializeAuth()).catch(() => {
-      // Silently fail - user will be redirected to login if needed
-    });
+    // Demo mode: Auto-login with demo admin user (no backend needed)
+    dispatch(setDemoAuth({ user: currentUser, accessToken: demoAccessToken }));
+
+    // Initialize demo data
+    dispatch(setDemoLocations());
+    dispatch(setDemoBrands());
+    dispatch(setDemoInventory());
   }, [dispatch]);
 
   // Apply user's theme preference from database after authentication

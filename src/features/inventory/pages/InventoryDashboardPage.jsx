@@ -41,7 +41,7 @@ import {
   clearInventory,
 } from '../../inventory/inventorySlice';
 import { selectCurrentLocation } from '../../locations/locationsSlice';
-import { selectUser } from '../../auth/authSlice';
+import { selectUser, selectIsDemo } from '../../auth/authSlice';
 import EditProductModal from '../components/EditProductModal';
 import SummaryTab from '../components/SummaryTab';
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS, PRODUCT_STATUS, PERMISSIONS, USER_ROLES, LOCATION_TABS } from '../../../constants';
@@ -55,6 +55,7 @@ function InventoryDashboardPage() {
   const currentLocation = useSelector(selectCurrentLocation);
   const currentType = useSelector(selectCurrentType);
   const currentUser = useSelector(selectUser);
+  const isDemo = useSelector(selectIsDemo);
 
   // Products State (Global view)
   const products = useSelector(selectProducts);
@@ -100,7 +101,7 @@ function InventoryDashboardPage() {
 
   // Helper function to refresh inventory data
   const refreshInventory = (pageOverride = null, sizeOverride = null) => {
-    if (currentType === 'SUMMARY') {
+    if (currentType === 'SUMMARY' || isDemo) {
       return;
     }
 

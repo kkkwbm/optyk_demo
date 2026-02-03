@@ -188,6 +188,21 @@ const brandsSlice = createSlice({
     clearCurrentBrand: (state) => {
       state.currentBrand = null;
     },
+    setDemoBrands: (state) => {
+      const demoBrands = [
+        { id: 'demo-brand-1', name: 'Ray-Ban', isActive: true, status: 'ACTIVE' },
+        { id: 'demo-brand-2', name: 'Oakley', isActive: true, status: 'ACTIVE' },
+        { id: 'demo-brand-3', name: 'Persol', isActive: true, status: 'ACTIVE' },
+        { id: 'demo-brand-4', name: 'Carrera', isActive: true, status: 'ACTIVE' },
+        { id: 'demo-brand-5', name: 'Tom Ford', isActive: true, status: 'ACTIVE' },
+        { id: 'demo-brand-6', name: 'Gucci', isActive: true, status: 'ACTIVE' },
+        { id: 'demo-brand-7', name: 'Prada', isActive: true, status: 'ACTIVE' },
+        { id: 'demo-brand-8', name: 'Versace', isActive: true, status: 'ACTIVE' },
+      ];
+      state.items = demoBrands;
+      state.activeBrands = demoBrands;
+      state.loading = false;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -371,7 +386,7 @@ const brandsSlice = createSlice({
 });
 
 // Actions
-export const { clearError, setFilters, clearFilters, clearCurrentBrand } = brandsSlice.actions;
+export const { clearError, setFilters, clearFilters, clearCurrentBrand, setDemoBrands } = brandsSlice.actions;
 
 // Selectors
 export const selectBrands = (state) => state.brands.items;

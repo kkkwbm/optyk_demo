@@ -18,7 +18,6 @@ import {
 import {
   Menu as MenuIcon,
   User,
-  LogOut,
   Settings,
   KeyRound,
   BarChart3,
@@ -31,10 +30,9 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { logout, selectUser, selectUserRole } from '../../features/auth/authSlice';
+import { selectUser, selectUserRole } from '../../features/auth/authSlice';
 import { selectCurrentLocation } from '../../features/locations/locationsSlice';
 import { PERMISSIONS, LOCATION_TYPES } from '../../constants';
-import toast from 'react-hot-toast';
 
 function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
   const navigate = useNavigate();
@@ -63,17 +61,6 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
   const handleChangePassword = () => {
     handleMenuClose();
     navigate('/change-password');
-  };
-
-  const handleLogout = async () => {
-    handleMenuClose();
-    try {
-      await dispatch(logout()).unwrap();
-      toast.success('Wylogowano pomyślnie');
-      navigate('/login');
-    } catch (error) {
-      navigate('/login');
-    }
   };
 
   const getUserInitials = (firstName, lastName) => {
@@ -319,13 +306,6 @@ function Header({ drawerWidth, onMenuClick, sidebarOpen }) {
               <KeyRound size={20} />
             </ListItemIcon>
             Zmień hasło
-          </MenuItem>
-          <Divider />
-          <MenuItem onClick={handleLogout}>
-            <ListItemIcon>
-              <LogOut size={20} />
-            </ListItemIcon>
-            Wyloguj
           </MenuItem>
         </Menu>
       </Toolbar>

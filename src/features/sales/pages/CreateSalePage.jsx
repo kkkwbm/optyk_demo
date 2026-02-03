@@ -1016,7 +1016,7 @@ function CreateSalePage() {
                   variant="contained"
                   fullWidth
                   size="large"
-                  disabled={cart.length === 0 || !currentLocation || isWarehouseSelected}
+                  disabled={true}
                   sx={{
                     py: 1.5,
                     fontSize: '1.1rem',
@@ -1025,6 +1025,9 @@ function CreateSalePage() {
                 >
                   Zakończ sprzedaż
                 </Button>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+                  Tworzenie sprzedaży jest wyłączone w trybie demo
+                </Typography>
               </CardContent>
             </Card>
           </Grid>

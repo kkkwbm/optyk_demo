@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -69,6 +69,9 @@ function SalesListPage() {
     dispatch(fetchActiveLocations());
   }, [dispatch]);
 
+  // Track previous debounced search to reset pagination only on actual changes
+  const prevDebouncedSearchRef = useRef(debouncedSearchQuery);
+
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -77,6 +80,27 @@ function SalesListPage() {
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Reset pagination when debounced search query changes
+  useEffect(() => {
+    if (prevDebouncedSearchRef.current !== debouncedSearchQuery) {
+      pagination.setPage(0);
+      prevDebouncedSearchRef.current = debouncedSearchQuery;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchQuery]);
+
+  // Track previous location to reset pagination only on actual changes
+  const prevLocationRef = useRef(currentLocation?.id);
+
+  // Reset pagination when location changes
+  useEffect(() => {
+    if (prevLocationRef.current !== currentLocation?.id) {
+      pagination.setPage(0);
+      prevLocationRef.current = currentLocation?.id;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLocation?.id]);
 
   useEffect(() => {
     // Date validation: ensure startDate is not after endDate
@@ -235,6 +259,7 @@ function SalesListPage() {
     setStartDate('');
     setEndDate('');
     setSearchQuery('');
+    pagination.setPage(0);
   };
 
   const toggleStatusFilter = (status) => {
@@ -243,6 +268,7 @@ function SalesListPage() {
         ? prev.filter(s => s !== status)
         : [...prev, status]
     );
+    pagination.setPage(0);
   };
 
   const toggleProductTypeFilter = (type) => {
@@ -251,6 +277,7 @@ function SalesListPage() {
         ? prev.filter(t => t !== type)
         : [...prev, type]
     );
+    pagination.setPage(0);
   };
 
   // Check if current location is a warehouse
@@ -480,7 +507,10 @@ function SalesListPage() {
                 label="Od"
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  pagination.setPage(0);
+                }}
                 size="small"
                 InputLabelProps={{ shrink: true }}
                 sx={{ minWidth: 150 }}
@@ -490,7 +520,10 @@ function SalesListPage() {
                 label="Do"
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  pagination.setPage(0);
+                }}
                 size="small"
                 InputLabelProps={{ shrink: true }}
                 sx={{ minWidth: 150 }}
