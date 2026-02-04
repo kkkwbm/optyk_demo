@@ -10,6 +10,18 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080
 import { jwtDecode } from 'jwt-decode';
 
 /**
+ * Demo mode flag - when true, all API requests are blocked
+ * This is set during demo initialization and prevents any network activity
+ */
+let isDemoMode = false;
+
+export const setDemoMode = (enabled) => {
+  isDemoMode = enabled;
+};
+
+export const getDemoMode = () => isDemoMode;
+
+/**
  * In-memory storage for access token
  */
 let inMemoryAccessToken = null;
@@ -120,6 +132,16 @@ const api = axios.create({
 // Request interceptor - Add JWT token and CSRF token to requests
 api.interceptors.request.use(
   (config) => {
+    // In demo mode, silently block requests by returning a canceled promise
+    // This is a safety net - thunks should check demo mode before calling API
+    if (isDemoMode) {
+      return Promise.reject({
+        isDemo: true,
+        message: 'Request blocked in demo mode',
+        config
+      });
+    }
+
     // Add JWT Bearer token from memory (not localStorage!)
     const accessToken = tokenManager.getAccessToken();
     if (accessToken) {

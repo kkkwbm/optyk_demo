@@ -24,7 +24,12 @@ const initialState = {
 // Async thunks
 export const fetchInventory = createAsyncThunk(
   'inventory/fetchInventory',
-  async ({ locationId, params }, { rejectWithValue }) => {
+  async ({ locationId, params }, { getState, rejectWithValue }) => {
+    // Skip API call in demo mode - data is already loaded
+    if (getState().auth.isDemo) {
+      const items = getState().inventory.items;
+      return { content: items, totalElements: items.length, page: 0, size: 20, totalPages: 1 };
+    }
     try {
       // If locationId is null/undefined, getInventory will now fetch all inventory
       // params may contain locationType
@@ -41,7 +46,14 @@ export const fetchInventory = createAsyncThunk(
 
 export const fetchInventoryItem = createAsyncThunk(
   'inventory/fetchInventoryItem',
-  async ({ productId, locationId }, { rejectWithValue }) => {
+  async ({ productId, locationId }, { getState, rejectWithValue }) => {
+    // Skip API call in demo mode
+    if (getState().auth.isDemo) {
+      const item = getState().inventory.items.find(
+        i => i.productId === productId && i.locationId === locationId
+      );
+      return item || null;
+    }
     try {
       const response = await inventoryService.getInventoryItem(productId, locationId);
       if (response.data.success) {
@@ -56,7 +68,12 @@ export const fetchInventoryItem = createAsyncThunk(
 
 export const fetchInventoryStock = createAsyncThunk(
   'inventory/fetchInventoryStock',
-  async (params, { rejectWithValue }) => {
+  async (params, { getState, rejectWithValue }) => {
+    // Skip API call in demo mode
+    if (getState().auth.isDemo) {
+      const items = getState().inventory.items;
+      return { content: items, totalElements: items.length, page: 0, size: 20, totalPages: 1 };
+    }
     try {
       const { locationId, ...restParams } = params;
       const response = await inventoryService.getInventory(locationId, restParams);
@@ -117,7 +134,11 @@ export const releaseStock = createAsyncThunk(
 
 export const fetchInventoryStats = createAsyncThunk(
   'inventory/fetchInventoryStats',
-  async (locationId, { rejectWithValue }) => {
+  async (locationId, { getState, rejectWithValue }) => {
+    // Skip API call in demo mode - return existing stats
+    if (getState().auth.isDemo) {
+      return getState().inventory.stats || { totalItems: 0, totalValue: 0, lowStock: 0 };
+    }
     try {
       const response = await inventoryService.getInventoryStats(locationId);
       if (response.data.success) {
@@ -132,7 +153,11 @@ export const fetchInventoryStats = createAsyncThunk(
 
 export const fetchInventoryValue = createAsyncThunk(
   'inventory/fetchInventoryValue',
-  async (locationId, { rejectWithValue }) => {
+  async (locationId, { getState, rejectWithValue }) => {
+    // Skip API call in demo mode
+    if (getState().auth.isDemo) {
+      return { totalValue: 0, totalCost: 0 };
+    }
     try {
       const response = await inventoryService.getInventoryValue(locationId);
       if (response.data.success) {

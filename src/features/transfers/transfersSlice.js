@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import transferService from '../../services/transferService';
+import { transfers as mockTransfers } from '../../mocks/data/transfers';
 
 // Initial state
 const initialState = {
@@ -31,7 +32,12 @@ const initialState = {
 // Async thunks
 export const fetchTransfers = createAsyncThunk(
   'transfers/fetchTransfers',
-  async (params, { rejectWithValue }) => {
+  async (params, { getState, rejectWithValue }) => {
+    // Skip API call in demo mode
+    if (getState().auth.isDemo) {
+      const items = getState().transfers.items;
+      return { content: items, totalElements: items.length, page: 0, size: 20, totalPages: 1 };
+    }
     try {
       const response = await transferService.getTransfers(params);
       if (response.data.success) {
@@ -46,7 +52,12 @@ export const fetchTransfers = createAsyncThunk(
 
 export const fetchTransferById = createAsyncThunk(
   'transfers/fetchTransferById',
-  async (id, { rejectWithValue }) => {
+  async (id, { getState, rejectWithValue }) => {
+    // Skip API call in demo mode
+    if (getState().auth.isDemo) {
+      const transfer = getState().transfers.items.find(t => t.id === id);
+      return transfer || null;
+    }
     try {
       const response = await transferService.getTransferById(id);
       if (response.data.success) {
@@ -273,6 +284,19 @@ const transfersSlice = createSlice({
     },
     clearReturnTransfer: (state) => {
       state.returnTransfer = null;
+    },
+    setDemoTransfers: (state) => {
+      state.items = mockTransfers;
+      state.incomingTransfers = mockTransfers;
+      state.outgoingTransfers = mockTransfers;
+      state.pendingIncomingCount = mockTransfers.filter(t => t.status === 'PENDING').length;
+      state.loading = false;
+      state.pagination = {
+        page: 0,
+        size: 20,
+        totalElements: mockTransfers.length,
+        totalPages: Math.ceil(mockTransfers.length / 20),
+      };
     },
   },
   extraReducers: (builder) => {
@@ -530,7 +554,7 @@ const transfersSlice = createSlice({
 });
 
 // Actions
-export const { clearError, setFilters, clearFilters, clearCurrentTransfer, clearReturnTransfer } = transfersSlice.actions;
+export const { clearError, setFilters, clearFilters, clearCurrentTransfer, clearReturnTransfer, setDemoTransfers } = transfersSlice.actions;
 
 // Selectors
 export const selectTransfers = (state) => state.transfers.items;

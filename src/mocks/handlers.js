@@ -124,6 +124,11 @@ const errorResponse = (message, status = 400) => {
   return HttpResponse.json(apiResponse(null, false, message), { status });
 };
 
+// Helper for demo mode restriction - blocks all mutations
+const demoRestricted = (operation) => {
+  return errorResponse(`${operation} jest niedostępne w wersji demo`, 403);
+};
+
 // Helper to transform product to match expected UI structure
 const transformProduct = (product) => {
   if (!product) return null;
@@ -428,114 +433,30 @@ export const handlers = [
     }));
   }),
 
-  // Inventory mutations
-  http.post(`${API_BASE}/inventory`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-    const { productId, locationId, quantity } = data;
-
-    // Check if inventory record exists
-    const existingIndex = mutableInventory.findIndex(
-      inv => inv.productId === productId && inv.locationId === locationId
-    );
-
-    if (existingIndex >= 0) {
-      // Update existing inventory
-      mutableInventory[existingIndex].quantity += quantity;
-      return HttpResponse.json(apiResponse(mutableInventory[existingIndex]));
-    }
-
-    // Create new inventory record
-    const newInventory = {
-      id: generateId('inv'),
-      productId,
-      locationId,
-      quantity,
-      reservedQuantity: 0,
-      minQuantity: data.minQuantity || 1
-    };
-    mutableInventory.push(newInventory);
-    return HttpResponse.json(apiResponse(newInventory));
-  }),
-
-  http.post(`${API_BASE}/inventory/reserve`, async ({ request }) => {
+  // Inventory mutations (all blocked in demo mode)
+  http.post(`${API_BASE}/inventory`, async () => {
     await delay(50);
-    const data = await request.json();
-    const { productId, locationId, quantity } = data;
-
-    const index = mutableInventory.findIndex(
-      inv => inv.productId === productId && inv.locationId === locationId
-    );
-
-    if (index === -1) {
-      return errorResponse('Inventory not found', 404);
-    }
-
-    const inv = mutableInventory[index];
-    const available = inv.quantity - (inv.reservedQuantity || 0);
-
-    if (quantity > available) {
-      return errorResponse('Insufficient available quantity', 400);
-    }
-
-    mutableInventory[index].reservedQuantity = (inv.reservedQuantity || 0) + quantity;
-    return HttpResponse.json(apiResponse(mutableInventory[index]));
+    return demoRestricted('Dodawanie do magazynu');
   }),
 
-  http.post(`${API_BASE}/inventory/release`, async ({ request }) => {
+  http.post(`${API_BASE}/inventory/reserve`, async () => {
     await delay(50);
-    const data = await request.json();
-    const { productId, locationId, quantity } = data;
-
-    const index = mutableInventory.findIndex(
-      inv => inv.productId === productId && inv.locationId === locationId
-    );
-
-    if (index === -1) {
-      return errorResponse('Inventory not found', 404);
-    }
-
-    mutableInventory[index].reservedQuantity = Math.max(
-      0,
-      (mutableInventory[index].reservedQuantity || 0) - quantity
-    );
-    return HttpResponse.json(apiResponse(mutableInventory[index]));
+    return demoRestricted('Rezerwacja produktów');
   }),
 
-  http.patch(`${API_BASE}/inventory/products/:productId/locations/:locationId/min-stock`, async ({ params, request }) => {
+  http.post(`${API_BASE}/inventory/release`, async () => {
     await delay(50);
-    const data = await request.json();
-
-    const index = mutableInventory.findIndex(
-      inv => inv.productId === params.productId && inv.locationId === params.locationId
-    );
-
-    if (index === -1) {
-      return errorResponse('Inventory not found', 404);
-    }
-
-    mutableInventory[index].minQuantity = data.minQuantity;
-    return HttpResponse.json(apiResponse(mutableInventory[index]));
+    return demoRestricted('Zwalnianie rezerwacji');
   }),
 
-  http.post(`${API_BASE}/inventory/batch-adjust`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-    const { adjustments } = data;
+  http.patch(`${API_BASE}/inventory/products/:productId/locations/:locationId/min-stock`, async () => {
+    await delay(50);
+    return demoRestricted('Zmiana minimalnego stanu');
+  }),
 
-    const results = [];
-    for (const adj of adjustments) {
-      const index = mutableInventory.findIndex(
-        inv => inv.productId === adj.productId && inv.locationId === adj.locationId
-      );
-
-      if (index >= 0) {
-        mutableInventory[index].quantity = Math.max(0, mutableInventory[index].quantity + adj.adjustment);
-        results.push(mutableInventory[index]);
-      }
-    }
-
-    return HttpResponse.json(apiResponse(results));
+  http.post(`${API_BASE}/inventory/batch-adjust`, async () => {
+    await delay(50);
+    return demoRestricted('Korekta magazynowa');
   }),
 
   // ========== PRODUCTS ENDPOINTS ==========
@@ -681,318 +602,119 @@ export const handlers = [
     return HttpResponse.json(apiResponse(paginate(transformed, page, size)));
   }),
 
-  // Product mutations (generic endpoints for all product types)
-  http.post(`${API_BASE}/frames`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-    const brand = data.brandId ? mutableBrands.find(b => b.id === data.brandId) : null;
-    const newProduct = {
-      id: generateId('prd'),
-      type: 'FRAME',
-      ...data,
-      brandName: brand?.name || null,
-      status: 'ACTIVE',
-      deletedAt: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    mutableProducts.push(newProduct);
-    return HttpResponse.json(apiResponse(transformProduct(newProduct)));
-  }),
-
-  http.post(`${API_BASE}/contact-lenses`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-    const brand = data.brandId ? mutableBrands.find(b => b.id === data.brandId) : null;
-    const newProduct = {
-      id: generateId('prd'),
-      type: 'CONTACT_LENS',
-      ...data,
-      brandName: brand?.name || null,
-      status: 'ACTIVE',
-      deletedAt: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    mutableProducts.push(newProduct);
-    return HttpResponse.json(apiResponse(transformProduct(newProduct)));
-  }),
-
-  http.post(`${API_BASE}/solutions`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-    const brand = data.brandId ? mutableBrands.find(b => b.id === data.brandId) : null;
-    const newProduct = {
-      id: generateId('prd'),
-      type: 'SOLUTION',
-      ...data,
-      brandName: brand?.name || null,
-      status: 'ACTIVE',
-      deletedAt: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    mutableProducts.push(newProduct);
-    return HttpResponse.json(apiResponse(transformProduct(newProduct)));
-  }),
-
-  http.post(`${API_BASE}/sunglasses`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-    const brand = data.brandId ? mutableBrands.find(b => b.id === data.brandId) : null;
-    const newProduct = {
-      id: generateId('prd'),
-      type: 'SUNGLASSES',
-      ...data,
-      brandName: brand?.name || null,
-      status: 'ACTIVE',
-      deletedAt: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    mutableProducts.push(newProduct);
-    return HttpResponse.json(apiResponse(transformProduct(newProduct)));
-  }),
-
-  http.post(`${API_BASE}/other-products`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-    const newProduct = {
-      id: generateId('prd'),
-      type: 'OTHER',
-      ...data,
-      brandId: null,
-      brandName: null,
-      status: 'ACTIVE',
-      deletedAt: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    mutableProducts.push(newProduct);
-    return HttpResponse.json(apiResponse(transformProduct(newProduct)));
-  }),
-
-  // Update product endpoints
-  http.put(`${API_BASE}/frames/:id`, async ({ params, request }) => {
-    await delay(100);
-    const data = await request.json();
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    const brand = data.brandId ? mutableBrands.find(b => b.id === data.brandId) : null;
-    mutableProducts[index] = {
-      ...mutableProducts[index],
-      ...data,
-      brandName: brand?.name || mutableProducts[index].brandName,
-      updatedAt: new Date().toISOString()
-    };
-    return HttpResponse.json(apiResponse(transformProduct(mutableProducts[index])));
-  }),
-
-  http.put(`${API_BASE}/contact-lenses/:id`, async ({ params, request }) => {
-    await delay(100);
-    const data = await request.json();
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    const brand = data.brandId ? mutableBrands.find(b => b.id === data.brandId) : null;
-    mutableProducts[index] = {
-      ...mutableProducts[index],
-      ...data,
-      brandName: brand?.name || mutableProducts[index].brandName,
-      updatedAt: new Date().toISOString()
-    };
-    return HttpResponse.json(apiResponse(transformProduct(mutableProducts[index])));
-  }),
-
-  http.put(`${API_BASE}/solutions/:id`, async ({ params, request }) => {
-    await delay(100);
-    const data = await request.json();
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    const brand = data.brandId ? mutableBrands.find(b => b.id === data.brandId) : null;
-    mutableProducts[index] = {
-      ...mutableProducts[index],
-      ...data,
-      brandName: brand?.name || mutableProducts[index].brandName,
-      updatedAt: new Date().toISOString()
-    };
-    return HttpResponse.json(apiResponse(transformProduct(mutableProducts[index])));
-  }),
-
-  http.put(`${API_BASE}/sunglasses/:id`, async ({ params, request }) => {
-    await delay(100);
-    const data = await request.json();
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    const brand = data.brandId ? mutableBrands.find(b => b.id === data.brandId) : null;
-    mutableProducts[index] = {
-      ...mutableProducts[index],
-      ...data,
-      brandName: brand?.name || mutableProducts[index].brandName,
-      updatedAt: new Date().toISOString()
-    };
-    return HttpResponse.json(apiResponse(transformProduct(mutableProducts[index])));
-  }),
-
-  http.put(`${API_BASE}/other-products/:id`, async ({ params, request }) => {
-    await delay(100);
-    const data = await request.json();
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    mutableProducts[index] = {
-      ...mutableProducts[index],
-      ...data,
-      updatedAt: new Date().toISOString()
-    };
-    return HttpResponse.json(apiResponse(transformProduct(mutableProducts[index])));
-  }),
-
-  // Delete product endpoints (soft delete)
-  http.delete(`${API_BASE}/frames/:id`, async ({ params }) => {
+  // Product mutations (all blocked in demo mode)
+  http.post(`${API_BASE}/frames`, async () => {
     await delay(50);
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    mutableProducts[index].status = 'DELETED';
-    mutableProducts[index].deletedAt = new Date().toISOString();
-    return HttpResponse.json(apiResponse({ message: 'Product deleted successfully' }));
+    return demoRestricted('Dodawanie produktów');
   }),
 
-  http.delete(`${API_BASE}/contact-lenses/:id`, async ({ params }) => {
+  http.post(`${API_BASE}/contact-lenses`, async () => {
     await delay(50);
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    mutableProducts[index].status = 'DELETED';
-    mutableProducts[index].deletedAt = new Date().toISOString();
-    return HttpResponse.json(apiResponse({ message: 'Product deleted successfully' }));
+    return demoRestricted('Dodawanie produktów');
   }),
 
-  http.delete(`${API_BASE}/solutions/:id`, async ({ params }) => {
+  http.post(`${API_BASE}/solutions`, async () => {
     await delay(50);
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    mutableProducts[index].status = 'DELETED';
-    mutableProducts[index].deletedAt = new Date().toISOString();
-    return HttpResponse.json(apiResponse({ message: 'Product deleted successfully' }));
+    return demoRestricted('Dodawanie produktów');
   }),
 
-  http.delete(`${API_BASE}/sunglasses/:id`, async ({ params }) => {
+  http.post(`${API_BASE}/sunglasses`, async () => {
     await delay(50);
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    mutableProducts[index].status = 'DELETED';
-    mutableProducts[index].deletedAt = new Date().toISOString();
-    return HttpResponse.json(apiResponse({ message: 'Product deleted successfully' }));
+    return demoRestricted('Dodawanie produktów');
   }),
 
-  http.delete(`${API_BASE}/other-products/:id`, async ({ params }) => {
+  http.post(`${API_BASE}/other-products`, async () => {
     await delay(50);
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    mutableProducts[index].status = 'DELETED';
-    mutableProducts[index].deletedAt = new Date().toISOString();
-    return HttpResponse.json(apiResponse({ message: 'Product deleted successfully' }));
+    return demoRestricted('Dodawanie produktów');
   }),
 
-  // Restore product endpoints
-  http.patch(`${API_BASE}/frames/:id/restore`, async ({ params }) => {
+  // Update product endpoints (all blocked in demo mode)
+  http.put(`${API_BASE}/frames/:id`, async () => {
     await delay(50);
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    mutableProducts[index].status = 'ACTIVE';
-    mutableProducts[index].deletedAt = null;
-    return HttpResponse.json(apiResponse(transformProduct(mutableProducts[index])));
+    return demoRestricted('Edycja produktów');
   }),
 
-  http.patch(`${API_BASE}/contact-lenses/:id/restore`, async ({ params }) => {
+  http.put(`${API_BASE}/contact-lenses/:id`, async () => {
     await delay(50);
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    mutableProducts[index].status = 'ACTIVE';
-    mutableProducts[index].deletedAt = null;
-    return HttpResponse.json(apiResponse(transformProduct(mutableProducts[index])));
+    return demoRestricted('Edycja produktów');
   }),
 
-  http.patch(`${API_BASE}/solutions/:id/restore`, async ({ params }) => {
+  http.put(`${API_BASE}/solutions/:id`, async () => {
     await delay(50);
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    mutableProducts[index].status = 'ACTIVE';
-    mutableProducts[index].deletedAt = null;
-    return HttpResponse.json(apiResponse(transformProduct(mutableProducts[index])));
+    return demoRestricted('Edycja produktów');
   }),
 
-  http.patch(`${API_BASE}/sunglasses/:id/restore`, async ({ params }) => {
+  http.put(`${API_BASE}/sunglasses/:id`, async () => {
     await delay(50);
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    mutableProducts[index].status = 'ACTIVE';
-    mutableProducts[index].deletedAt = null;
-    return HttpResponse.json(apiResponse(transformProduct(mutableProducts[index])));
+    return demoRestricted('Edycja produktów');
   }),
 
-  http.patch(`${API_BASE}/other-products/:id/restore`, async ({ params }) => {
+  http.put(`${API_BASE}/other-products/:id`, async () => {
     await delay(50);
-    const index = mutableProducts.findIndex(p => p.id === params.id);
-    if (index === -1) {
-      return errorResponse('Product not found', 404);
-    }
-    mutableProducts[index].status = 'ACTIVE';
-    mutableProducts[index].deletedAt = null;
-    return HttpResponse.json(apiResponse(transformProduct(mutableProducts[index])));
+    return demoRestricted('Edycja produktów');
   }),
 
-  // Bulk operations
-  http.post(`${API_BASE}/frames/bulk-delete`, async ({ request }) => {
-    await delay(100);
-    const { ids } = await request.json();
-    ids.forEach(id => {
-      const index = mutableProducts.findIndex(p => p.id === id);
-      if (index >= 0) {
-        mutableProducts[index].status = 'DELETED';
-        mutableProducts[index].deletedAt = new Date().toISOString();
-      }
-    });
-    return HttpResponse.json(apiResponse({ deletedCount: ids.length }));
+  // Delete product endpoints (all blocked in demo mode)
+  http.delete(`${API_BASE}/frames/:id`, async () => {
+    await delay(50);
+    return demoRestricted('Usuwanie produktów');
   }),
 
-  http.post(`${API_BASE}/frames/bulk-restore`, async ({ request }) => {
-    await delay(100);
-    const { ids } = await request.json();
-    ids.forEach(id => {
-      const index = mutableProducts.findIndex(p => p.id === id);
-      if (index >= 0) {
-        mutableProducts[index].status = 'ACTIVE';
-        mutableProducts[index].deletedAt = null;
-      }
-    });
-    return HttpResponse.json(apiResponse({ restoredCount: ids.length }));
+  http.delete(`${API_BASE}/contact-lenses/:id`, async () => {
+    await delay(50);
+    return demoRestricted('Usuwanie produktów');
+  }),
+
+  http.delete(`${API_BASE}/solutions/:id`, async () => {
+    await delay(50);
+    return demoRestricted('Usuwanie produktów');
+  }),
+
+  http.delete(`${API_BASE}/sunglasses/:id`, async () => {
+    await delay(50);
+    return demoRestricted('Usuwanie produktów');
+  }),
+
+  http.delete(`${API_BASE}/other-products/:id`, async () => {
+    await delay(50);
+    return demoRestricted('Usuwanie produktów');
+  }),
+
+  // Restore product endpoints (all blocked in demo mode)
+  http.patch(`${API_BASE}/frames/:id/restore`, async () => {
+    await delay(50);
+    return demoRestricted('Przywracanie produktów');
+  }),
+
+  http.patch(`${API_BASE}/contact-lenses/:id/restore`, async () => {
+    await delay(50);
+    return demoRestricted('Przywracanie produktów');
+  }),
+
+  http.patch(`${API_BASE}/solutions/:id/restore`, async () => {
+    await delay(50);
+    return demoRestricted('Przywracanie produktów');
+  }),
+
+  http.patch(`${API_BASE}/sunglasses/:id/restore`, async () => {
+    await delay(50);
+    return demoRestricted('Przywracanie produktów');
+  }),
+
+  http.patch(`${API_BASE}/other-products/:id/restore`, async () => {
+    await delay(50);
+    return demoRestricted('Przywracanie produktów');
+  }),
+
+  // Bulk operations (all blocked in demo mode)
+  http.post(`${API_BASE}/frames/bulk-delete`, async () => {
+    await delay(50);
+    return demoRestricted('Masowe usuwanie produktów');
+  }),
+
+  http.post(`${API_BASE}/frames/bulk-restore`, async () => {
+    await delay(50);
+    return demoRestricted('Masowe przywracanie produktów');
   }),
 
   // Product search (POST variant)
@@ -1333,186 +1055,31 @@ export const handlers = [
     return HttpResponse.json(apiResponse(transformed));
   }),
 
-  // Transfer mutations
-  http.post(`${API_BASE}/transfers`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-
-    const fromLocation = mutableLocations.find(l => l.id === data.fromLocationId);
-    const toLocation = mutableLocations.find(l => l.id === data.toLocationId);
-
-    const transferItems = data.items.map((item, idx) => ({
-      id: `ti-${Date.now()}-${idx}`,
-      productId: item.productId,
-      product: mutableProducts.find(p => p.id === item.productId),
-      quantity: item.quantity
-    }));
-
-    const newTransfer = {
-      id: generateId('trf'),
-      transferNumber: `TRF-${new Date().getFullYear()}-${String(mutableTransfers.length + 1).padStart(4, '0')}`,
-      fromLocationId: data.fromLocationId,
-      fromLocation,
-      toLocationId: data.toLocationId,
-      toLocation,
-      items: transferItems,
-      status: 'PENDING',
-      reason: data.reason || 'STOCK_REPLENISHMENT',
-      notes: data.notes || null,
-      createdById: currentUser.id,
-      createdBy: currentUser,
-      confirmedById: null,
-      confirmedBy: null,
-      parentTransferId: data.parentTransferId || null,
-      createdAt: new Date().toISOString(),
-      confirmedAt: null
-    };
-
-    // Reserve the products in source location
-    transferItems.forEach(item => {
-      const invIndex = mutableInventory.findIndex(
-        inv => inv.productId === item.productId && inv.locationId === data.fromLocationId
-      );
-      if (invIndex >= 0) {
-        mutableInventory[invIndex].reservedQuantity =
-          (mutableInventory[invIndex].reservedQuantity || 0) + item.quantity;
-      }
-    });
-
-    mutableTransfers.push(newTransfer);
-    return HttpResponse.json(apiResponse(newTransfer));
+  // Transfer mutations (all blocked in demo mode)
+  http.post(`${API_BASE}/transfers`, async () => {
+    await delay(50);
+    return demoRestricted('Tworzenie transferów');
   }),
 
-  http.put(`${API_BASE}/transfers/:id/confirm`, async ({ params, request }) => {
-    await delay(100);
-    const index = mutableTransfers.findIndex(t => t.id === params.id);
-    if (index === -1) {
-      return errorResponse('Transfer not found', 404);
-    }
-
-    const transfer = mutableTransfers[index];
-    if (transfer.status !== 'PENDING') {
-      return errorResponse('Transfer is not pending', 400);
-    }
-
-    // Move items from source to destination
-    transfer.items.forEach(item => {
-      // Deduct from source
-      const sourceIndex = mutableInventory.findIndex(
-        inv => inv.productId === item.productId && inv.locationId === transfer.fromLocationId
-      );
-      if (sourceIndex >= 0) {
-        mutableInventory[sourceIndex].quantity -= item.quantity;
-        mutableInventory[sourceIndex].reservedQuantity =
-          Math.max(0, (mutableInventory[sourceIndex].reservedQuantity || 0) - item.quantity);
-      }
-
-      // Add to destination
-      const destIndex = mutableInventory.findIndex(
-        inv => inv.productId === item.productId && inv.locationId === transfer.toLocationId
-      );
-      if (destIndex >= 0) {
-        mutableInventory[destIndex].quantity += item.quantity;
-      } else {
-        // Create new inventory record at destination
-        mutableInventory.push({
-          id: generateId('inv'),
-          productId: item.productId,
-          locationId: transfer.toLocationId,
-          quantity: item.quantity,
-          reservedQuantity: 0,
-          minQuantity: 1
-        });
-      }
-    });
-
-    mutableTransfers[index] = {
-      ...transfer,
-      status: 'COMPLETED',
-      confirmedById: currentUser.id,
-      confirmedBy: currentUser,
-      confirmedAt: new Date().toISOString()
-    };
-
-    return HttpResponse.json(apiResponse(mutableTransfers[index]));
+  http.put(`${API_BASE}/transfers/:id/confirm`, async () => {
+    await delay(50);
+    return demoRestricted('Potwierdzanie transferów');
   }),
 
-  http.put(`${API_BASE}/transfers/:id/reject`, async ({ params, request }) => {
-    await delay(100);
-    const data = await request.json();
-    const index = mutableTransfers.findIndex(t => t.id === params.id);
-    if (index === -1) {
-      return errorResponse('Transfer not found', 404);
-    }
-
-    const transfer = mutableTransfers[index];
-    if (transfer.status !== 'PENDING') {
-      return errorResponse('Transfer is not pending', 400);
-    }
-
-    // Release reserved items in source location
-    transfer.items.forEach(item => {
-      const invIndex = mutableInventory.findIndex(
-        inv => inv.productId === item.productId && inv.locationId === transfer.fromLocationId
-      );
-      if (invIndex >= 0) {
-        mutableInventory[invIndex].reservedQuantity =
-          Math.max(0, (mutableInventory[invIndex].reservedQuantity || 0) - item.quantity);
-      }
-    });
-
-    mutableTransfers[index] = {
-      ...transfer,
-      status: 'REJECTED',
-      rejectionReason: data.reason || 'No reason provided',
-      rejectedById: currentUser.id,
-      rejectedBy: currentUser,
-      rejectedAt: new Date().toISOString()
-    };
-
-    return HttpResponse.json(apiResponse(mutableTransfers[index]));
+  http.put(`${API_BASE}/transfers/:id/reject`, async () => {
+    await delay(50);
+    return demoRestricted('Odrzucanie transferów');
   }),
 
-  http.put(`${API_BASE}/transfers/:id/cancel`, async ({ params, request }) => {
-    await delay(100);
-    const data = await request.json();
-    const index = mutableTransfers.findIndex(t => t.id === params.id);
-    if (index === -1) {
-      return errorResponse('Transfer not found', 404);
-    }
-
-    const transfer = mutableTransfers[index];
-    if (transfer.status !== 'PENDING') {
-      return errorResponse('Transfer is not pending', 400);
-    }
-
-    // Release reserved items in source location
-    transfer.items.forEach(item => {
-      const invIndex = mutableInventory.findIndex(
-        inv => inv.productId === item.productId && inv.locationId === transfer.fromLocationId
-      );
-      if (invIndex >= 0) {
-        mutableInventory[invIndex].reservedQuantity =
-          Math.max(0, (mutableInventory[invIndex].reservedQuantity || 0) - item.quantity);
-      }
-    });
-
-    mutableTransfers[index] = {
-      ...transfer,
-      status: 'CANCELLED',
-      cancellationReason: data.reason || 'No reason provided',
-      cancelledById: currentUser.id,
-      cancelledBy: currentUser,
-      cancelledAt: new Date().toISOString()
-    };
-
-    return HttpResponse.json(apiResponse(mutableTransfers[index]));
+  http.put(`${API_BASE}/transfers/:id/cancel`, async () => {
+    await delay(50);
+    return demoRestricted('Anulowanie transferów');
   }),
 
   http.post(`${API_BASE}/transfers/validate`, async ({ request }) => {
     await delay(50);
     const data = await request.json();
-    // Validate that source has enough stock
+    // Validation is read-only, so it's allowed in demo mode
     const issues = [];
     for (const item of data.items) {
       const inv = mutableInventory.find(
@@ -1530,25 +1097,14 @@ export const handlers = [
     return HttpResponse.json(apiResponse({ valid: issues.length === 0, issues }));
   }),
 
-  http.patch(`${API_BASE}/transfers/:id`, async ({ params, request }) => {
+  http.patch(`${API_BASE}/transfers/:id`, async () => {
     await delay(50);
-    const data = await request.json();
-    const index = mutableTransfers.findIndex(t => t.id === params.id);
-    if (index === -1) {
-      return errorResponse('Transfer not found', 404);
-    }
-    mutableTransfers[index] = { ...mutableTransfers[index], ...data };
-    return HttpResponse.json(apiResponse(mutableTransfers[index]));
+    return demoRestricted('Edycja transferów');
   }),
 
-  http.delete(`${API_BASE}/transfers/:id`, async ({ params }) => {
+  http.delete(`${API_BASE}/transfers/:id`, async () => {
     await delay(50);
-    const index = mutableTransfers.findIndex(t => t.id === params.id);
-    if (index === -1) {
-      return errorResponse('Transfer not found', 404);
-    }
-    mutableTransfers.splice(index, 1);
-    return HttpResponse.json(apiResponse({ message: 'Transfer deleted successfully' }));
+    return demoRestricted('Usuwanie transferów');
   }),
 
   // ========== SALES ENDPOINTS ==========
@@ -1697,124 +1253,20 @@ export const handlers = [
     return HttpResponse.json(apiResponse(transformed));
   }),
 
-  // Sales mutations
-  http.post(`${API_BASE}/sales`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-
-    const location = mutableLocations.find(l => l.id === data.locationId);
-
-    const saleItems = data.items.map((item, idx) => {
-      const product = mutableProducts.find(p => p.id === item.productId);
-      return {
-        id: `si-${Date.now()}-${idx}`,
-        productId: item.productId,
-        product,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice || product?.sellingPrice || 0,
-        totalPrice: item.quantity * (item.unitPrice || product?.sellingPrice || 0)
-      };
-    });
-
-    const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    const totalAmount = subtotal - (data.discount || 0);
-
-    const newSale = {
-      id: generateId('sale'),
-      saleNumber: `SPR-${new Date().getFullYear()}-${String(mutableSales.length + 1).padStart(4, '0')}`,
-      locationId: data.locationId,
-      location,
-      userId: currentUser.id,
-      user: currentUser,
-      userFullName: `${currentUser.firstName} ${currentUser.lastName}`,
-      customerFirstName: data.customerFirstName || null,
-      customerLastName: data.customerLastName || null,
-      customerEmail: data.customerEmail || null,
-      customerPhone: data.customerPhone || null,
-      items: saleItems,
-      subtotal,
-      discount: data.discount || 0,
-      totalAmount,
-      paymentMethod: data.paymentMethod || 'CASH',
-      status: 'COMPLETED',
-      notes: data.notes || null,
-      createdAt: new Date().toISOString(),
-      completedAt: new Date().toISOString()
-    };
-
-    // Deduct inventory
-    saleItems.forEach(item => {
-      const invIndex = mutableInventory.findIndex(
-        inv => inv.productId === item.productId && inv.locationId === data.locationId
-      );
-      if (invIndex >= 0) {
-        mutableInventory[invIndex].quantity = Math.max(0, mutableInventory[invIndex].quantity - item.quantity);
-      }
-    });
-
-    mutableSales.push(newSale);
-    return HttpResponse.json(apiResponse(newSale));
+  // Sales mutations (all blocked in demo mode)
+  http.post(`${API_BASE}/sales`, async () => {
+    await delay(50);
+    return demoRestricted('Rejestrowanie sprzedaży');
   }),
 
-  http.post(`${API_BASE}/sales/:id/cancel`, async ({ params, request }) => {
-    await delay(100);
-    const data = await request.json();
-    const index = mutableSales.findIndex(s => s.id === params.id);
-    if (index === -1) {
-      return errorResponse('Sale not found', 404);
-    }
-
-    const sale = mutableSales[index];
-
-    // Restore inventory
-    sale.items.forEach(item => {
-      const invIndex = mutableInventory.findIndex(
-        inv => inv.productId === item.productId && inv.locationId === sale.locationId
-      );
-      if (invIndex >= 0) {
-        mutableInventory[invIndex].quantity += item.quantity;
-      }
-    });
-
-    mutableSales[index] = {
-      ...sale,
-      status: 'CANCELLED',
-      cancellationReason: data.reason || 'No reason provided',
-      cancelledAt: new Date().toISOString()
-    };
-
-    return HttpResponse.json(apiResponse(mutableSales[index]));
+  http.post(`${API_BASE}/sales/:id/cancel`, async () => {
+    await delay(50);
+    return demoRestricted('Anulowanie sprzedaży');
   }),
 
-  http.post(`${API_BASE}/sales/:id/return`, async ({ params, request }) => {
-    await delay(100);
-    const data = await request.json();
-    const index = mutableSales.findIndex(s => s.id === params.id);
-    if (index === -1) {
-      return errorResponse('Sale not found', 404);
-    }
-
-    const sale = mutableSales[index];
-
-    // Restore inventory for returned items
-    const returnedItems = data.items || sale.items;
-    returnedItems.forEach(item => {
-      const invIndex = mutableInventory.findIndex(
-        inv => inv.productId === item.productId && inv.locationId === sale.locationId
-      );
-      if (invIndex >= 0) {
-        mutableInventory[invIndex].quantity += item.quantity;
-      }
-    });
-
-    mutableSales[index] = {
-      ...sale,
-      status: 'RETURNED',
-      returnReason: data.reason || 'No reason provided',
-      returnedAt: new Date().toISOString()
-    };
-
-    return HttpResponse.json(apiResponse(mutableSales[index]));
+  http.post(`${API_BASE}/sales/:id/return`, async () => {
+    await delay(50);
+    return demoRestricted('Zwrot sprzedaży');
   }),
 
   // ========== HISTORY ENDPOINTS ==========
@@ -2127,31 +1579,25 @@ export const handlers = [
     return HttpResponse.json(apiResponse(paginate(filtered, page, size)));
   }),
 
-  // History mutations
-  http.post(`${API_BASE}/history/:id/revert`, async ({ params, request }) => {
-    await delay(100);
-    const data = await request.json();
-    // In demo mode, just acknowledge the revert
-    return HttpResponse.json(apiResponse({
-      message: 'Operation reverted successfully',
-      reason: data.reason
-    }));
+  // History mutations (all blocked in demo mode)
+  http.post(`${API_BASE}/history/:id/revert`, async () => {
+    await delay(50);
+    return demoRestricted('Cofanie operacji');
   }),
 
-  http.delete(`${API_BASE}/history/:id`, async ({ params }) => {
+  http.delete(`${API_BASE}/history/:id`, async () => {
     await delay(50);
-    return HttpResponse.json(apiResponse({ message: 'History entry deleted successfully' }));
+    return demoRestricted('Usuwanie historii');
   }),
 
   http.delete(`${API_BASE}/history`, async () => {
-    await delay(100);
-    return HttpResponse.json(apiResponse({ message: 'History cleared successfully' }));
+    await delay(50);
+    return demoRestricted('Czyszczenie historii');
   }),
 
-  http.delete(`${API_BASE}/history/batch`, async ({ request }) => {
-    await delay(100);
-    const ids = await request.json();
-    return HttpResponse.json(apiResponse({ deletedCount: ids.length }));
+  http.delete(`${API_BASE}/history/batch`, async () => {
+    await delay(50);
+    return demoRestricted('Usuwanie historii');
   }),
 
   // ========== STATISTICS ENDPOINTS ==========
@@ -2515,35 +1961,30 @@ export const handlers = [
     return HttpResponse.json(apiResponse(paginate(items, page, size)));
   }),
 
-  // Add stock to inventory (POST variant used by some services)
-  http.post(`${API_BASE}/inventory/frames`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-    return handleAddInventory(data);
+  // Add stock to inventory (all blocked in demo mode)
+  http.post(`${API_BASE}/inventory/frames`, async () => {
+    await delay(50);
+    return demoRestricted('Dodawanie do magazynu');
   }),
 
-  http.post(`${API_BASE}/inventory/contact-lenses`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-    return handleAddInventory(data);
+  http.post(`${API_BASE}/inventory/contact-lenses`, async () => {
+    await delay(50);
+    return demoRestricted('Dodawanie do magazynu');
   }),
 
-  http.post(`${API_BASE}/inventory/solutions`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-    return handleAddInventory(data);
+  http.post(`${API_BASE}/inventory/solutions`, async () => {
+    await delay(50);
+    return demoRestricted('Dodawanie do magazynu');
   }),
 
-  http.post(`${API_BASE}/inventory/sunglasses`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-    return handleAddInventory(data);
+  http.post(`${API_BASE}/inventory/sunglasses`, async () => {
+    await delay(50);
+    return demoRestricted('Dodawanie do magazynu');
   }),
 
-  http.post(`${API_BASE}/inventory/other-products`, async ({ request }) => {
-    await delay(100);
-    const data = await request.json();
-    return handleAddInventory(data);
+  http.post(`${API_BASE}/inventory/other-products`, async () => {
+    await delay(50);
+    return demoRestricted('Dodawanie do magazynu');
   }),
 
   // ========== COMPANY SETTINGS ==========

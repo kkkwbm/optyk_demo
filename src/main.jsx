@@ -51,8 +51,36 @@ async function startApp() {
   // Start Mock Service Worker to intercept API calls
   const { worker } = await import('./mocks/browser');
   await worker.start({
-    onUnhandledRequest: 'warn', // Warn about unhandled requests so we can add missing handlers
-    quiet: false // Show MSW logs for debugging
+    onUnhandledRequest(request, print) {
+      // For demo mode: block ALL unhandled API requests, don't let them reach the network
+      const url = new URL(request.url);
+
+      // Allow requests for static assets, fonts, and local resources
+      if (
+        url.pathname.startsWith('/src/') ||
+        url.pathname.startsWith('/node_modules/') ||
+        url.pathname.startsWith('/@') ||
+        url.pathname.endsWith('.js') ||
+        url.pathname.endsWith('.css') ||
+        url.pathname.endsWith('.ttf') ||
+        url.pathname.endsWith('.woff') ||
+        url.pathname.endsWith('.woff2') ||
+        url.pathname.endsWith('.png') ||
+        url.pathname.endsWith('.svg') ||
+        url.pathname.endsWith('.ico') ||
+        url.hostname === 'localhost' && !url.pathname.startsWith('/api')
+      ) {
+        return;
+      }
+
+      // Block any API requests that aren't handled - this prevents backend communication
+      print.warning();
+      console.error(
+        `[MSW] Demo mode: Blocked unhandled request to ${request.method} ${request.url}. ` +
+        `Add a handler in src/mocks/handlers.js if this endpoint is needed.`
+      );
+    },
+    quiet: true // Quiet mode - no MSW logs in console
   });
 
   createRoot(document.getElementById('root')).render(

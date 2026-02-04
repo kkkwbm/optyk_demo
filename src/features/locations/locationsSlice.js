@@ -26,7 +26,11 @@ const initialState = {
 // Async thunks
 export const fetchLocations = createAsyncThunk(
   'locations/fetchLocations',
-  async (params, { rejectWithValue }) => {
+  async (params, { getState, rejectWithValue }) => {
+    // Skip API call in demo mode - data is already loaded
+    if (getState().auth.isDemo) {
+      return { content: getState().locations.items };
+    }
     try {
       const response = await locationService.getLocations(params);
       if (response.data.success) {
@@ -41,7 +45,12 @@ export const fetchLocations = createAsyncThunk(
 
 export const fetchLocationById = createAsyncThunk(
   'locations/fetchLocationById',
-  async (id, { rejectWithValue }) => {
+  async (id, { getState, rejectWithValue }) => {
+    // Skip API call in demo mode - find location in existing data
+    if (getState().auth.isDemo) {
+      const location = getState().locations.items.find(l => l.id === id);
+      return location || null;
+    }
     try {
       const response = await locationService.getLocationById(id);
       if (response.data.success) {
@@ -132,7 +141,15 @@ export const deleteLocation = createAsyncThunk(
 
 export const fetchActiveLocations = createAsyncThunk(
   'locations/fetchActiveLocations',
-  async (type = null, { rejectWithValue }) => {
+  async (type = null, { getState, rejectWithValue }) => {
+    // Skip API call in demo mode
+    if (getState().auth.isDemo) {
+      let locations = getState().locations.activeLocations;
+      if (type) {
+        locations = locations.filter(l => l.type === type);
+      }
+      return locations;
+    }
     try {
       const response = await locationService.getActiveLocations(type);
       if (response.data.success) {
@@ -147,7 +164,11 @@ export const fetchActiveLocations = createAsyncThunk(
 
 export const fetchMyLocations = createAsyncThunk(
   'locations/fetchMyLocations',
-  async (_, { rejectWithValue }) => {
+  async (_, { getState, rejectWithValue }) => {
+    // Skip API call in demo mode
+    if (getState().auth.isDemo) {
+      return getState().locations.myLocations;
+    }
     try {
       const response = await locationService.getMyLocations();
       if (response.data.success) {
