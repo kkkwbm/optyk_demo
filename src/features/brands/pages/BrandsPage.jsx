@@ -13,6 +13,7 @@ import {
   Menu,
   MenuItem,
   Typography,
+  Divider,
 } from '@mui/material';
 import { Plus, MoreVertical } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -304,31 +305,19 @@ function BrandsPage() {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem
-          onClick={() => {
-            handleOpenDialog(selectedBrand);
-            handleMenuClose();
-          }}
-        >
+        <MenuItem disabled>
           Edytuj
         </MenuItem>
-        <MenuItem
-          onClick={() => {
-            handleOpenConfirm(selectedBrand, 'toggle');
-            handleMenuClose();
-          }}
-        >
+        <MenuItem disabled>
           {selectedBrand?.status === BRAND_STATUS.ACTIVE ? 'Dezaktywuj' : 'Aktywuj'}
         </MenuItem>
-        <MenuItem
-          onClick={() => {
-            handleOpenConfirm(selectedBrand, 'delete');
-            handleMenuClose();
-          }}
-          sx={{ color: 'error.main' }}
-        >
+        <MenuItem disabled sx={{ color: 'text.disabled' }}>
           Usuń
         </MenuItem>
+        <Divider />
+        <Typography variant="caption" color="text.secondary" sx={{ px: 2, py: 1, display: 'block' }}>
+          Akcje niedostępne w wersji demo
+        </Typography>
       </Menu>
 
       {/* Confirm Dialog */}

@@ -244,7 +244,7 @@ function SaleDetailsPage() {
                 <TableRow key={index}>
                   <TableCell>
                     <Box>
-                      {item.productModel || item.productName || '-'}
+                      {item.product?.model || item.productModel || item.productName || '-'}
                       {item.isCustomEyeglassLens && item.eyeglassLensNotes && (
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                           {item.eyeglassLensNotes}
@@ -252,7 +252,7 @@ function SaleDetailsPage() {
                       )}
                     </Box>
                   </TableCell>
-                  <TableCell>{item.brand?.name || '-'}</TableCell>
+                  <TableCell>{item.product?.brand?.name || item.brand?.name || '-'}</TableCell>
                   <TableCell align="right">{item.quantity}</TableCell>
                   <TableCell align="right">{item.unitPrice.toFixed(2)} zł</TableCell>
                   <TableCell align="right">

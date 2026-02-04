@@ -9,6 +9,7 @@ import {
   TextField,
   MenuItem,
   Chip,
+  Tooltip,
 } from '@mui/material';
 import { UserPlus, KeyRound, Edit } from 'lucide-react';
 import { format } from 'date-fns';
@@ -169,18 +170,19 @@ function UsersListPage() {
             </Button>
           )}
           {canResetPassword && (
-            <Button
-              size="small"
-              variant="text"
-              color="primary"
-              startIcon={<KeyRound size={14} />}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleResetPassword(row.id);
-              }}
-            >
-              Resetuj hasło
-            </Button>
+            <Tooltip title="Resetowanie hasła jest niedostępne w wersji demo">
+              <span>
+                <Button
+                  size="small"
+                  variant="text"
+                  color="primary"
+                  startIcon={<KeyRound size={14} />}
+                  disabled
+                >
+                  Resetuj hasło
+                </Button>
+              </span>
+            </Tooltip>
           )}
         </Box>
       ) : null,

@@ -7,6 +7,7 @@ import {
   Button,
   TextField,
   Box,
+  Alert,
 } from '@mui/material';
 import { AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
@@ -28,6 +29,8 @@ import { useState } from 'react';
  * @param {String} props.reasonLabel - Reason field label
  * @param {Boolean} props.loading - Loading state
  * @param {String} props.severity - Dialog severity (warning, error, info)
+ * @param {Boolean} props.disabled - Disable confirm button
+ * @param {String} props.disabledMessage - Message to show when disabled
  */
 function ConfirmDialog({
   open = false,
@@ -43,6 +46,8 @@ function ConfirmDialog({
   reasonPlaceholder = 'Proszę podaj powód...',
   loading = false,
   severity = 'warning',
+  disabled = false,
+  disabledMessage = '',
 }) {
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
@@ -104,8 +109,13 @@ function ConfirmDialog({
             onChange={handleReasonChange}
             error={!!error}
             helperText={error}
-            disabled={loading}
+            disabled={loading || disabled}
           />
+        )}
+        {disabled && disabledMessage && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            {disabledMessage}
+          </Alert>
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -116,7 +126,7 @@ function ConfirmDialog({
           onClick={handleConfirm}
           color={confirmColor}
           variant="contained"
-          disabled={loading || (requireReason && !reason.trim())}
+          disabled={disabled || loading || (requireReason && !reason.trim())}
           autoFocus={!requireReason}
         >
           {loading ? 'Przetwarzanie...' : confirmText}

@@ -171,10 +171,10 @@ const ConfirmTransferDialog = ({ open, onClose, onConfirm, transfer, loading }) 
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Package size={16} />
-                            {item.productName || item.productModel}
+                            {item.product?.model || item.productName || item.productModel || '-'}
                           </Box>
                         </TableCell>
-                        <TableCell>{item.brand?.name || '-'}</TableCell>
+                        <TableCell>{item.product?.brand?.name || item.brand?.name || '-'}</TableCell>
                         <TableCell align="center">
                           <Chip label={item.quantity} size="small" />
                         </TableCell>
@@ -296,6 +296,11 @@ const ConfirmTransferDialog = ({ open, onClose, onConfirm, transfer, loading }) 
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Dodaj uwagi do tego potwierdzenia..."
             />
+
+            {/* Demo mode warning */}
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Potwierdzanie transferów jest niedostępne w wersji demo.
+            </Alert>
           </>
         )}
       </DialogContent>
@@ -304,16 +309,14 @@ const ConfirmTransferDialog = ({ open, onClose, onConfirm, transfer, loading }) 
           Anuluj
         </Button>
         <Button
-          onClick={handleConfirm}
           variant="contained"
           color={summary.rejected > 0 ? 'warning' : 'success'}
-          disabled={loading || summary.accepted === 0}
+          disabled
+          title="Niedostępne w wersji demo"
         >
-          {loading
-            ? 'Potwierdzanie...'
-            : summary.rejected > 0
-              ? `Potwierdź i zwróć ${summary.rejected}`
-              : 'Potwierdź odbiór'}
+          {summary.rejected > 0
+            ? `Potwierdź i zwróć ${summary.rejected}`
+            : 'Potwierdź odbiór'}
         </Button>
       </DialogActions>
     </Dialog>

@@ -32,6 +32,7 @@ import {
   CircularProgress,
   Checkbox,
   FormGroup,
+  Tooltip,
 } from '@mui/material';
 import { Settings, Moon, Sun, MapPin, Plus, Trash2, User, Shield, Mail, Phone, Edit, FileText, Upload, Image, X } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
@@ -504,15 +505,19 @@ function SettingsPage() {
                           onChange={(e) => setCompanyName(e.target.value)}
                           placeholder="np. Salon Optyczny Family"
                           inputProps={{ maxLength: 255 }}
+                          disabled
                         />
-                        <Button
-                          variant="contained"
-                          onClick={handleSaveCompanyName}
-                          disabled={savingCompanyName || companyName === companySettings?.companyName}
-                          sx={{ minWidth: 100 }}
-                        >
-                          {savingCompanyName ? <CircularProgress size={20} /> : 'Zapisz'}
-                        </Button>
+                        <Tooltip title="Zmiana nazwy firmy jest niedostępna w wersji demo">
+                          <span>
+                            <Button
+                              variant="contained"
+                              disabled
+                              sx={{ minWidth: 100 }}
+                            >
+                              Zapisz
+                            </Button>
+                          </span>
+                        </Tooltip>
                       </Box>
                     </Box>
                   </Grid>
@@ -595,22 +600,18 @@ function SettingsPage() {
                           </Box>
                         )}
                         <Box>
-                          <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleLogoUpload}
-                            accept="image/jpeg,image/png,image/gif"
-                            style={{ display: 'none' }}
-                          />
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={uploadingLogo ? <CircularProgress size={14} /> : <Upload size={14} />}
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploadingLogo}
-                          >
-                            {uploadingLogo ? 'Wgrywanie...' : 'Wgraj logo'}
-                          </Button>
+                          <Tooltip title="Wgrywanie logo jest niedostępne w wersji demo">
+                            <span>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<Upload size={14} />}
+                                disabled
+                              >
+                                Wgraj logo
+                              </Button>
+                            </span>
+                          </Tooltip>
                         </Box>
                       </Box>
                     </Box>
@@ -696,14 +697,18 @@ function SettingsPage() {
                     Zarządzaj salonami optycznymi i magazynami
                   </Typography>
                 </Box>
-                <Button
-                  variant="contained"
-                  startIcon={<Plus size={18} />}
-                  onClick={handleOpenLocationDialog}
-                  size="small"
-                >
-                  Dodaj lokalizację
-                </Button>
+                <Tooltip title="Dodawanie lokalizacji jest niedostępne w wersji demo">
+                  <span>
+                    <Button
+                      variant="contained"
+                      startIcon={<Plus size={18} />}
+                      size="small"
+                      disabled
+                    >
+                      Dodaj lokalizację
+                    </Button>
+                  </span>
+                </Tooltip>
               </Box>
 
               {locations && locations.length > 0 ? (

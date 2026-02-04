@@ -80,9 +80,9 @@ function TransferDetailsPage() {
       // Initialize edited items from transfer - mark as original (read-only)
       const items = transfer.items?.map(item => ({
         productId: item.productId || item.product?.id,
-        productName: item.productModel || item.productName || item.product?.model,
-        brand: item.brand,
-        productType: item.productType,
+        productName: item.product?.model || item.productModel || item.productName,
+        brand: item.product?.brand || item.brand,
+        productType: item.product?.type || item.productType,
         quantity: item.quantity,
         isOriginal: true, // Mark existing items as original
       })) || [];
@@ -113,7 +113,9 @@ function TransferDetailsPage() {
         size: 1000,
         locationId: editedFromLocationId,
       });
-      setAvailableProducts(response.data.content || []);
+      // Handle API response structure: { success, data: { content: [...] }, error, timestamp }
+      const products = response.data?.data?.content || response.data?.content || [];
+      setAvailableProducts(products);
     } catch (error) {
       toast.error('Nie udało się pobrać listy produktów');
     }
@@ -127,8 +129,9 @@ function TransferDetailsPage() {
         status: 'ACTIVE'
       });
 
-      // Handle different response structures
-      const locations = response.data?.content || response.data?.data || response.data || [];
+      // Handle API response structure: { success, data: [...] or { content: [...] }, error, timestamp }
+      const data = response.data?.data;
+      const locations = Array.isArray(data) ? data : (data?.content || []);
 
       setAvailableLocations(locations);
     } catch (error) {
@@ -173,9 +176,9 @@ function TransferDetailsPage() {
 
       const items = transfer.items?.map(item => ({
         productId: item.productId || item.product?.id,
-        productName: item.productModel || item.productName || item.product?.model,
-        brand: item.brand,
-        productType: item.productType,
+        productName: item.product?.model || item.productModel || item.productName,
+        brand: item.product?.brand || item.brand,
+        productType: item.product?.type || item.productType,
         quantity: item.quantity,
         isOriginal: true,
       })) || [];
@@ -315,19 +318,6 @@ function TransferDetailsPage() {
           { label: getTransferNumber() },
         ]}
         actions={[
-          ...(transfer.status === TRANSFER_STATUS.COMPLETED ? [{
-            label: isEditing ? 'Zapisz' : 'Edytuj',
-            icon: isEditing ? <Save size={20} /> : <Edit size={20} />,
-            onClick: isEditing ? handleSaveEdit : handleEditToggle,
-            variant: 'contained',
-            color: 'primary',
-          }] : []),
-          ...(isEditing ? [{
-            label: 'Anuluj',
-            icon: <X size={20} />,
-            onClick: handleEditToggle,
-            variant: 'outlined',
-          }] : []),
           {
             label: 'Wróć',
             icon: <ArrowLeft size={20} />,
@@ -361,14 +351,14 @@ function TransferDetailsPage() {
         )}
 
         {/* Akcje */}
-        <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-          {transfer.status === TRANSFER_STATUS.PENDING && (
-            <>
+        {transfer.status === TRANSFER_STATUS.PENDING && (
+          <Box sx={{ mb: 3 }}>
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
               <Button
                 variant="contained"
                 color="success"
                 startIcon={<CheckCircle size={16} />}
-                onClick={() => handleOpenConfirm('complete')}
+                disabled
               >
                 Odbierz transfer
               </Button>
@@ -376,13 +366,16 @@ function TransferDetailsPage() {
                 variant="outlined"
                 color="error"
                 startIcon={<XCircle size={16} />}
-                onClick={() => handleOpenConfirm('cancel')}
+                disabled
               >
                 Anuluj transfer
               </Button>
-            </>
-          )}
-        </Box>
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              Akcje na transferach są niedostępne w wersji demo.
+            </Typography>
+          </Box>
+        )}
 
         <Divider sx={{ mb: 3 }} />
 
@@ -674,12 +667,12 @@ function TransferDetailsPage() {
                   {transfer.items?.map((item, index) => (
                     <TableRow key={index}>
                       <TableCell>
-                        {item.productModel || item.productName || '-'}
+                        {item.product?.model || item.productModel || item.productName || '-'}
                       </TableCell>
-                      <TableCell>{item.brand?.name || '-'}</TableCell>
+                      <TableCell>{item.product?.brand?.name || item.brand?.name || '-'}</TableCell>
                       <TableCell>
                         <Chip
-                          label={PRODUCT_TYPE_LABELS[item.productType] || 'Nieznany'}
+                          label={PRODUCT_TYPE_LABELS[item.product?.type || item.productType] || 'Nieznany'}
                           size="small"
                           variant="outlined"
                         />

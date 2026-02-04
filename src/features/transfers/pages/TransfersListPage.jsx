@@ -883,6 +883,8 @@ function TransfersListPage() {
         message={getDialogMessage()}
         confirmText={getConfirmText()}
         confirmColor={getConfirmColor()}
+        disabled
+        disabledMessage="Ta operacja jest niedostępna w wersji demo."
       />
 
       {/* Dialog częściowego odbioru transferu */}

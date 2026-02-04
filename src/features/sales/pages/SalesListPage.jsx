@@ -588,6 +588,7 @@ function SalesListPage() {
         message={`Czy na pewno chcesz usunąć sprzedaż #${confirmDialog.sale?.saleNumber || confirmDialog.sale?.id?.slice(0, 8)}? Spowoduje to zwrot produktów do magazynu.`}
         confirmText="Usuń sprzedaż"
         confirmColor="error"
+        disabled={true}
       />
     </Container>
   );

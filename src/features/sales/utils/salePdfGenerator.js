@@ -214,10 +214,10 @@ export const generateSalePdf = async (sale, location, selectedFields, companySet
 
     const tableData = sale.items.map((item) => {
       const row = {
-        product: item.productModel || item.productName || '-',
+        product: item.product?.model || item.productModel || item.productName || '-',
       };
       if (selectedFields.productBrand) {
-        row.brand = item.brand?.name || '-';
+        row.brand = item.product?.brand?.name || item.brand?.name || '-';
       }
       if (selectedFields.productQuantity) {
         row.quantity = String(item.quantity);

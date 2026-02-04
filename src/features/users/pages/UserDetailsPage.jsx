@@ -26,6 +26,7 @@ import {
   OutlinedInput,
   Checkbox,
   ListItemIcon,
+  Tooltip,
 } from '@mui/material';
 import { ArrowLeft, Edit, KeyRound, Trash2, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
@@ -281,24 +282,32 @@ function UserDetailsPage() {
             </Button>
           )}
           {canResetPassword && (
-            <Button
-              variant="outlined"
-              color="primary"
-              startIcon={<KeyRound size={16} />}
-              onClick={handleResetPassword}
-            >
-              Resetuj hasło
-            </Button>
+            <Tooltip title="Resetowanie hasła jest niedostępne w wersji demo">
+              <span>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<KeyRound size={16} />}
+                  disabled
+                >
+                  Resetuj hasło
+                </Button>
+              </span>
+            </Tooltip>
           )}
           {canManageUsers && (
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<Trash2 size={16} />}
-              onClick={handleOpenDeleteDialog}
-            >
-              Usuń
-            </Button>
+            <Tooltip title="Usuwanie użytkowników jest niedostępne w wersji demo">
+              <span>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<Trash2 size={16} />}
+                  disabled
+                >
+                  Usuń
+                </Button>
+              </span>
+            </Tooltip>
           )}
         </Box>
 

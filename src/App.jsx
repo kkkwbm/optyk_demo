@@ -12,7 +12,7 @@ import { createAriaLiveAnnouncer } from './utils/accessibility';
 import { selectTheme, setTheme } from './app/uiSlice';
 import { setDemoAuth, selectUser, logout } from './features/auth/authSlice';
 import { currentUser, demoAccessToken } from './mocks/data/users';
-import { initializeCurrentLocation, setDemoLocations } from './features/locations/locationsSlice';
+import { setDemoLocations } from './features/locations/locationsSlice';
 import { setDemoBrands } from './features/brands/brandsSlice';
 import { setDemoInventory } from './features/inventory/inventorySlice';
 import { tokenManager } from './config/api';
@@ -26,9 +26,6 @@ function ThemedApp() {
   useEffect(() => {
     // Initialize ARIA live announcer for accessibility
     createAriaLiveAnnouncer();
-
-    // Initialize current location
-    dispatch(initializeCurrentLocation());
 
     // Register active logout handler
     tokenManager.setupTokenExpirationHandlers(() => {

@@ -660,6 +660,7 @@ function HistoryListPage() {
                   size="small"
                   onClick={handleToggleSelectionMode}
                   startIcon={<CheckSquare size={16} />}
+                  disabled={true}
                 >
                   Usuń wiele
                 </Button>
@@ -669,6 +670,7 @@ function HistoryListPage() {
                   size="small"
                   onClick={handleDeleteAll}
                   startIcon={<Trash2 size={16} />}
+                  disabled={true}
                 >
                   {currentLocation ? `Usuń całą historię z ${currentLocation.name}` : 'Usuń całą historię'}
                 </Button>

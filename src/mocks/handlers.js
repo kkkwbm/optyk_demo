@@ -88,6 +88,29 @@ const paginate = (items, page = 0, size = 20) => {
   };
 };
 
+// Helper to sort inventory items
+const sortInventory = (items, sortBy, sortDirection) => {
+  if (!sortBy || !sortDirection) return items;
+
+  const direction = sortDirection === 'desc' ? -1 : 1;
+
+  return [...items].sort((a, b) => {
+    let aVal, bVal;
+
+    if (sortBy === 'quantity') {
+      aVal = a.quantity || 0;
+      bVal = b.quantity || 0;
+    } else if (sortBy === 'product.sellingPrice' || sortBy === 'sellingPrice') {
+      aVal = a.product?.sellingPrice || 0;
+      bVal = b.product?.sellingPrice || 0;
+    } else {
+      return 0;
+    }
+
+    return (aVal - bVal) * direction;
+  });
+};
+
 // Helper to create standard API response
 const apiResponse = (data, success = true, error = null) => ({
   success,
@@ -250,19 +273,10 @@ export const handlers = [
     }));
   }),
 
-  // Location mutations
-  http.post(`${API_BASE}/locations`, async ({ request }) => {
+  // Location mutations (create disabled in demo mode)
+  http.post(`${API_BASE}/locations`, async () => {
     await delay(100);
-    const data = await request.json();
-    const newLocation = {
-      id: generateId('loc'),
-      ...data,
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    mutableLocations.push(newLocation);
-    return HttpResponse.json(apiResponse(newLocation));
+    return errorResponse('Dodawanie lokalizacji jest niedostępne w wersji demo', 403);
   }),
 
   http.put(`${API_BASE}/locations/:id`, async ({ params, request }) => {
@@ -317,10 +331,14 @@ export const handlers = [
     await delay(150);
     const url = new URL(request.url);
     const productType = url.searchParams.get('productType');
+    const search = url.searchParams.get('search');
+    const sortBy = url.searchParams.get('sortBy');
+    const sortDirection = url.searchParams.get('sortDirection');
     const page = parseInt(url.searchParams.get('page') || '0');
     const size = parseInt(url.searchParams.get('size') || '20');
 
-    let items = getInventoryWithProducts(null, productType);
+    let items = getInventoryWithProducts(null, productType, search);
+    items = sortInventory(items, sortBy, sortDirection);
     return HttpResponse.json(apiResponse(paginate(items, page, size)));
   }),
 
@@ -329,10 +347,13 @@ export const handlers = [
     const url = new URL(request.url);
     const productType = url.searchParams.get('productType');
     const search = url.searchParams.get('search');
+    const sortBy = url.searchParams.get('sortBy');
+    const sortDirection = url.searchParams.get('sortDirection');
     const page = parseInt(url.searchParams.get('page') || '0');
     const size = parseInt(url.searchParams.get('size') || '20');
 
     let items = getInventoryWithProducts(params.locationId, productType, search);
+    items = sortInventory(items, sortBy, sortDirection);
     return HttpResponse.json(apiResponse(paginate(items, page, size)));
   }),
 
@@ -1008,67 +1029,30 @@ export const handlers = [
     return HttpResponse.json(apiResponse(brand));
   }),
 
-  // Brand mutations
-  http.post(`${API_BASE}/brands`, async ({ request }) => {
+  // Brand mutations (disabled in demo mode)
+  http.post(`${API_BASE}/brands`, async () => {
     await delay(100);
-    const data = await request.json();
-    const newBrand = {
-      id: generateId('brd'),
-      ...data,
-      logoUrl: null,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    mutableBrands.push(newBrand);
-    return HttpResponse.json(apiResponse(newBrand));
+    return errorResponse('Dodawanie marek jest niedostępne w wersji demo', 403);
   }),
 
-  http.put(`${API_BASE}/brands/:id`, async ({ params, request }) => {
+  http.put(`${API_BASE}/brands/:id`, async () => {
     await delay(100);
-    const data = await request.json();
-    const index = mutableBrands.findIndex(b => b.id === params.id);
-    if (index === -1) {
-      return errorResponse('Brand not found', 404);
-    }
-    mutableBrands[index] = {
-      ...mutableBrands[index],
-      ...data,
-      updatedAt: new Date().toISOString()
-    };
-    return HttpResponse.json(apiResponse(mutableBrands[index]));
+    return errorResponse('Edycja marek jest niedostępna w wersji demo', 403);
   }),
 
-  http.patch(`${API_BASE}/brands/:id/activate`, async ({ params }) => {
+  http.patch(`${API_BASE}/brands/:id/activate`, async () => {
     await delay(50);
-    const index = mutableBrands.findIndex(b => b.id === params.id);
-    if (index === -1) {
-      return errorResponse('Brand not found', 404);
-    }
-    mutableBrands[index].isActive = true;
-    mutableBrands[index].updatedAt = new Date().toISOString();
-    return HttpResponse.json(apiResponse(mutableBrands[index]));
+    return errorResponse('Aktywacja marek jest niedostępna w wersji demo', 403);
   }),
 
-  http.patch(`${API_BASE}/brands/:id/deactivate`, async ({ params }) => {
+  http.patch(`${API_BASE}/brands/:id/deactivate`, async () => {
     await delay(50);
-    const index = mutableBrands.findIndex(b => b.id === params.id);
-    if (index === -1) {
-      return errorResponse('Brand not found', 404);
-    }
-    mutableBrands[index].isActive = false;
-    mutableBrands[index].updatedAt = new Date().toISOString();
-    return HttpResponse.json(apiResponse(mutableBrands[index]));
+    return errorResponse('Dezaktywacja marek jest niedostępna w wersji demo', 403);
   }),
 
-  http.delete(`${API_BASE}/brands/:id`, async ({ params }) => {
+  http.delete(`${API_BASE}/brands/:id`, async () => {
     await delay(50);
-    const index = mutableBrands.findIndex(b => b.id === params.id);
-    if (index === -1) {
-      return errorResponse('Brand not found', 404);
-    }
-    mutableBrands.splice(index, 1);
-    return HttpResponse.json(apiResponse({ message: 'Brand deleted successfully' }));
+    return errorResponse('Usuwanie marek jest niedostępne w wersji demo', 403);
   }),
 
   // ========== USERS ENDPOINTS ==========
@@ -1090,78 +1074,35 @@ export const handlers = [
     return HttpResponse.json(apiResponse(user));
   }),
 
-  // User mutations
-  http.post(`${API_BASE}/users`, async ({ request }) => {
+  // User mutations (disabled in demo mode)
+  http.post(`${API_BASE}/users`, async () => {
     await delay(100);
-    const data = await request.json();
-    const newUser = {
-      id: generateId('usr'),
-      ...data,
-      status: 'ACTIVE',
-      themePreference: 'LIGHT',
-      locations: data.locations || [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    mutableUsers.push(newUser);
-    return HttpResponse.json(apiResponse(newUser));
+    return errorResponse('Tworzenie użytkowników jest niedostępne w wersji demo', 403);
   }),
 
-  http.put(`${API_BASE}/users/:id`, async ({ params, request }) => {
+  http.put(`${API_BASE}/users/:id`, async () => {
     await delay(100);
-    const data = await request.json();
-    const index = mutableUsers.findIndex(u => u.id === params.id);
-    if (index === -1) {
-      return errorResponse('User not found', 404);
-    }
-    mutableUsers[index] = {
-      ...mutableUsers[index],
-      ...data,
-      updatedAt: new Date().toISOString()
-    };
-    return HttpResponse.json(apiResponse(mutableUsers[index]));
+    return errorResponse('Edycja użytkowników jest niedostępna w wersji demo', 403);
   }),
 
-  http.patch(`${API_BASE}/users/:id/activate`, async ({ params }) => {
+  http.patch(`${API_BASE}/users/:id/activate`, async () => {
     await delay(50);
-    const index = mutableUsers.findIndex(u => u.id === params.id);
-    if (index === -1) {
-      return errorResponse('User not found', 404);
-    }
-    mutableUsers[index].status = 'ACTIVE';
-    mutableUsers[index].updatedAt = new Date().toISOString();
-    return HttpResponse.json(apiResponse(mutableUsers[index]));
+    return errorResponse('Aktywacja użytkowników jest niedostępna w wersji demo', 403);
   }),
 
-  http.patch(`${API_BASE}/users/:id/deactivate`, async ({ params }) => {
+  http.patch(`${API_BASE}/users/:id/deactivate`, async () => {
     await delay(50);
-    const index = mutableUsers.findIndex(u => u.id === params.id);
-    if (index === -1) {
-      return errorResponse('User not found', 404);
-    }
-    mutableUsers[index].status = 'INACTIVE';
-    mutableUsers[index].updatedAt = new Date().toISOString();
-    return HttpResponse.json(apiResponse(mutableUsers[index]));
+    return errorResponse('Dezaktywacja użytkowników jest niedostępna w wersji demo', 403);
   }),
 
-  http.delete(`${API_BASE}/users/:id`, async ({ params }) => {
+  http.delete(`${API_BASE}/users/:id`, async () => {
     await delay(50);
-    const index = mutableUsers.findIndex(u => u.id === params.id);
-    if (index === -1) {
-      return errorResponse('User not found', 404);
-    }
-    mutableUsers.splice(index, 1);
-    return HttpResponse.json(apiResponse({ message: 'User deleted successfully' }));
+    return errorResponse('Usuwanie użytkowników jest niedostępne w wersji demo', 403);
   }),
 
-  http.patch(`${API_BASE}/users/:id/reset-password`, async ({ params }) => {
+  http.patch(`${API_BASE}/users/:id/reset-password`, async () => {
     await delay(100);
-    const index = mutableUsers.findIndex(u => u.id === params.id);
-    if (index === -1) {
-      return errorResponse('User not found', 404);
-    }
-    // In demo mode, just acknowledge the password reset
-    return HttpResponse.json(apiResponse({ message: 'Password reset successfully' }));
+    return errorResponse('Resetowanie hasła jest niedostępne w wersji demo', 403);
   }),
 
   http.delete(`${API_BASE}/users/:userId/locations/:locationId`, async ({ params }) => {
@@ -2216,25 +2157,330 @@ export const handlers = [
   // ========== STATISTICS ENDPOINTS ==========
   http.get(`${API_BASE}/statistics/dashboard`, async () => {
     await delay(150);
-    const totalValue = mutableInventory.reduce((sum, inv) => {
+
+    // Calculate inventory by product type
+    const inventoryByType = { FRAME: 0, SUNGLASSES: 0, CONTACT_LENS: 0, SOLUTION: 0, OTHER: 0 };
+    const uniqueFrameIds = new Set();
+    let totalInventoryValue = 0;
+
+    mutableInventory.forEach(inv => {
       const product = mutableProducts.find(p => p.id === inv.productId);
-      return sum + (product ? product.sellingPrice * inv.quantity : 0);
-    }, 0);
+      if (product && product.status === 'ACTIVE') {
+        inventoryByType[product.type] = (inventoryByType[product.type] || 0) + inv.quantity;
+        totalInventoryValue += product.sellingPrice * inv.quantity;
+        if (product.type === 'FRAME') {
+          uniqueFrameIds.add(product.id);
+        }
+      }
+    });
 
+    // Calculate sales data
     const completedSales = mutableSales.filter(s => s.status === 'COMPLETED');
-    const thisMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-    const salesThisMonth = completedSales.filter(s => s.createdAt.startsWith(thisMonth));
-    const salesRevenue = salesThisMonth.reduce((sum, s) => sum + s.totalAmount, 0);
+    const totalSales = completedSales.reduce((sum, s) => sum + s.totalAmount, 0);
+    const salesCount = completedSales.length;
 
+    // Calculate sales by brand
+    const salesByBrandMap = {};
+    completedSales.forEach(sale => {
+      sale.items.forEach(item => {
+        const product = item.product || mutableProducts.find(p => p.id === item.productId);
+        if (product && product.brandName) {
+          if (!salesByBrandMap[product.brandName]) {
+            salesByBrandMap[product.brandName] = { brand: product.brandName, totalSales: 0, quantitySold: 0 };
+          }
+          salesByBrandMap[product.brandName].totalSales += item.totalPrice || (item.quantity * item.unitPrice);
+          salesByBrandMap[product.brandName].quantitySold += item.quantity;
+        }
+      });
+    });
+    const salesByBrand = Object.values(salesByBrandMap).sort((a, b) => b.totalSales - a.totalSales);
+
+    // Calculate transfer stats
     const pendingTransfers = mutableTransfers.filter(t => t.status === 'PENDING').length;
+    const completedTransfers = mutableTransfers.filter(t => t.status === 'COMPLETED').length;
+    const totalTransferredProducts = mutableTransfers
+      .filter(t => t.status === 'COMPLETED')
+      .reduce((sum, t) => sum + t.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0);
+
+    // Count aging inventory (items older than 90 days without sales - mock random count)
+    const inventoryAgingCount = Math.floor(Math.random() * 15) + 5;
+
+    const totalProductsInStock = inventoryByType.FRAME + inventoryByType.SUNGLASSES +
+      inventoryByType.CONTACT_LENS + inventoryByType.SOLUTION + inventoryByType.OTHER;
 
     return HttpResponse.json(apiResponse({
+      // Sales stats
+      totalSales,
+      salesCount,
+      salesByBrand,
+
+      // Transfer stats
+      pendingTransfers,
+      completedTransfers,
+      totalTransferredProducts,
+
+      // Inventory stats
+      totalProductsInStock,
+      totalInventoryValue,
+      totalFrames: inventoryByType.FRAME,
+      uniqueFrameModels: uniqueFrameIds.size,
+      totalSunglasses: inventoryByType.SUNGLASSES,
+      totalContactLenses: inventoryByType.CONTACT_LENS,
+      totalSolutions: inventoryByType.SOLUTION,
+      totalOther: inventoryByType.OTHER,
+      inventoryAgingCount,
+
+      // Legacy fields
       totalProducts: mutableProducts.filter(p => p.status === 'ACTIVE').length,
       totalLocations: mutableLocations.filter(l => l.status === 'ACTIVE').length,
-      totalInventoryValue: totalValue,
-      salesThisMonth: salesThisMonth.length,
-      salesRevenueThisMonth: salesRevenue,
-      transfersPending: pendingTransfers
+    }));
+  }),
+
+  // Product Analytics (top sellers, sales by product type)
+  http.get(`${API_BASE}/statistics/products`, async () => {
+    await delay(100);
+
+    const completedSales = mutableSales.filter(s => s.status === 'COMPLETED');
+
+    // Calculate sales by product type
+    const salesByTypeMap = {};
+    completedSales.forEach(sale => {
+      sale.items.forEach(item => {
+        const product = item.product || mutableProducts.find(p => p.id === item.productId);
+        if (product) {
+          if (!salesByTypeMap[product.type]) {
+            salesByTypeMap[product.type] = {
+              productType: product.type,
+              totalQuantitySold: 0,
+              totalRevenue: 0,
+              transactionCount: 0
+            };
+          }
+          salesByTypeMap[product.type].totalQuantitySold += item.quantity;
+          salesByTypeMap[product.type].totalRevenue += item.totalPrice || (item.quantity * item.unitPrice);
+          salesByTypeMap[product.type].transactionCount++;
+        }
+      });
+    });
+
+    const salesByProductType = Object.values(salesByTypeMap).sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+    // Calculate top sellers
+    const productSalesMap = {};
+    completedSales.forEach(sale => {
+      sale.items.forEach(item => {
+        const product = item.product || mutableProducts.find(p => p.id === item.productId);
+        if (product) {
+          if (!productSalesMap[product.id]) {
+            productSalesMap[product.id] = {
+              productId: product.id,
+              productName: product.name,
+              brandName: product.brandName,
+              productType: product.type,
+              totalQuantitySold: 0,
+              totalRevenue: 0
+            };
+          }
+          productSalesMap[product.id].totalQuantitySold += item.quantity;
+          productSalesMap[product.id].totalRevenue += item.totalPrice || (item.quantity * item.unitPrice);
+        }
+      });
+    });
+
+    const topSellers = Object.values(productSalesMap)
+      .sort((a, b) => b.totalRevenue - a.totalRevenue)
+      .slice(0, 10);
+
+    return HttpResponse.json(apiResponse({
+      salesByProductType,
+      topSellers,
+      slowMovers: [] // Could be populated based on inventory age
+    }));
+  }),
+
+  // Store Comparison
+  http.get(`${API_BASE}/statistics/stores/comparison`, async () => {
+    await delay(100);
+
+    const completedSales = mutableSales.filter(s => s.status === 'COMPLETED');
+    const storeStats = {};
+
+    // Calculate sales by location
+    completedSales.forEach(sale => {
+      if (!storeStats[sale.locationId]) {
+        const location = mutableLocations.find(l => l.id === sale.locationId);
+        storeStats[sale.locationId] = {
+          locationId: sale.locationId,
+          locationName: location?.name || 'Nieznana lokalizacja',
+          locationType: location?.type || 'STORE',
+          salesCount: 0,
+          totalSales: 0
+        };
+      }
+      storeStats[sale.locationId].salesCount++;
+      storeStats[sale.locationId].totalSales += sale.totalAmount;
+    });
+
+    // Calculate averages and rank
+    const stores = Object.values(storeStats)
+      .map(store => ({
+        ...store,
+        averageSaleValue: store.salesCount > 0 ? store.totalSales / store.salesCount : 0
+      }))
+      .sort((a, b) => b.totalSales - a.totalSales)
+      .map((store, index) => ({ ...store, rank: index + 1 }));
+
+    // Add locations with no sales
+    mutableLocations
+      .filter(l => l.status === 'ACTIVE' && !storeStats[l.id])
+      .forEach(location => {
+        stores.push({
+          locationId: location.id,
+          locationName: location.name,
+          locationType: location.type,
+          salesCount: 0,
+          totalSales: 0,
+          averageSaleValue: 0,
+          rank: stores.length + 1
+        });
+      });
+
+    return HttpResponse.json(apiResponse({
+      stores,
+      totalSales: stores.reduce((sum, s) => sum + s.totalSales, 0),
+      totalSalesCount: stores.reduce((sum, s) => sum + s.salesCount, 0)
+    }));
+  }),
+
+  // User Sales Statistics
+  http.get(`${API_BASE}/statistics/users/sales`, async () => {
+    await delay(100);
+
+    const completedSales = mutableSales.filter(s => s.status === 'COMPLETED');
+    const userStats = {};
+
+    // Calculate sales by user
+    completedSales.forEach(sale => {
+      const userId = sale.userId || sale.user?.id;
+      if (!userStats[userId]) {
+        const user = mutableUsers.find(u => u.id === userId);
+        userStats[userId] = {
+          userId,
+          userName: sale.userFullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Nieznany użytkownik',
+          userEmail: user?.email || 'brak@email.pl',
+          salesCount: 0,
+          totalSales: 0,
+          totalOperations: 0
+        };
+      }
+      userStats[userId].salesCount++;
+      userStats[userId].totalSales += sale.totalAmount;
+      userStats[userId].totalOperations++;
+    });
+
+    // Calculate averages and rank
+    const userSales = Object.values(userStats)
+      .map(user => ({
+        ...user,
+        averageSaleValue: user.salesCount > 0 ? user.totalSales / user.salesCount : 0
+      }))
+      .sort((a, b) => b.totalSales - a.totalSales)
+      .map((user, index) => ({ ...user, rank: index + 1 }));
+
+    return HttpResponse.json(apiResponse({
+      userSales,
+      totalSales: userSales.reduce((sum, u) => sum + u.totalSales, 0),
+      totalSalesCount: userSales.reduce((sum, u) => sum + u.salesCount, 0)
+    }));
+  }),
+
+  // Product Inventory by Location
+  http.get(`${API_BASE}/statistics/products/inventory-by-location`, async ({ request }) => {
+    await delay(100);
+    const url = new URL(request.url);
+    const productTypesParam = url.searchParams.get('productTypes');
+    const productTypes = productTypesParam ? productTypesParam.split(',') : ['FRAME', 'SUNGLASSES', 'CONTACT_LENS', 'SOLUTION', 'OTHER'];
+
+    const locationStats = {};
+
+    mutableInventory.forEach(inv => {
+      const product = mutableProducts.find(p => p.id === inv.productId);
+      const location = mutableLocations.find(l => l.id === inv.locationId);
+
+      if (product && location && product.status === 'ACTIVE' && productTypes.includes(product.type)) {
+        if (!locationStats[inv.locationId]) {
+          locationStats[inv.locationId] = {
+            locationId: inv.locationId,
+            locationName: location.name,
+            locationType: location.type,
+            productTypeQuantities: {}
+          };
+        }
+        if (!locationStats[inv.locationId].productTypeQuantities[product.type]) {
+          locationStats[inv.locationId].productTypeQuantities[product.type] = 0;
+        }
+        locationStats[inv.locationId].productTypeQuantities[product.type] += inv.quantity;
+      }
+    });
+
+    const locations = Object.values(locationStats);
+
+    return HttpResponse.json(apiResponse({
+      locations,
+      productTypes
+    }));
+  }),
+
+  // Sales Trend
+  http.get(`${API_BASE}/statistics/sales/trend`, async ({ request }) => {
+    await delay(100);
+    const url = new URL(request.url);
+    const startDate = url.searchParams.get('startDate');
+    const endDate = url.searchParams.get('endDate');
+    const period = url.searchParams.get('period') || 'month';
+
+    const completedSales = mutableSales.filter(s => s.status === 'COMPLETED');
+
+    // Generate trend data based on period
+    const trendMap = {};
+    const start = startDate ? new Date(startDate) : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    const end = endDate ? new Date(endDate) : new Date();
+
+    completedSales.forEach(sale => {
+      const saleDate = new Date(sale.createdAt);
+      if (saleDate >= start && saleDate <= end) {
+        let key;
+        if (period === 'day') {
+          key = sale.createdAt.substring(0, 10);
+        } else if (period === 'week') {
+          const weekStart = new Date(saleDate);
+          weekStart.setDate(saleDate.getDate() - saleDate.getDay());
+          key = weekStart.toISOString().substring(0, 10);
+        } else {
+          key = sale.createdAt.substring(0, 7);
+        }
+
+        if (!trendMap[key]) {
+          trendMap[key] = { period: key, totalSales: 0, salesCount: 0, averageValue: 0 };
+        }
+        trendMap[key].totalSales += sale.totalAmount;
+        trendMap[key].salesCount++;
+      }
+    });
+
+    // Fill in missing periods and calculate averages
+    const trendData = Object.values(trendMap)
+      .map(item => ({
+        ...item,
+        averageValue: item.salesCount > 0 ? item.totalSales / item.salesCount : 0
+      }))
+      .sort((a, b) => a.period.localeCompare(b.period));
+
+    return HttpResponse.json(apiResponse({
+      trendData,
+      period,
+      startDate: start.toISOString(),
+      endDate: end.toISOString()
     }));
   }),
 
@@ -2306,24 +2552,19 @@ export const handlers = [
     return HttpResponse.json(apiResponse(companySettings));
   }),
 
-  http.put(`${API_BASE}/company-settings`, async ({ request }) => {
+  http.put(`${API_BASE}/company-settings`, async () => {
     await delay(100);
-    const data = await request.json();
-    companySettings = { ...companySettings, ...data };
-    return HttpResponse.json(apiResponse(companySettings));
+    return errorResponse('Zmiana ustawień firmy jest niedostępna w wersji demo', 403);
   }),
 
   http.post(`${API_BASE}/company-settings/logo`, async () => {
     await delay(200);
-    // In demo mode, just acknowledge the upload
-    companySettings.logoUrl = '/demo-logo.png';
-    return HttpResponse.json(apiResponse({ logoUrl: companySettings.logoUrl }));
+    return errorResponse('Wgrywanie logo jest niedostępne w wersji demo', 403);
   }),
 
   http.delete(`${API_BASE}/company-settings/logo`, async () => {
     await delay(50);
-    companySettings.logoUrl = null;
-    return HttpResponse.json(apiResponse({ message: 'Logo deleted successfully' }));
+    return errorResponse('Usuwanie logo jest niedostępne w wersji demo', 403);
   }),
 
   // ========== ERROR LOGGING ==========

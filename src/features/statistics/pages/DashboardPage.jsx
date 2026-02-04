@@ -94,12 +94,10 @@ function DashboardPage() {
   }, [dispatch]);
 
   useEffect(() => {
-    // Set default store comparison locations to all stores (not warehouses) when locations are loaded
+    // Set default store comparison locations to all locations when locations are loaded
     if (activeLocations.length > 0 && selectedStoreComparisonLocationIds.length === 0) {
-      const storeIds = activeLocations
-        .filter(loc => loc.type === 'STORE')
-        .map(loc => loc.id);
-      setSelectedStoreComparisonLocationIds(storeIds);
+      const allLocationIds = activeLocations.map(loc => loc.id);
+      setSelectedStoreComparisonLocationIds(allLocationIds);
     }
   }, [activeLocations, selectedStoreComparisonLocationIds.length]);
 

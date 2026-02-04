@@ -9,7 +9,7 @@ const getUserFullName = (user) => user ? `${user.firstName} ${user.lastName}` : 
 export const sales = [
   {
     id: 'sale-001',
-    saleNumber: 'SPR-2024-0001',
+    saleNumber: 'SPR-2025-0001',
     locationId: 'loc-002',
     location: locations.find(l => l.id === 'loc-002'),
     userId: 'usr-003',
@@ -43,12 +43,12 @@ export const sales = [
     paymentMethod: 'CARD',
     status: 'COMPLETED',
     notes: 'Klient zadowolony z wyboru',
-    createdAt: '2024-12-15T10:30:00Z',
-    completedAt: '2024-12-15T10:35:00Z'
+    createdAt: '2025-06-15T10:30:00Z',
+    completedAt: '2025-06-15T10:35:00Z'
   },
   {
     id: 'sale-002',
-    saleNumber: 'SPR-2024-0002',
+    saleNumber: 'SPR-2025-0002',
     locationId: 'loc-002',
     location: locations.find(l => l.id === 'loc-002'),
     userId: 'usr-003',
@@ -82,12 +82,12 @@ export const sales = [
     paymentMethod: 'CASH',
     status: 'COMPLETED',
     notes: null,
-    createdAt: '2024-12-15T14:20:00Z',
-    completedAt: '2024-12-15T14:25:00Z'
+    createdAt: '2025-06-20T14:20:00Z',
+    completedAt: '2025-06-20T14:25:00Z'
   },
   {
     id: 'sale-003',
-    saleNumber: 'SPR-2024-0003',
+    saleNumber: 'SPR-2025-0003',
     locationId: 'loc-003',
     location: locations.find(l => l.id === 'loc-003'),
     userId: 'usr-003',
@@ -113,12 +113,12 @@ export const sales = [
     paymentMethod: 'CARD',
     status: 'COMPLETED',
     notes: 'Rabat dla stałego klienta',
-    createdAt: '2024-12-16T11:00:00Z',
-    completedAt: '2024-12-16T11:10:00Z'
+    createdAt: '2025-07-05T11:00:00Z',
+    completedAt: '2025-07-05T11:10:00Z'
   },
   {
     id: 'sale-004',
-    saleNumber: 'SPR-2024-0004',
+    saleNumber: 'SPR-2025-0004',
     locationId: 'loc-004',
     location: locations.find(l => l.id === 'loc-004'),
     userId: 'usr-004',
@@ -144,12 +144,12 @@ export const sales = [
     paymentMethod: 'CARD',
     status: 'COMPLETED',
     notes: null,
-    createdAt: '2024-12-17T09:45:00Z',
-    completedAt: '2024-12-17T09:50:00Z'
+    createdAt: '2025-07-18T09:45:00Z',
+    completedAt: '2025-07-18T09:50:00Z'
   },
   {
     id: 'sale-005',
-    saleNumber: 'SPR-2024-0005',
+    saleNumber: 'SPR-2025-0005',
     locationId: 'loc-002',
     location: locations.find(l => l.id === 'loc-002'),
     userId: 'usr-003',
@@ -191,12 +191,12 @@ export const sales = [
     paymentMethod: 'CARD',
     status: 'COMPLETED',
     notes: 'Zestaw prezentowy',
-    createdAt: '2024-12-18T15:30:00Z',
-    completedAt: '2024-12-18T15:40:00Z'
+    createdAt: '2025-08-02T15:30:00Z',
+    completedAt: '2025-08-02T15:40:00Z'
   },
   {
     id: 'sale-006',
-    saleNumber: 'SPR-2024-0006',
+    saleNumber: 'SPR-2025-0006',
     locationId: 'loc-003',
     location: locations.find(l => l.id === 'loc-003'),
     userId: 'usr-003',
@@ -222,12 +222,12 @@ export const sales = [
     paymentMethod: 'CASH',
     status: 'COMPLETED',
     notes: 'Zapas soczewek na 3 miesiące',
-    createdAt: '2024-12-19T10:15:00Z',
-    completedAt: '2024-12-19T10:20:00Z'
+    createdAt: '2025-08-15T10:15:00Z',
+    completedAt: '2025-08-15T10:20:00Z'
   },
   {
     id: 'sale-007',
-    saleNumber: 'SPR-2024-0007',
+    saleNumber: 'SPR-2025-0007',
     locationId: 'loc-004',
     location: locations.find(l => l.id === 'loc-004'),
     userId: 'usr-004',
@@ -253,12 +253,12 @@ export const sales = [
     paymentMethod: 'CARD',
     status: 'COMPLETED',
     notes: null,
-    createdAt: '2024-12-20T13:00:00Z',
-    completedAt: '2024-12-20T13:05:00Z'
+    createdAt: '2025-09-01T13:00:00Z',
+    completedAt: '2025-09-01T13:05:00Z'
   },
   {
     id: 'sale-008',
-    saleNumber: 'SPR-2024-0008',
+    saleNumber: 'SPR-2025-0008',
     locationId: 'loc-002',
     location: locations.find(l => l.id === 'loc-002'),
     userId: 'usr-003',
@@ -284,12 +284,12 @@ export const sales = [
     paymentMethod: 'CARD',
     status: 'COMPLETED',
     notes: 'Oakley Holbrook Prizm - polaryzacja',
-    createdAt: '2024-12-21T11:30:00Z',
-    completedAt: '2024-12-21T11:35:00Z'
+    createdAt: '2025-09-18T11:30:00Z',
+    completedAt: '2025-09-18T11:35:00Z'
   },
   {
     id: 'sale-009',
-    saleNumber: 'SPR-2024-0009',
+    saleNumber: 'SPR-2025-0009',
     locationId: 'loc-003',
     location: locations.find(l => l.id === 'loc-003'),
     userId: 'usr-003',
@@ -323,12 +323,12 @@ export const sales = [
     paymentMethod: 'CASH',
     status: 'COMPLETED',
     notes: null,
-    createdAt: '2024-12-22T16:45:00Z',
-    completedAt: '2024-12-22T16:50:00Z'
+    createdAt: '2025-10-05T16:45:00Z',
+    completedAt: '2025-10-05T16:50:00Z'
   },
   {
     id: 'sale-010',
-    saleNumber: 'SPR-2024-0010',
+    saleNumber: 'SPR-2025-0010',
     locationId: 'loc-002',
     location: locations.find(l => l.id === 'loc-002'),
     userId: 'usr-003',
@@ -354,12 +354,12 @@ export const sales = [
     paymentMethod: 'CARD',
     status: 'COMPLETED',
     notes: 'Tom Ford - klient VIP',
-    createdAt: '2024-12-23T12:00:00Z',
-    completedAt: '2024-12-23T12:15:00Z'
+    createdAt: '2025-10-22T12:00:00Z',
+    completedAt: '2025-10-22T12:15:00Z'
   },
   {
     id: 'sale-011',
-    saleNumber: 'SPR-2025-0001',
+    saleNumber: 'SPR-2025-0011',
     locationId: 'loc-002',
     location: locations.find(l => l.id === 'loc-002'),
     userId: 'usr-003',
@@ -393,12 +393,12 @@ export const sales = [
     paymentMethod: 'CARD',
     status: 'COMPLETED',
     notes: null,
-    createdAt: '2025-01-02T10:00:00Z',
-    completedAt: '2025-01-02T10:10:00Z'
+    createdAt: '2025-11-08T10:00:00Z',
+    completedAt: '2025-11-08T10:10:00Z'
   },
   {
     id: 'sale-012',
-    saleNumber: 'SPR-2025-0002',
+    saleNumber: 'SPR-2025-0012',
     locationId: 'loc-004',
     location: locations.find(l => l.id === 'loc-004'),
     userId: 'usr-004',
@@ -424,12 +424,12 @@ export const sales = [
     paymentMethod: 'CASH',
     status: 'COMPLETED',
     notes: null,
-    createdAt: '2025-01-03T14:30:00Z',
-    completedAt: '2025-01-03T14:35:00Z'
+    createdAt: '2025-11-20T14:30:00Z',
+    completedAt: '2025-11-20T14:35:00Z'
   },
   {
     id: 'sale-013',
-    saleNumber: 'SPR-2025-0003',
+    saleNumber: 'SPR-2025-0013',
     locationId: 'loc-003',
     location: locations.find(l => l.id === 'loc-003'),
     userId: 'usr-003',
@@ -455,12 +455,12 @@ export const sales = [
     paymentMethod: 'CARD',
     status: 'COMPLETED',
     notes: 'Gucci Classic - 10% rabatu',
-    createdAt: '2025-01-05T11:20:00Z',
-    completedAt: '2025-01-05T11:30:00Z'
+    createdAt: '2025-12-05T11:20:00Z',
+    completedAt: '2025-12-05T11:30:00Z'
   },
   {
     id: 'sale-014',
-    saleNumber: 'SPR-2025-0004',
+    saleNumber: 'SPR-2025-0014',
     locationId: 'loc-002',
     location: locations.find(l => l.id === 'loc-002'),
     userId: 'usr-003',
@@ -494,12 +494,12 @@ export const sales = [
     paymentMethod: 'CARD',
     status: 'COMPLETED',
     notes: null,
-    createdAt: '2025-01-08T09:15:00Z',
-    completedAt: '2025-01-08T09:20:00Z'
+    createdAt: '2025-12-18T09:15:00Z',
+    completedAt: '2025-12-18T09:20:00Z'
   },
   {
     id: 'sale-015',
-    saleNumber: 'SPR-2025-0005',
+    saleNumber: 'SPR-2025-0015',
     locationId: 'loc-003',
     location: locations.find(l => l.id === 'loc-003'),
     userId: 'usr-003',
@@ -525,12 +525,12 @@ export const sales = [
     paymentMethod: 'CARD',
     status: 'COMPLETED',
     notes: 'Gucci Oversized - zakup prezentowy',
-    createdAt: '2025-01-10T15:00:00Z',
-    completedAt: '2025-01-10T15:10:00Z'
+    createdAt: '2026-01-05T15:00:00Z',
+    completedAt: '2026-01-05T15:10:00Z'
   },
   {
     id: 'sale-016',
-    saleNumber: 'SPR-2025-0006',
+    saleNumber: 'SPR-2026-0001',
     locationId: 'loc-002',
     location: locations.find(l => l.id === 'loc-002'),
     userId: 'usr-003',
@@ -556,12 +556,12 @@ export const sales = [
     paymentMethod: 'CARD',
     status: 'CANCELLED',
     notes: 'Klient zrezygnował z zakupu',
-    createdAt: '2025-01-12T11:00:00Z',
-    cancelledAt: '2025-01-12T11:30:00Z'
+    createdAt: '2026-01-18T11:00:00Z',
+    cancelledAt: '2026-01-18T11:30:00Z'
   },
   {
     id: 'sale-017',
-    saleNumber: 'SPR-2025-0007',
+    saleNumber: 'SPR-2026-0002',
     locationId: 'loc-003',
     location: locations.find(l => l.id === 'loc-003'),
     userId: 'usr-003',
@@ -587,13 +587,13 @@ export const sales = [
     paymentMethod: 'CASH',
     status: 'RETURNED',
     notes: 'Zwrot - produkt nie odpowiadał klientowi',
-    createdAt: '2025-01-14T14:00:00Z',
-    completedAt: '2025-01-14T14:10:00Z',
-    returnedAt: '2025-01-15T10:00:00Z'
+    createdAt: '2026-01-25T14:00:00Z',
+    completedAt: '2026-01-25T14:10:00Z',
+    returnedAt: '2026-01-26T10:00:00Z'
   },
   {
     id: 'sale-018',
-    saleNumber: 'SPR-2025-0008',
+    saleNumber: 'SPR-2026-0003',
     locationId: 'loc-004',
     location: locations.find(l => l.id === 'loc-004'),
     userId: 'usr-004',
@@ -617,10 +617,10 @@ export const sales = [
     discount: 0,
     totalAmount: 890.00,
     paymentMethod: 'CARD',
-    status: 'CANCELLED',
-    notes: 'Anulowano - klient zmienił zdanie',
-    createdAt: '2025-01-16T09:30:00Z',
-    cancelledAt: '2025-01-16T10:00:00Z'
+    status: 'COMPLETED',
+    notes: 'Zakup na prezent',
+    createdAt: '2026-02-01T09:30:00Z',
+    completedAt: '2026-02-01T09:40:00Z'
   }
 ];
 

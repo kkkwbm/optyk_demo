@@ -9,6 +9,7 @@ import {
   Grid,
   CircularProgress,
   Box,
+  Tooltip,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -189,14 +190,18 @@ function EditUserDialog({ open, onClose, userId, onSuccess }) {
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} disabled={submitting}>Anuluj</Button>
-        <Button
-          type="submit"
-          form="edit-user-form"
-          variant="contained"
-          disabled={loading || submitting}
-        >
-          {submitting ? 'Zapisywanie...' : 'Zaktualizuj'}
-        </Button>
+        <Tooltip title="Edycja użytkowników jest niedostępna w wersji demo">
+          <span>
+            <Button
+              type="submit"
+              form="edit-user-form"
+              variant="contained"
+              disabled
+            >
+              Zaktualizuj
+            </Button>
+          </span>
+        </Tooltip>
       </DialogActions>
     </Dialog>
   );

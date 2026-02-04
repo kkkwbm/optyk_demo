@@ -272,7 +272,7 @@ const locationsSlice = createSlice({
       state.items = demoLocations;
       state.activeLocations = demoLocations;
       state.myLocations = demoLocations;
-      state.currentLocation = demoLocations[0];
+      // Keep currentLocation as null so "Wszystko" is selected by default
       state.loading = false;
     },
   },

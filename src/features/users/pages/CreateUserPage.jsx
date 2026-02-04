@@ -1,6 +1,6 @@
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Container, Paper, Box, Button, Grid } from '@mui/material';
+import { Container, Paper, Box, Button, Grid, Tooltip } from '@mui/material';
 import { ArrowLeft } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -203,9 +203,13 @@ function CreateUserPage() {
             <Button variant="outlined" onClick={() => navigate('/users')}>
               Anuluj
             </Button>
-            <Button type="submit" variant="contained">
-              Stwórz użytkownika
-            </Button>
+            <Tooltip title="Tworzenie użytkowników jest niedostępne w wersji demo">
+              <span>
+                <Button type="submit" variant="contained" disabled>
+                  Stwórz użytkownika
+                </Button>
+              </span>
+            </Tooltip>
           </Box>
         </form>
       </Paper>
