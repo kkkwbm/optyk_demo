@@ -36,4 +36,4 @@ dist-ssr
 .firebaserc
 
 # Claude Code
-.claude/settings.local.json
+.claude/
